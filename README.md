@@ -7,13 +7,7 @@
 Running in docker compose:
 
 ```sh
-docker-compose docker-up
-```
-
-Example of running the app locally:
-
-```sh
-go run main.go serve --debug
+make docker-up
 ```
 
 ## Usage

@@ -1,0 +1,14 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+.DS_Store
+*.test
+*.out
+/dist
+.vscode
+config.json
+config.yaml
+tmp
+/bootstrap

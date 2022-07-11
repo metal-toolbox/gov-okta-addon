@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  gov-okta-addon:
+    build: .
+    command:
+    - serve
+    - --debug
+    - --pretty
+    - --audit-log-path=/app-audit/audit.log
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    depends_on:
+      - audit
+    networks:
+      - gov-okta-addon
+    volumes:
+      - type: volume
+        source: audit-log
+        target: /app-audit
+        read_only: false
+
+  audit:
+    image: ghcr.io/metal-toolbox/audittail:v0.1.10
+    command: -f /app-audit/audit.log
+    volumes:
+      - type: volume
+        source: audit-log
+        target: /app-audit
+        read_only: false
+    restart: unless-stopped
+
+volumes:
+  audit-log:
+
+networks:
+  gov-okta-addon:

@@ -1,0 +1,79 @@
+env:
+  ARTIFACT_NAME: gov-okta-addon
+  GOPRIVATE: github.com/equinixmetal/*,go.equinixmetal.net
+  QUAY_REPO: quay.io/equinixmetal/gov-okta-addon
+  IMAGE_TAG: ${BUILDKITE_BUILD_NUMBER}-${BUILDKITE_COMMIT:0:8}
+  DEPLOYMENT_REPO: k8s-gov-okta-addon
+
+steps:
+  - label: ":golangci-lint: lint :lint-roller:"
+    key: "lint"
+    plugins:
+      - docker#v3.13.0:
+          image: "registry.hub.docker.com/golangci/golangci-lint:v1.43-alpine"
+          command: ["golangci-lint", "run", "-v"]
+
+  - label: ":test_tube: test"
+    key: "test"
+    plugins:
+      - docker#v3.13.0:
+          image: "golang:1.18"
+          command: ["go", "test", "-cover", "-short", "-tags", "testtools", "./..."]
+
+  - label: ":golang: build"
+    key: "gobuild"
+    commands:
+      - CGO_ENABLED=0 GOOS=linux go build -mod=mod -a -o ${ARTIFACT_NAME}-bin main.go && chmod +x ${ARTIFACT_NAME}-bin
+    artifact_paths: "${ARTIFACT_NAME}-bin"
+    plugins:
+      - docker#v3.13.0:
+          image: "golang:1.18"
+
+  - label: ":docker: docker build and publish"
+    key: "build"
+    depends_on: ["lint", "test", "gobuild"]
+    commands: |
+      #!/bin/bash
+      echo --- Retrieve Artifacts
+      buildkite-agent artifact download "${ARTIFACT_NAME}-bin" .
+
+      # work around buildkite stripping the path if the artifact is the same name as the build
+      echo -- Rename artifact
+      mv ${ARTIFACT_NAME}-bin ${ARTIFACT_NAME}
+
+      # make sure it is executable
+      chmod +x ${ARTIFACT_NAME}
+
+      echo --- Build Docker Image
+      docker build . -t "$QUAY_REPO:$IMAGE_TAG"
+
+      echo --- Push Docker Image
+      docker push "$QUAY_REPO:$IMAGE_TAG"
+
+  # For main commits, pull-requests will be created to bump the image in the deployment manifest
+  - label: "Bump image tag for main branch builds"
+    depends_on: "build"
+    if: build.branch == 'main'
+    plugins:
+      - first-aml/git-clone:
+          repository: git@github.com:equinixmetal/$DEPLOYMENT_REPO.git
+      - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.2:
+          parameters:
+            GITHUB_TOKEN: /buildkite/github/personal-access-token/v1
+      - ssh://git@github.com/packethost/yaml-update-buildkite-plugin#v1.0.1:
+          dir: $DEPLOYMENT_REPO
+          file: values.yaml
+          values:
+            - .image.tag=$IMAGE_TAG
+      - ssh://git@github.com/equinixmetal/github-pr-template-buildkite-plugin#v0.2.0: {}
+      # Create Pull Request to main using commit from previous step
+      - envato/github-pull-request#v0.4.0:
+          title: "[buildkite] bump image tag to $IMAGE_TAG"
+          head: buildkite-yaml-update-$BUILDKITE_BUILD_NUMBER
+          base: main
+
+notify:
+  # PagerDuty Service: Delivery Engineering
+  # https://packet.pagerduty.com/services/P7N1J2P/integrations/P0KCDZB
+  - pagerduty_change_event: "ff2aedea7230430dd0e6e7a68154c59e"
+    if: build.state == 'passed' && build.branch == 'main'

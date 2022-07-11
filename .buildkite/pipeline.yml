@@ -1,7 +1,7 @@
 env:
   ARTIFACT_NAME: gov-okta-addon
   GOPRIVATE: github.com/equinixmetal/*,go.equinixmetal.net
-  QUAY_REPO: quay.io/packet/gov-okta-addon
+  QUAY_REPO: quay.io/equinixmetal/gov-okta-addon
   IMAGE_TAG: ${BUILDKITE_BUILD_NUMBER}-${BUILDKITE_COMMIT:0:8}
   DEPLOYMENT_REPO: k8s-gov-okta-addon
 

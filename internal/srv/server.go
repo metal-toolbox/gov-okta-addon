@@ -13,6 +13,7 @@ import (
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
+	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
@@ -24,6 +25,8 @@ type Server struct {
 	Listen          string
 	Debug           bool
 	AuditFileWriter io.Writer
+	NATSClient      *NATSClient
+	OktaClient      *okta.Client
 }
 
 var (
@@ -113,11 +116,25 @@ func (s *Server) Run(ctx context.Context) error {
 		}
 	}()
 
+	if err := s.registerSubscriptionHandlers(); err != nil {
+		panic(err)
+	}
+
 	<-ctx.Done()
 
 	ctxShutDown, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer func() {
 		cancel()
+	}()
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+
+		if err := s.shutdownSubscriptions(); err != nil {
+			s.Logger.Warn("error shutting down subscription", zap.Error(err))
+		}
 	}()
 
 	if err := httpsrv.Shutdown(ctxShutDown); err != nil {

@@ -7,12 +7,18 @@ services:
     - serve
     - --debug
     - --pretty
+    - --development
     - --audit-log-path=/app-audit/audit.log
+    environment:
+      GOA_NATS_URL: nats://nats-server:4222
+      GOA_NATS_TOKEN: topSecret111
+      GOA_OKTA_TOKEN: ${GOA_OKTA_TOKEN}
     ports:
       - "8000:8000"
     restart: unless-stopped
     depends_on:
       - audit
+      - nats-server
     networks:
       - gov-okta-addon
     volumes:
@@ -30,6 +36,18 @@ services:
         target: /app-audit
         read_only: false
     restart: unless-stopped
+
+  nats-server:
+    image: nats:latest
+    command:
+      - -D
+      - --auth
+      - topSecret111
+    ports:
+      - "4222:4222"
+    restart: unless-stopped
+    networks:
+      - gov-okta-addon
 
 volumes:
   audit-log:

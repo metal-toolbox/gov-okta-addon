@@ -2,15 +2,20 @@ package cmd
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"os/signal"
+	"time"
 
 	audithelpers "github.com/metal-toolbox/auditevent/helpers"
 	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"go.equinixmetal.net/gov-okta-addon/internal/governor"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
+	"go.equinixmetal.net/gov-okta-addon/internal/reconciler"
 	"go.equinixmetal.net/gov-okta-addon/internal/srv"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 // serveCmd startes the gov-okta-addon service
@@ -58,6 +63,24 @@ func init() {
 	viperBindFlag("okta.url", serveCmd.Flags().Lookup("okta-url"))
 	serveCmd.Flags().String("okta-token", "", "token for access to the Okta API")
 	viperBindFlag("okta.token", serveCmd.Flags().Lookup("okta-token"))
+	serveCmd.Flags().Bool("okta-nocache", false, "disable the okta client cache, useful for development")
+	viperBindFlag("okta.nocache", serveCmd.Flags().Lookup("okta-nocache"))
+
+	// Governor related flags
+	serveCmd.Flags().String("governor-url", "https://api.governor.metalkube.net", "url of the governor api")
+	viperBindFlag("governor.url", serveCmd.Flags().Lookup("governor-url"))
+	serveCmd.Flags().String("governor-client-id", "dfghdfhfd∂", "oauth client ID for client credentials flow")
+	viperBindFlag("governor.client-id", serveCmd.Flags().Lookup("governor-client-id"))
+	serveCmd.Flags().String("governor-client-secret", "", "oauth client secret for client credentials flow")
+	viperBindFlag("governor.client-secret", serveCmd.Flags().Lookup("governor-client-secret"))
+	serveCmd.Flags().String("governor-token-url", "http://hydra:4444/oauth2/token", "url used for client credential flow")
+	viperBindFlag("governor.token-url", serveCmd.Flags().Lookup("governor-token-url"))
+	serveCmd.Flags().String("governor-audience", "https://api.governor.metalkube.net", "oauth audience for client credential flow")
+	viperBindFlag("governor.audience", serveCmd.Flags().Lookup("governor-audience"))
+
+	// Reconciler flags
+	serveCmd.Flags().Duration("reconciler-interval", 1*time.Hour, "interval for the reconciler loop")
+	viperBindFlag("reconciler.interval", serveCmd.Flags().Lookup("reconciler-interval"))
 }
 
 func serve(cmdCtx context.Context, v *viper.Viper) error {
@@ -106,10 +129,37 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		okta.WithLogger(logger.Desugar()),
 		okta.WithURL(viper.GetString("okta.url")),
 		okta.WithToken(viper.GetString("okta.token")),
+		okta.WithCache((!viper.GetBool("okta.nocache"))),
 	)
 	if err != nil {
 		return err
 	}
+
+	gc, err := governor.NewClient(
+		governor.WithLogger(logger.Desugar()),
+		governor.WithURL(viper.GetString("governor.url")),
+		governor.WithClientCredentialConfig(&clientcredentials.Config{
+			ClientID:       viper.GetString("governor.client-id"),
+			ClientSecret:   viper.GetString("governor.client-secret"),
+			TokenURL:       viper.GetString("governor.token-url"),
+			EndpointParams: url.Values{"audience": {viper.GetString("governor.audience")}},
+			Scopes: []string{
+				"read:governor:users",
+				"read:governor:groups",
+				"read:governor:organizations",
+			},
+		}),
+	)
+	if err != nil {
+		return err
+	}
+
+	rec := reconciler.New(
+		reconciler.WithLogger(logger.Desugar()),
+		reconciler.WithInterval(viper.GetDuration("reconciler.interval")),
+		reconciler.WithGovernorClient(gc),
+		reconciler.WithOktaClient(oc),
+	)
 
 	server := &srv.Server{
 		Debug:           viper.GetBool("logging.debug"),
@@ -118,6 +168,7 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		AuditFileWriter: auf,
 		NATSClient:      natsClient,
 		OktaClient:      oc,
+		Reconciler:      rec,
 	}
 
 	logger.Infow("starting server", "address", viper.GetString("listen"))

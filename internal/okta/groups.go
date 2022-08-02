@@ -74,14 +74,16 @@ func (c *Client) DeleteGroup(ctx context.Context, id string) error {
 func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, error) {
 	c.logger.Info("getting group by governor id", zap.String("governor.id", id))
 
-	f := fmt.Sprintf("profile.governor_id eq %s", id)
+	f := fmt.Sprintf("profile.governor_id eq \"%s\"", id)
 
 	groups, _, err := c.groupIface.ListGroups(ctx, &query.Params{Search: f})
 	if err != nil {
 		return "", err
 	}
 
-	if len(groups) != 1 {
+	if len(groups) == 0 {
+		return "", ErrGroupsNotFound
+	} else if len(groups) > 1 {
 		return "", ErrUnexpectedGroupsCount
 	}
 

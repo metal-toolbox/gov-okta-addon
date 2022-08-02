@@ -2,7 +2,9 @@ version: "3.9"
 
 services:
   gov-okta-addon:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     command:
     - serve
     - --debug
@@ -13,6 +15,12 @@ services:
       GOA_NATS_URL: nats://nats-server:4222
       GOA_NATS_TOKEN: topSecret111
       GOA_OKTA_TOKEN: ${GOA_OKTA_TOKEN}
+      GOA_OKTA_NOCACHE: true
+      GOA_GOVERNOR_URL: ${GOA_GOVERNOR_URL}
+      GOA_GOVERNOR_CLIENT_ID: girder-governor
+      GOA_GOVERNOR_CLIENT_SECRET: ${GOA_GOVERNOR_CLIENT_SECRET}
+      GOA_GOVERNOR_TOKEN_URL: https://hydra.edge-a.ewr1.metalkube.net/oauth2/token
+      GOA_RECONCILER_INTERVAL: 60s
     ports:
       - "8000:8000"
     restart: unless-stopped

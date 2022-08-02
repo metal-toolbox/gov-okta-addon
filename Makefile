@@ -11,7 +11,7 @@ unit-test: | lint
 	@echo Running unit tests...
 	@go test -cover -short -tags testtools ./...
 
-coverage: | test-database
+coverage:
 	@echo Generating coverage report...
 	@go test ./... -race -coverprofile=coverage.out -covermode=atomic -tags testtools -p 1
 	@go tool cover -func=coverage.out
@@ -23,6 +23,10 @@ golint: | vendor
 	@echo Linting Go files...
 	@golangci-lint run --build-tags "-tags testtools"
 
+build:
+	@go mod download
+	@CGO_ENABLED=0 GOOS=linux go build -mod=readonly -v -o gov-okta-addon
+
 clean: docker-clean
 	@echo Cleaning...
 	@rm -rf ./dist/
@@ -33,7 +37,7 @@ vendor:
 	@go mod download
 	@go mod tidy
 
-docker-up:
+docker-up: | build
 	@docker-compose -f docker-compose.yml up -d gov-okta-addon
 
 docker-down:

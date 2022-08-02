@@ -10,12 +10,22 @@ import (
 
 // Client is a client that can talk to Okta
 type Client struct {
+	appIface   ApplicationInterface
 	groupIface GroupInterface
 	userIface  UserInterface
 	logger     *zap.Logger
 
-	url   string
-	token string
+	url          string
+	token        string
+	cacheEnabled bool
+}
+
+// ApplicationInterface abstracts the interactions with okta applications
+type ApplicationInterface interface {
+	ListApplications(context.Context, *query.Params) ([]okta.App, *okta.Response, error)
+	CreateApplicationGroupAssignment(ctx context.Context, appID string, groupID string, body okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error)
+	GetApplicationGroupAssignment(ctx context.Context, appID string, groupID string, qp *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error)
+	ListApplicationGroupAssignments(ctx context.Context, appID string, qp *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error)
 }
 
 // GroupInterface is the interface for managing groups in Okta
@@ -50,6 +60,13 @@ func WithToken(t string) Option {
 	}
 }
 
+// WithCache enabled the okta client memory cache, default enabled.
+func WithCache(t bool) Option {
+	return func(c *Client) {
+		c.cacheEnabled = t
+	}
+}
+
 // WithLogger sets logger
 func WithLogger(l *zap.Logger) Option {
 	return func(c *Client) {
@@ -71,11 +88,13 @@ func NewClient(opts ...Option) (*Client, error) {
 		context.TODO(),
 		okta.WithOrgUrl(client.url),
 		okta.WithToken(client.token),
+		okta.WithCache(client.cacheEnabled),
 	)
 	if err != nil {
 		return nil, err
 	}
 
+	client.appIface = c.Application
 	client.groupIface = c.Group
 	client.userIface = c.User
 

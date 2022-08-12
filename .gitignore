@@ -13,3 +13,4 @@ config.yaml
 tmp
 /bootstrap
 gov-okta-addon
+config.*

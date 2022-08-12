@@ -24,6 +24,7 @@ type Client struct {
 type ApplicationInterface interface {
 	ListApplications(context.Context, *query.Params) ([]okta.App, *okta.Response, error)
 	CreateApplicationGroupAssignment(ctx context.Context, appID string, groupID string, body okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error)
+	DeleteApplicationGroupAssignment(ctx context.Context, appID string, groupID string) (*okta.Response, error)
 	GetApplicationGroupAssignment(ctx context.Context, appID string, groupID string, qp *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error)
 	ListApplicationGroupAssignments(ctx context.Context, appID string, qp *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error)
 }

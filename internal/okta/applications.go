@@ -14,7 +14,7 @@ const (
 
 // GithubCloudApplications returns a map of all Okta Github cloud applications with org name as the key and the okta ID as the value
 func (c *Client) GithubCloudApplications(ctx context.Context) (map[string]string, error) {
-	applications, _, err := c.appIface.ListApplications(ctx, &query.Params{Filter: "name eq \"githubcloud\"", Limit: defaultPageLimit})
+	applications, err := c.listApplications(ctx, &query.Params{Filter: "name eq \"githubcloud\"", Limit: defaultPageLimit})
 	if err != nil {
 		return nil, err
 	}
@@ -48,6 +48,34 @@ func (c *Client) GithubCloudApplications(ctx context.Context) (map[string]string
 	return apps, nil
 }
 
+// listApplications returns all of the applications modified by the query parameters
+func (c *Client) listApplications(ctx context.Context, qp *query.Params) ([]okta.App, error) {
+	apps, resp, err := c.appIface.ListApplications(ctx, qp)
+	if err != nil {
+		return nil, err
+	}
+
+	c.logger.Debug("output from listing applications", zap.Any("okta.application", apps), zap.Any("response", resp))
+
+	list := make([]okta.App, len(apps))
+	copy(list, apps)
+
+	for {
+		if !resp.HasNextPage() {
+			break
+		}
+
+		resp, err = resp.Next(ctx, &apps)
+		if err != nil {
+			return nil, err
+		}
+
+		list = append(list, apps...)
+	}
+
+	return list, nil
+}
+
 // AssignGroupToApplication assigns a group to an okta application
 func (c *Client) AssignGroupToApplication(ctx context.Context, appID, groupID string) error {
 	assignment, _, err := c.appIface.CreateApplicationGroupAssignment(ctx, appID, groupID, okta.ApplicationGroupAssignment{})
@@ -56,6 +84,17 @@ func (c *Client) AssignGroupToApplication(ctx context.Context, appID, groupID st
 	}
 
 	c.logger.Debug("output from application group assignment", zap.Any("okta.assignment", assignment))
+
+	return nil
+}
+
+// RemoveApplicationGroupAssignment removes an application group assignment
+func (c *Client) RemoveApplicationGroupAssignment(ctx context.Context, appID, groupID string) error {
+	if _, err := c.appIface.DeleteApplicationGroupAssignment(ctx, appID, groupID); err != nil {
+		return err
+	}
+
+	c.logger.Debug("deleted application group assignment", zap.String("okta.app.id", appID), zap.String("okta.group.id", groupID))
 
 	return nil
 }

@@ -92,20 +92,22 @@ func (r *Reconciler) Run(ctx context.Context) {
 
 			r.logger.Debug("got groups response", zap.Any("groups list", groups))
 
-			oktaAppOrgs, err := r.oktaClient.GithubCloudApplications(ctx)
-			if err != nil {
-				r.logger.Error("error listing okta githubcloud applications", zap.Error(err))
-				continue
-			}
-
-			r.logger.Debug("got okta github cloud orgs", zap.Any("github.orgs", oktaAppOrgs))
+			groupMap := map[string]*v1alpha.Group{}
 
 			for _, g := range groups {
-				if err := r.reconcileGroup(ctx, g, oktaAppOrgs); err != nil {
-					r.logger.Error("error reconciling governor group", zap.String("group.id", g.ID), zap.String("group.slug", g.Slug))
+				oktaGroupID, err := r.reconcileGroupExists(ctx, g)
+				if err != nil {
+					r.logger.Error("error reconciling governor group exists", zap.String("group.id", g.ID), zap.String("group.slug", g.Slug))
 					continue
 				}
+
+				groupMap[oktaGroupID] = g
 			}
+
+			if err := r.reconcileGroupApplications(ctx, groupMap); err != nil {
+				r.logger.Error("error reconciling group application links", zap.Error(err))
+			}
+
 		case <-ctx.Done():
 			r.logger.Info("shutting down reconciler",
 				zap.String("time", time.Now().UTC().Format(time.RFC3339)),
@@ -116,21 +118,116 @@ func (r *Reconciler) Run(ctx context.Context) {
 	}
 }
 
-// reconcileGroup reconciles a governor group with an okta group
-func (r *Reconciler) reconcileGroup(ctx context.Context, g *v1alpha.Group, oktaAppOrgs map[string]string) error {
+// reconcileGroupApplications reconciles the application assignments for all groups.  It takes a map
+// of okta group ids to governor groups and does it's best to make as few calls to okta as possible.
+func (r *Reconciler) reconcileGroupApplications(ctx context.Context, gm map[string]*v1alpha.Group) error {
+	oktaAppOrgs, err := r.oktaClient.GithubCloudApplications(ctx)
+	if err != nil {
+		r.logger.Error("error listing okta githubcloud applications", zap.Error(err))
+		return err
+	}
+
+	r.logger.Debug("got okta github cloud orgs", zap.Any("github.orgs", oktaAppOrgs))
+
+	govOrgs, err := r.governorClient.Organizations(ctx)
+	if err != nil {
+		r.logger.Error("error listing governor organizations", zap.Error(err))
+		return err
+	}
+
+	r.logger.Debug("got governor organizations", zap.Any("governor.orgs", govOrgs))
+
+	// for each of the okta github cloud applications, get the groups assigned to the application
+	for org, appID := range oktaAppOrgs {
+		logger := r.logger.With(zap.String("okta.app.org", org), zap.String("okta.app.id", appID))
+
+		assignments, err := r.oktaClient.ListGroupApplicationAssignment(ctx, appID)
+		if err != nil {
+			logger.Error("error listing okta group assigned to okta application")
+			return err
+		}
+
+		logger.Debug("list of groups for application", zap.Any("groups", assignments))
+
+		// foreach governor/okta group, check if should be assigned to the app and reconcile
+		for gID, g := range gm {
+			logger := logger.With(zap.String("group.id", g.ID), zap.String("group.slug", g.Slug))
+
+			groupDetails, err := r.governorClient.Group(ctx, g.ID)
+			if err != nil {
+				logger.Error("error getting governor group", zap.Error(err))
+				return err
+			}
+
+			logger.Debug("got governor group response", zap.Any("group details", groupDetails))
+
+			slugs := getGroupOrgSlugs(groupDetails, govOrgs)
+
+			logger.Debug("got governor group org slugs", zap.Strings("slugs", slugs))
+
+			// if the group organizations contains the github organization for the okta application
+			if contains(slugs, org) {
+				logger.Debug("group org list contains app org slug, ensuring group is assigned to okta app")
+
+				// ensure it exists in the app in okta
+				if contains(assignments, gID) {
+					continue
+				}
+
+				// assign group to the application
+				logger.Info("assigning okta group to okta application")
+
+				if err := r.oktaClient.AssignGroupToApplication(ctx, appID, gID); err != nil {
+					logger.Error("error assigning okta group to okta application", zap.String("okta.app.id", appID), zap.String("okta.group.id", gID))
+					return err
+				}
+
+				continue
+			}
+
+			logger.Debug("group org list does not contain app org slug, ensuring group is not assigned to okta app")
+
+			// ensure it doesn't exist in the okta app
+			if !contains(assignments, gID) {
+				continue
+			}
+
+			// remove group from the application
+			logger.Info("removing assignment of okta group from okta application")
+
+			if err := r.oktaClient.RemoveApplicationGroupAssignment(ctx, appID, gID); err != nil {
+				logger.Error("error removing okta group from okta application", zap.String("okta.app.id", appID), zap.String("okta.group.id", gID))
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// getGroupOrgSlugs returns the organization slugs for a governor group
+func getGroupOrgSlugs(group *v1alpha.Group, orgs []*v1alpha.Organization) []string {
+	slugs := []string{}
+
+	for _, g := range group.Organizations {
+		for _, o := range orgs {
+			if o.ID == g {
+				slugs = append(slugs, o.Slug)
+				break
+			}
+		}
+	}
+
+	return slugs
+}
+
+func (r *Reconciler) reconcileGroupExists(ctx context.Context, g *v1alpha.Group) (string, error) {
 	logger := r.logger.With(zap.String("group.id", g.ID), zap.String("group.slug", g.Slug))
 
 	group, err := r.governorClient.Group(ctx, g.ID)
 	if err != nil {
 		logger.Error("error getting governor group", zap.Error(err))
-		return err
-	}
-
-	// TODO remove this once we're more comfortable with governor managing okta groups
-	// use assigned organizations in governor to trigger creating groups in Okta
-	if len(group.Organizations) == 0 {
-		logger.Info("skipping group without any organizations assigned")
-		return nil
+		return "", err
 	}
 
 	logger.Debug("got group response", zap.Any("group details", group))
@@ -139,59 +236,23 @@ func (r *Reconciler) reconcileGroup(ctx context.Context, g *v1alpha.Group, oktaA
 	if err != nil {
 		if !errors.Is(err, okta.ErrGroupsNotFound) {
 			logger.Error("error getting okta group by governor id", zap.Error(err))
-			return err
+			return "", err
 		}
 
 		ogID, err := r.oktaClient.CreateGroup(ctx, g.Name, g.Description, map[string]interface{}{"governor_id": g.ID})
 		if err != nil {
 			logger.Error("error creating okta group", zap.Error(err))
-			return err
+			return "", err
 		}
 
 		logger.Info("created okta group", zap.String("okta.group.id", ogID))
+
+		return ogID, nil
 	}
 
 	logger.Debug("got okta group", zap.Any("okta.group", oktaGroup))
 
-	for _, o := range group.Organizations {
-		org, err := r.governorClient.Organization(ctx, o)
-		if err != nil {
-			logger.Error("error getting organization from governor", zap.Error(err))
-			return err
-		}
-
-		logger.Debug("got governor organization", zap.Any("governor.org", org))
-
-		oktaAppID, ok := oktaAppOrgs[org.Name]
-		if !ok {
-			logger.Warn("assigned organization not found in okta github applications", zap.String("governor.org", org.Name))
-			continue
-		}
-
-		assignments, err := r.oktaClient.ListGroupApplicationAssignment(ctx, oktaAppID)
-		if err != nil {
-			logger.Error("error listing okta group assigned to okta application", zap.String("okta.app", oktaAppID))
-			return err
-		}
-
-		logger.Debug("list of groups for application", zap.Any("groups", assignments))
-
-		if contains(assignments, oktaGroup) {
-			continue
-		}
-
-		// if err := r.oktaClient.GetGroupApplicationAssignment(ctx, oktaAppID, oktaGroup); err != nil {
-		// 	logger.Error("error getting okta group to okta application assignment", zap.String("okta.app", oktaAppID), zap.String("okta.group.id", oktaGroup))
-		// 	return err
-		// }
-
-		if err := r.oktaClient.AssignGroupToApplication(ctx, oktaAppID, oktaGroup); err != nil {
-			logger.Error("error assigning okta group to okta application", zap.String("okta.app", oktaAppID), zap.String("okta.group.id", oktaGroup))
-			return err
-		}
-	}
-
-	return nil
+	return oktaGroup, nil
 }
 
 func contains(list []string, item string) bool {

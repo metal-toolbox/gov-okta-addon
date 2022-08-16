@@ -69,7 +69,7 @@ func init() {
 	// Governor related flags
 	serveCmd.Flags().String("governor-url", "https://api.governor.metalkube.net", "url of the governor api")
 	viperBindFlag("governor.url", serveCmd.Flags().Lookup("governor-url"))
-	serveCmd.Flags().String("governor-client-id", "dfghdfhfd∂", "oauth client ID for client credentials flow")
+	serveCmd.Flags().String("governor-client-id", "gov-okta-addon-governor", "oauth client ID for client credentials flow")
 	viperBindFlag("governor.client-id", serveCmd.Flags().Lookup("governor-client-id"))
 	serveCmd.Flags().String("governor-client-secret", "", "oauth client secret for client credentials flow")
 	viperBindFlag("governor.client-secret", serveCmd.Flags().Lookup("governor-client-secret"))

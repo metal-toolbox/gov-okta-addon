@@ -7,7 +7,6 @@ WORKDIR /app
 ARG ACTIONS_BOT_GITHUB_PAT
 ENV ACTIONS_BOT_GITHUB_PAT=${ACTIONS_BOT_GITHUB_PAT}
 RUN git config --global url."https://${ACTIONS_BOT_GITHUB_PAT}:x-oauth-basic@github.com/equinixmetal".insteadOf "https://github.com/equinixmetal"
-RUN git config --global url."https://${ACTIONS_BOT_GITHUB_PAT}:x-oauth-basic@github.com/packethost".insteadOf "https://github.com/packethost"
 ENV GOPRIVATE=github.com/equinixmetal/*,go.equinixmetal.net
 
 # Retrieve application dependencies using go modules.

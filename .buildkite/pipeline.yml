@@ -45,6 +45,8 @@ steps:
           command: ["go", "build", "-mod=mod", "-a", "-o", "gov-okta-addon-bin"]
 
   - label: ":docker: docker build and publish"
+    agents:
+      queue: "test-em-quay"
     key: "build"
     depends_on: ["lint", "test", "gobuild"]
     commands: |

@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"time"
 
 	audithelpers "github.com/metal-toolbox/auditevent/helpers"
@@ -84,6 +86,10 @@ func init() {
 
 func serve(cmdCtx context.Context, v *viper.Viper) error {
 	initTracing()
+
+	if err := validateMandatoryFlags(); err != nil {
+		return err
+	}
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -180,7 +186,6 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 }
 
 // newNATSConnection creates a new NATS connection
-// TODO: modify for auth/tls settings once we finalize NATS deployment details
 func newNATSConnection() (*nats.Conn, error) {
 	opts := []nats.Option{}
 
@@ -201,4 +206,51 @@ func newNATSConnection() (*nats.Conn, error) {
 		viper.GetString("nats-url"),
 		opts...,
 	)
+}
+
+// validateMandatoryFlags collects the mandatory flag validation
+func validateMandatoryFlags() error {
+	errs := []string{}
+
+	if viper.GetString("nats.url") == "" {
+		errs = append(errs, ErrNATSURLRequired.Error())
+	}
+
+	if viper.GetString("nats.token") == "" && viper.GetString("nats.nkey") == "" {
+		errs = append(errs, ErrNATSAuthRequired.Error())
+	}
+
+	if viper.GetString("okta.url") == "" {
+		errs = append(errs, ErrOktaURLRequired.Error())
+	}
+
+	if viper.GetString("okta.token") == "" {
+		errs = append(errs, ErrOktaTokenRequired.Error())
+	}
+
+	if viper.GetString("governor.url") == "" {
+		errs = append(errs, ErrGovernorURLRequired.Error())
+	}
+
+	if viper.GetString("governor.client-id") == "" {
+		errs = append(errs, ErrGovernorClientIDRequired.Error())
+	}
+
+	if viper.GetString("governor.client-secret") == "" {
+		errs = append(errs, ErrGovernorClientSecretRequired.Error())
+	}
+
+	if viper.GetString("governor.token-url") == "" {
+		errs = append(errs, ErrGovernorClientTokenURLRequired.Error())
+	}
+
+	if viper.GetString("governor.audience") == "" {
+		errs = append(errs, ErrGovernorClientAudienceRequired.Error())
+	}
+
+	if len(errs) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf(strings.Join(errs, "\n")) //nolint:goerr113
 }

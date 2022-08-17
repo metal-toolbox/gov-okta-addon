@@ -24,7 +24,7 @@ steps:
           environment:
             - "GOPRIVATE"
             - "GITHUB_TOKEN"
-          entrypoint: ./entrypoint.sh
+          entrypoint: ./scripts/ci_entrypoint.sh
           command: ["go", "test", "-cover" ,"-race", "./..."]
 
   - label: ":golang: build"
@@ -41,7 +41,7 @@ steps:
             - GITHUB_TOKEN
             - CGO_ENABLED=0
             - GOOS=linux
-          entrypoint: ./entrypoint.sh
+          entrypoint: ./scripts/ci_entrypoint.sh
           command: ["go", "build", "-mod=mod", "-a", "-o", "gov-okta-addon-bin"]
 
   - label: ":docker: docker build and publish"

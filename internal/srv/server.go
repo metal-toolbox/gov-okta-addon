@@ -13,10 +13,12 @@ import (
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
-	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
+
+	"go.equinixmetal.net/gov-okta-addon/internal/okta"
+	"go.equinixmetal.net/gov-okta-addon/internal/reconciler"
 )
 
 // Server implements the HTTP Server
@@ -27,6 +29,7 @@ type Server struct {
 	AuditFileWriter io.Writer
 	NATSClient      *NATSClient
 	OktaClient      *okta.Client
+	Reconciler      *reconciler.Reconciler
 }
 
 var (
@@ -115,6 +118,8 @@ func (s *Server) Run(ctx context.Context) error {
 			panic(err)
 		}
 	}()
+
+	go s.Reconciler.Run(ctx)
 
 	if err := s.registerSubscriptionHandlers(); err != nil {
 		panic(err)

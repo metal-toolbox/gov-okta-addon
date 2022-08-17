@@ -16,18 +16,33 @@ steps:
   - label: ":test_tube: test"
     key: "test"
     plugins:
+      - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.2:
+          parameters:
+            GITHUB_TOKEN: /buildkite/github/personal-access-token/v1
       - docker#v3.13.0:
           image: "golang:1.18"
-          command: ["go", "test", "-cover", "-short", "-tags", "testtools", "./..."]
+          environment:
+            - "GOPRIVATE"
+            - "GITHUB_TOKEN"
+          entrypoint: ./scripts/ci_entrypoint.sh
+          command: ["go", "test", "-cover" ,"-race", "./..."]
 
   - label: ":golang: build"
     key: "gobuild"
-    commands:
-      - CGO_ENABLED=0 GOOS=linux go build -mod=mod -a -o ${ARTIFACT_NAME}-bin main.go && chmod +x ${ARTIFACT_NAME}-bin
     artifact_paths: "${ARTIFACT_NAME}-bin"
     plugins:
+      - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.2:
+          parameters:
+            GITHUB_TOKEN: /buildkite/github/personal-access-token/v1
       - docker#v3.13.0:
           image: "golang:1.18"
+          environment:
+            - GOPRIVATE
+            - GITHUB_TOKEN
+            - CGO_ENABLED=0
+            - GOOS=linux
+          entrypoint: ./scripts/ci_entrypoint.sh
+          command: ["go", "build", "-mod=mod", "-a", "-o", "gov-okta-addon-bin"]
 
   - label: ":docker: docker build and publish"
     key: "build"

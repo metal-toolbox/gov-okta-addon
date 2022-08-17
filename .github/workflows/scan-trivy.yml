@@ -22,10 +22,12 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           context: .
-          file: ./Dockerfile
+          file: ./Dockerfile.dev
           push: false
           load: true
           tags: localbuild/sec-scan-trivy:latest
+          build-args: |
+            ACTIONS_BOT_GITHUB_PAT=${{ secrets.ACTIONS_BOT_GITHUB_PAT }}
 
       - name: Scan image
         uses: aquasecurity/trivy-action@master

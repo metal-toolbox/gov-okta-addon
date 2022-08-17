@@ -120,7 +120,7 @@ func (c *Client) ListGroupApplicationAssignment(ctx context.Context, appID strin
 		return nil, err
 	}
 
-	c.logger.Debug("output from listing application group assignments", zap.Any("okta.assignment", assignments), zap.Any("response", resp))
+	c.logger.Debug("output from listing application group assignments", zap.Any("okta.assignment", assignments))
 
 	for _, a := range assignments {
 		groups = append(groups, a.Id)

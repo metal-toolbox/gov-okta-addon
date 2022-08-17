@@ -6,13 +6,15 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+
+	"go.equinixmetal.net/governor/pkg/api/v1alpha"
 )
 
 func TestServer_unmarshalPayload(t *testing.T) {
 	tests := []struct {
 		name    string
 		message *nats.Msg
-		want    *GovernorEvent
+		want    *v1alpha.Event
 		wantErr bool
 	}{
 		{
@@ -21,7 +23,7 @@ func TestServer_unmarshalPayload(t *testing.T) {
 				Subject: "foobar",
 				Data:    []byte(`{"version": "v1", "action": "CREATE", "group_id": "12345"}`),
 			},
-			want: &GovernorEvent{
+			want: &v1alpha.Event{
 				Version: "v1",
 				Action:  "CREATE",
 				GroupID: "12345",

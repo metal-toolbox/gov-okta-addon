@@ -14,3 +14,5 @@ tmp
 /bootstrap
 gov-okta-addon
 config.*
+nats.nkey
+audit.log

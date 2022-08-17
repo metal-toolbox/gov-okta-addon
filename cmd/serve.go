@@ -35,13 +35,12 @@ func init() {
 
 	serveCmd.Flags().String("nats-url", "nats://127.0.0.1:4222", "NATS server connection url")
 	viperBindFlag("nats.url", serveCmd.Flags().Lookup("nats-url"))
-
 	serveCmd.Flags().String("nats-token", "", "NATS auth token")
 	viperBindFlag("nats.token", serveCmd.Flags().Lookup("nats-token"))
-
-	serveCmd.Flags().String("nats-subject-prefix", "equinixmetal.governor.addons", "prefix for NATS subjects")
+	serveCmd.Flags().String("nats-nkey", "", "Path to the file containing the NATS nkey keypair")
+	viperBindFlag("nats.nkey", serveCmd.Flags().Lookup("nats-nkey"))
+	serveCmd.Flags().String("nats-subject-prefix", "equinixmetal.governor.events", "prefix for NATS subjects")
 	viperBindFlag("nats.subject-prefix", serveCmd.Flags().Lookup("nats-subject-prefix"))
-
 	serveCmd.Flags().String("nats-queue-group", "equinixmetal.governor.addons.gov-okta-addon", "queue group for load balancing messages across NATS consumers")
 	viperBindFlag("nats.queue-group", serveCmd.Flags().Lookup("nats-queue-group"))
 
@@ -183,12 +182,19 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 // newNATSConnection creates a new NATS connection
 // TODO: modify for auth/tls settings once we finalize NATS deployment details
 func newNATSConnection() (*nats.Conn, error) {
-	opts := []nats.Option{
-		nats.Token(viper.GetString("nats.token")),
-	}
+	opts := []nats.Option{}
 
 	if viper.GetBool("development") {
 		logger.Debug("enabling development settings")
+
+		opts = append(opts, nats.Token(viper.GetString("nats.token")))
+	} else {
+		opt, err := nats.NkeyOptionFromSeed(viper.GetString("nats-nkey"))
+		if err != nil {
+			return nil, err
+		}
+
+		opts = append(opts, opt)
 	}
 
 	return nats.Connect(

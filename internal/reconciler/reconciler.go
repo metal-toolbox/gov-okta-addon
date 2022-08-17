@@ -70,7 +70,11 @@ func New(opts ...Option) *Reconciler {
 	return &rec
 }
 
-// Run starts the reconciler
+// Run starts the reconciler.  The reconciler loop:
+//   - gets the full list of groups from governor
+//   - ensures each of those groups exist in okta
+//   - assigns github applications to those groups in okta for
+//     each organization associated with the group
 func (r *Reconciler) Run(ctx context.Context) {
 	ticker := time.NewTicker(r.interval)
 	defer ticker.Stop()
@@ -92,19 +96,31 @@ func (r *Reconciler) Run(ctx context.Context) {
 
 			r.logger.Debug("got groups response", zap.Any("groups list", groups))
 
+			// collect a map of okta group ids to governor groups so we don't have to
+			// go back to the okta API for this data and risk getting throttled
 			groupMap := map[string]*v1alpha.Group{}
 
 			for _, g := range groups {
-				oktaGroupID, err := r.reconcileGroupExists(ctx, g)
+				logger := r.logger.With(zap.String("governor.group.id", g.ID), zap.String("governor.group.slug", g.Slug))
+
+				groupDetails, err := r.governorClient.Group(ctx, g.ID)
 				if err != nil {
-					r.logger.Error("error reconciling governor group exists", zap.String("group.id", g.ID), zap.String("group.slug", g.Slug))
+					logger.Error("error getting governor group details", zap.Error(err))
 					continue
 				}
 
-				groupMap[oktaGroupID] = g
+				logger.Debug("got governor group response", zap.Any("group details", groupDetails))
+
+				oktaGroupID, err := r.ReconcileGroupExists(ctx, g.ID)
+				if err != nil {
+					logger.Error("error reconciling governor group exists")
+					continue
+				}
+
+				groupMap[oktaGroupID] = groupDetails
 			}
 
-			if err := r.reconcileGroupApplications(ctx, groupMap); err != nil {
+			if err := r.reconcileGroupApplicationAssignments(ctx, groupMap); err != nil {
 				r.logger.Error("error reconciling group application links", zap.Error(err))
 			}
 
@@ -118,12 +134,48 @@ func (r *Reconciler) Run(ctx context.Context) {
 	}
 }
 
-// reconcileGroupApplications reconciles the application assignments for all groups.  It takes a map
-// of okta group ids to governor groups and does it's best to make as few calls to okta as possible.
-func (r *Reconciler) reconcileGroupApplications(ctx context.Context, gm map[string]*v1alpha.Group) error {
+// ReconcileGroupsApplicationAssignments reconciles application assignments for a list of governor groups
+func (r *Reconciler) ReconcileGroupsApplicationAssignments(ctx context.Context, ids ...string) error {
+	groupMap := map[string]*v1alpha.Group{}
+
+	for _, id := range ids {
+		logger := r.logger.With(zap.String("group.id", id))
+
+		// get the details about a governor group
+		group, err := r.governorClient.Group(ctx, id)
+		if err != nil {
+			logger.Error("error getting governor group details", zap.Error(err))
+			continue
+		}
+
+		logger.Debug("got governor group response", zap.Any("group details", group))
+
+		// get the okta id for the governor group
+		og, err := r.oktaClient.GetGroupByGovernorID(ctx, id)
+		if err != nil {
+			logger.Error("error getting okta group by governor id", zap.Error(err))
+			continue
+		}
+
+		groupMap[og] = group
+	}
+
+	if err := r.reconcileGroupApplicationAssignments(ctx, groupMap); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// reconcileGroupApplicationAssignments reconciles the application assignments for all groups.  It takes a map
+// of okta group ids to governor groups and does it's best to make as few calls to okta as possible to prevent
+// throttling.  A call to this function without any changes will result in n+1 calls to the Okta API where
+// n is the number of Okta github cloud applications.
+func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, gm map[string]*v1alpha.Group) error {
+	// get the github cloud apps first from okta
 	oktaAppOrgs, err := r.oktaClient.GithubCloudApplications(ctx)
 	if err != nil {
-		r.logger.Error("error listing okta githubcloud applications", zap.Error(err))
+		r.logger.Error("error listing okta github cloud applications", zap.Error(err))
 		return err
 	}
 
@@ -151,17 +203,9 @@ func (r *Reconciler) reconcileGroupApplications(ctx context.Context, gm map[stri
 
 		// foreach governor/okta group, check if should be assigned to the app and reconcile
 		for gID, g := range gm {
-			logger := logger.With(zap.String("group.id", g.ID), zap.String("group.slug", g.Slug))
+			logger := logger.With(zap.String("governor.group.id", g.ID), zap.String("governor.group.slug", g.Slug), zap.String("okta.group.id", gID))
 
-			groupDetails, err := r.governorClient.Group(ctx, g.ID)
-			if err != nil {
-				logger.Error("error getting governor group", zap.Error(err))
-				return err
-			}
-
-			logger.Debug("got governor group response", zap.Any("group details", groupDetails))
-
-			slugs := getGroupOrgSlugs(groupDetails, govOrgs)
+			slugs := getGroupOrgSlugs(g, govOrgs)
 
 			logger.Debug("got governor group org slugs", zap.Strings("slugs", slugs))
 
@@ -175,10 +219,10 @@ func (r *Reconciler) reconcileGroupApplications(ctx context.Context, gm map[stri
 				}
 
 				// assign group to the application
-				logger.Info("assigning okta group to okta application")
+				logger.Info("assigning okta group to okta application", zap.String("okta.app.id", appID))
 
 				if err := r.oktaClient.AssignGroupToApplication(ctx, appID, gID); err != nil {
-					logger.Error("error assigning okta group to okta application", zap.String("okta.app.id", appID), zap.String("okta.group.id", gID))
+					logger.Error("error assigning okta group to okta application", zap.String("okta.app.id", appID))
 					return err
 				}
 
@@ -193,10 +237,10 @@ func (r *Reconciler) reconcileGroupApplications(ctx context.Context, gm map[stri
 			}
 
 			// remove group from the application
-			logger.Info("removing assignment of okta group from okta application")
+			logger.Info("removing assignment of okta group from okta application", zap.String("okta.app.id", appID))
 
 			if err := r.oktaClient.RemoveApplicationGroupAssignment(ctx, appID, gID); err != nil {
-				logger.Error("error removing okta group from okta application", zap.String("okta.app.id", appID), zap.String("okta.group.id", gID))
+				logger.Error("error removing okta group from okta application", zap.String("okta.app.id", appID))
 				return err
 			}
 		}
@@ -205,7 +249,7 @@ func (r *Reconciler) reconcileGroupApplications(ctx context.Context, gm map[stri
 	return nil
 }
 
-// getGroupOrgSlugs returns the organization slugs for a governor group
+// getGroupOrgSlugs returns the github organization slugs assigned to a governor group
 func getGroupOrgSlugs(group *v1alpha.Group, orgs []*v1alpha.Organization) []string {
 	slugs := []string{}
 
@@ -221,25 +265,26 @@ func getGroupOrgSlugs(group *v1alpha.Group, orgs []*v1alpha.Organization) []stri
 	return slugs
 }
 
-func (r *Reconciler) reconcileGroupExists(ctx context.Context, g *v1alpha.Group) (string, error) {
-	logger := r.logger.With(zap.String("group.id", g.ID), zap.String("group.slug", g.Slug))
-
-	group, err := r.governorClient.Group(ctx, g.ID)
+// ReconcileGroupExists ensures the governor group exists in okta
+func (r *Reconciler) ReconcileGroupExists(ctx context.Context, id string) (string, error) {
+	group, err := r.governorClient.Group(ctx, id)
 	if err != nil {
-		logger.Error("error getting governor group", zap.Error(err))
+		r.logger.Error("error getting governor group", zap.Error(err))
 		return "", err
 	}
 
-	logger.Debug("got group response", zap.Any("group details", group))
+	r.logger.Debug("got group response", zap.Any("group details", group))
 
-	oktaGroup, err := r.oktaClient.GetGroupByGovernorID(ctx, g.ID)
+	logger := r.logger.With(zap.String("governor.group.id", group.ID), zap.String("governor.group.slug", group.Slug))
+
+	oktaGroup, err := r.oktaClient.GetGroupByGovernorID(ctx, group.ID)
 	if err != nil {
 		if !errors.Is(err, okta.ErrGroupsNotFound) {
 			logger.Error("error getting okta group by governor id", zap.Error(err))
 			return "", err
 		}
 
-		ogID, err := r.oktaClient.CreateGroup(ctx, g.Name, g.Description, map[string]interface{}{"governor_id": g.ID})
+		ogID, err := r.oktaClient.CreateGroup(ctx, group.Name, group.Description, map[string]interface{}{"governor_id": group.ID})
 		if err != nil {
 			logger.Error("error creating okta group", zap.Error(err))
 			return "", err
@@ -253,6 +298,47 @@ func (r *Reconciler) reconcileGroupExists(ctx context.Context, g *v1alpha.Group)
 	logger.Debug("got okta group", zap.Any("okta.group", oktaGroup))
 
 	return oktaGroup, nil
+}
+
+// ReconcileGroupUpdate updates an existing governor group in okta
+func (r *Reconciler) ReconcileGroupUpdate(ctx context.Context, id string) (string, error) {
+	group, err := r.governorClient.Group(ctx, id)
+	if err != nil {
+		r.logger.Error("failed to get group from governor", zap.Error(err))
+		return "", err
+	}
+
+	logger := r.logger.With(zap.String("governor.group.id", group.ID), zap.String("governor.group.slug", group.Slug))
+
+	gid, err := r.oktaClient.GetGroupByGovernorID(ctx, group.ID)
+	if err != nil {
+		logger.Error("error getting group by governor id", zap.String("governor.group.id", group.ID), zap.Error(err))
+		return "", err
+	}
+
+	if err := r.oktaClient.UpdateGroup(ctx, gid, group.Name, group.Description, map[string]interface{}{"governor_id": group.ID}); err != nil {
+		logger.Error("error updating group", zap.Error(err))
+		return "", err
+	}
+
+	return gid, nil
+}
+
+// ReconcileGroupDelete deletes an existing governor group in okta
+func (r *Reconciler) ReconcileGroupDelete(ctx context.Context, id string) (string, error) {
+	// TODO validate the group is deleted from governor API by ID
+	gid, err := r.oktaClient.GetGroupByGovernorID(ctx, id)
+	if err != nil {
+		r.logger.Error("error getting okta group by governor id", zap.String("governor.group.id", id), zap.Error(err))
+		return "", err
+	}
+
+	if err := r.oktaClient.DeleteGroup(ctx, gid); err != nil {
+		r.logger.Error("error deleting group", zap.Error(err))
+		return "", err
+	}
+
+	return gid, nil
 }
 
 func contains(list []string, item string) bool {

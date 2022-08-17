@@ -13,11 +13,12 @@ import (
 	ginzap "github.com/gin-contrib/zap"
 	"github.com/gin-gonic/gin"
 	ginprometheus "github.com/zsais/go-gin-prometheus"
-	"go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.equinixmetal.net/gov-okta-addon/internal/reconciler"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
+
+	"go.equinixmetal.net/gov-okta-addon/internal/okta"
+	"go.equinixmetal.net/gov-okta-addon/internal/reconciler"
 )
 
 // Server implements the HTTP Server

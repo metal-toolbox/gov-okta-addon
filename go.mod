@@ -6,7 +6,7 @@ require (
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-contrib/zap v0.0.2
 	github.com/gin-gonic/gin v1.8.1
-	github.com/goccy/go-json v0.9.8
+	github.com/goccy/go-json v0.9.11
 	github.com/metal-toolbox/auditevent v0.2.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nats-io/nats.go v1.16.0

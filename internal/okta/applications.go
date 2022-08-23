@@ -99,18 +99,6 @@ func (c *Client) RemoveApplicationGroupAssignment(ctx context.Context, appID, gr
 	return nil
 }
 
-// GetGroupApplicationAssignment gets details about an application group assignment
-func (c *Client) GetGroupApplicationAssignment(ctx context.Context, appID, groupID string) error {
-	assignment, _, err := c.appIface.GetApplicationGroupAssignment(ctx, appID, groupID, &query.Params{})
-	if err != nil {
-		return err
-	}
-
-	c.logger.Debug("output from application group assignment", zap.Any("okta.assignment", assignment))
-
-	return nil
-}
-
 // ListGroupApplicationAssignment returns a list of the groups assigned to an application
 func (c *Client) ListGroupApplicationAssignment(ctx context.Context, appID string) ([]string, error) {
 	groups := []string{}

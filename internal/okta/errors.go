@@ -9,4 +9,6 @@ var (
 	ErrUnexpectedGroupsCount = errors.New("unexpected number of groups returned")
 	// ErrUnexpectedUsersCount is returned when we get an unexpected number of users, usually != 1
 	ErrUnexpectedUsersCount = errors.New("unexpected number of users returned")
+	// ErrApplicationBadParameters is returned when bad parameters are not passed to an app request
+	ErrApplicationBadParameters = errors.New("application request bad parameters")
 )

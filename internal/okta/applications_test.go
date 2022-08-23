@@ -79,6 +79,16 @@ func TestClient_AssignGroupToApplication(t *testing.T) {
 			groupID: "39712500-37a8-4102-bce9-432cbe2c28d2",
 		},
 		{
+			name:    "empty appID",
+			groupID: "39712500-37a8-4102-bce9-432cbe2c28d2",
+			wantErr: true,
+		},
+		{
+			name:    "empty groupID",
+			appID:   "14270ca5-ea9f-43b7-a560-f2014399bddc",
+			wantErr: true,
+		},
+		{
 			name:    "error",
 			appID:   "14270ca5-ea9f-43b7-a560-f2014399bddc",
 			groupID: "39712500-37a8-4102-bce9-432cbe2c28d2",
@@ -118,6 +128,16 @@ func TestClient_RemoveApplicationGroupAssignment(t *testing.T) {
 			name:    "example",
 			appID:   "14270ca5-ea9f-43b7-a560-f2014399bddc",
 			groupID: "39712500-37a8-4102-bce9-432cbe2c28d2",
+		},
+		{
+			name:    "empty appID",
+			groupID: "39712500-37a8-4102-bce9-432cbe2c28d2",
+			wantErr: true,
+		},
+		{
+			name:    "empty groupID",
+			appID:   "14270ca5-ea9f-43b7-a560-f2014399bddc",
+			wantErr: true,
 		},
 		{
 			name:    "error",
@@ -170,6 +190,10 @@ func TestClient_ListGroupApplicationAssignment(t *testing.T) {
 			},
 			resp: &okta.Response{},
 			want: []string{"group-001", "group-002"},
+		},
+		{
+			name:    "empty appID",
+			wantErr: true,
 		},
 		{
 			name:    "api error",
@@ -225,6 +249,12 @@ func TestClient_listApplications(t *testing.T) {
 				&okta.Application{Id: "app-02"},
 				&okta.Application{Id: "app-03"},
 			},
+		},
+		{
+			name: "example empty response",
+			resp: &okta.Response{},
+			apps: []okta.App{},
+			want: []okta.App{},
 		},
 		{
 			name:    "api error",
@@ -289,14 +319,14 @@ func TestClient_GithubCloudApplications(t *testing.T) {
 					Settings: &okta.ApplicationSettings{},
 				},
 				&okta.Application{
-					Id: "app-02",
+					Id: "app-05",
 					Settings: &okta.ApplicationSettings{
 						App: &okta.ApplicationSettingsApplication{
 							"githubOrg": []string{"some", "not", "string"},
 						},
 					},
 				},
-				&okta.Application{Id: "app-04"},
+				&okta.Application{Id: "app-06"},
 				&otherApplication{},
 			},
 			want: map[string]string{

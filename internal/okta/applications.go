@@ -14,6 +14,8 @@ const (
 
 // GithubCloudApplications returns a map of all Okta Github cloud applications with org name as the key and the okta ID as the value
 func (c *Client) GithubCloudApplications(ctx context.Context) (map[string]string, error) {
+	c.logger.Info("listing okta githubcloud application")
+
 	applications, err := c.listApplications(ctx, &query.Params{Filter: "name eq \"githubcloud\"", Limit: defaultPageLimit})
 	if err != nil {
 		return nil, err
@@ -82,6 +84,8 @@ func (c *Client) AssignGroupToApplication(ctx context.Context, appID, groupID st
 		return ErrApplicationBadParameters
 	}
 
+	c.logger.Info("adding okta application group assignments", zap.Any("okta.application.id", appID), zap.Any("okta.group.id", groupID))
+
 	assignment, _, err := c.appIface.CreateApplicationGroupAssignment(ctx, appID, groupID, okta.ApplicationGroupAssignment{})
 	if err != nil {
 		return err
@@ -98,6 +102,8 @@ func (c *Client) RemoveApplicationGroupAssignment(ctx context.Context, appID, gr
 		return ErrApplicationBadParameters
 	}
 
+	c.logger.Info("removing okta application group assignments", zap.Any("okta.application.id", appID), zap.Any("okta.group.id", groupID))
+
 	if _, err := c.appIface.DeleteApplicationGroupAssignment(ctx, appID, groupID); err != nil {
 		return err
 	}
@@ -112,6 +118,8 @@ func (c *Client) ListGroupApplicationAssignment(ctx context.Context, appID strin
 	if appID == "" {
 		return nil, ErrApplicationBadParameters
 	}
+
+	c.logger.Info("listing okta application group assignments", zap.Any("okta.application.id", appID))
 
 	groups := []string{}
 

@@ -17,6 +17,10 @@ type mockGroupClient struct {
 
 	group  *okta.Group
 	groups []*okta.Group
+
+	users []*okta.User
+
+	resp *okta.Response
 }
 
 func (m *mockGroupClient) CreateGroup(ctx context.Context, body okta.Group) (*okta.Group, *okta.Response, error) {
@@ -24,7 +28,7 @@ func (m *mockGroupClient) CreateGroup(ctx context.Context, body okta.Group) (*ok
 		return nil, nil, m.err
 	}
 
-	return m.group, nil, nil
+	return m.group, m.resp, nil
 }
 
 func (m *mockGroupClient) UpdateGroup(ctx context.Context, groupID string, body okta.Group) (*okta.Group, *okta.Response, error) {
@@ -32,7 +36,7 @@ func (m *mockGroupClient) UpdateGroup(ctx context.Context, groupID string, body 
 		return nil, nil, m.err
 	}
 
-	return m.group, nil, nil
+	return m.group, m.resp, nil
 }
 
 func (m *mockGroupClient) DeleteGroup(ctx context.Context, groupID string) (*okta.Response, error) {
@@ -40,7 +44,7 @@ func (m *mockGroupClient) DeleteGroup(ctx context.Context, groupID string) (*okt
 		return nil, m.err
 	}
 
-	return nil, nil
+	return m.resp, nil
 }
 
 func (m *mockGroupClient) ListGroups(ctx context.Context, qp *query.Params) ([]*okta.Group, *okta.Response, error) {
@@ -48,7 +52,7 @@ func (m *mockGroupClient) ListGroups(ctx context.Context, qp *query.Params) ([]*
 		return nil, nil, m.err
 	}
 
-	return m.groups, nil, nil
+	return m.groups, m.resp, nil
 }
 
 func (m *mockGroupClient) AddUserToGroup(ctx context.Context, groupID string, userID string) (*okta.Response, error) {
@@ -56,7 +60,7 @@ func (m *mockGroupClient) AddUserToGroup(ctx context.Context, groupID string, us
 		return nil, m.err
 	}
 
-	return nil, nil
+	return m.resp, nil
 }
 
 func (m *mockGroupClient) RemoveUserFromGroup(ctx context.Context, groupID string, userID string) (*okta.Response, error) {
@@ -64,7 +68,15 @@ func (m *mockGroupClient) RemoveUserFromGroup(ctx context.Context, groupID strin
 		return nil, m.err
 	}
 
-	return nil, nil
+	return m.resp, nil
+}
+
+func (m *mockGroupClient) ListGroupUsers(ctx context.Context, groupID string, qp *query.Params) ([]*okta.User, *okta.Response, error) {
+	if m.err != nil {
+		return nil, nil, m.err
+	}
+
+	return m.users, m.resp, nil
 }
 
 func TestClient_CreateGroup(t *testing.T) {
@@ -365,6 +377,55 @@ func TestClient_RemoveGroupUser(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestClient_ListGroupMembership(t *testing.T) {
+	tests := []struct {
+		name    string
+		users   []*okta.User
+		err     error
+		gid     string
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "example",
+			users: []*okta.User{
+				{Id: "user-01"},
+				{Id: "user-02"},
+				{Id: "user-03"},
+			},
+			gid:  "group-01",
+			want: []string{"user-01", "user-02", "user-03"},
+		},
+		{
+			name:    "error",
+			gid:     "group-02",
+			err:     errors.New("boom"), //nolint:goerr113
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				groupIface: &mockGroupClient{
+					t:     t,
+					err:   tt.err,
+					users: tt.users,
+					resp:  &okta.Response{},
+				},
+				logger: zap.NewNop(),
+			}
+			got, err := c.ListGroupMembership(context.TODO(), tt.gid)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

@@ -37,6 +37,7 @@ type GroupInterface interface {
 	ListGroups(ctx context.Context, qp *query.Params) ([]*okta.Group, *okta.Response, error)
 	AddUserToGroup(ctx context.Context, groupID string, userID string) (*okta.Response, error)
 	RemoveUserFromGroup(ctx context.Context, groupID string, userID string) (*okta.Response, error)
+	ListGroupUsers(ctx context.Context, groupID string, qp *query.Params) ([]*okta.User, *okta.Response, error)
 }
 
 // UserInterface is the interface for managing users in Okta

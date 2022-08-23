@@ -113,15 +113,11 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 		return "", "", err
 	}
 
-	logger = logger.With(zap.String("okta.group.id", oktaGID))
-
 	oktaUID, err := r.oktaClient.GetUserIDByEmail(ctx, user.Email)
 	if err != nil {
 		logger.Error("error getting user by email address", zap.String("user.email", user.Email), zap.Error(err))
 		return "", "", err
 	}
-
-	logger = logger.With(zap.String("okta.user.id", oktaUID))
 
 	if err := r.oktaClient.AddGroupUser(ctx, oktaGID, oktaUID); err != nil {
 		logger.Error("failed to add user to group",
@@ -171,15 +167,11 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 		return "", "", err
 	}
 
-	logger = logger.With(zap.String("okta.group.id", oktaGID))
-
 	oktaUID, err := r.oktaClient.GetUserIDByEmail(ctx, user.Email)
 	if err != nil {
 		logger.Error("error getting user by email address", zap.String("user.email", user.Email), zap.Error(err))
 		return "", "", err
 	}
-
-	logger = logger.With(zap.String("okta.user.id", oktaUID))
 
 	if err := r.oktaClient.RemoveGroupUser(context.Background(), oktaGID, oktaUID); err != nil {
 		logger.Error("failed to remove user from group",

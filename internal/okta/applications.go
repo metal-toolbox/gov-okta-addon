@@ -78,6 +78,10 @@ func (c *Client) listApplications(ctx context.Context, qp *query.Params) ([]okta
 
 // AssignGroupToApplication assigns a group to an okta application
 func (c *Client) AssignGroupToApplication(ctx context.Context, appID, groupID string) error {
+	if appID == "" || groupID == "" {
+		return ErrApplicationBadParameters
+	}
+
 	assignment, _, err := c.appIface.CreateApplicationGroupAssignment(ctx, appID, groupID, okta.ApplicationGroupAssignment{})
 	if err != nil {
 		return err
@@ -90,6 +94,10 @@ func (c *Client) AssignGroupToApplication(ctx context.Context, appID, groupID st
 
 // RemoveApplicationGroupAssignment removes an application group assignment
 func (c *Client) RemoveApplicationGroupAssignment(ctx context.Context, appID, groupID string) error {
+	if appID == "" || groupID == "" {
+		return ErrApplicationBadParameters
+	}
+
 	if _, err := c.appIface.DeleteApplicationGroupAssignment(ctx, appID, groupID); err != nil {
 		return err
 	}
@@ -99,20 +107,12 @@ func (c *Client) RemoveApplicationGroupAssignment(ctx context.Context, appID, gr
 	return nil
 }
 
-// GetGroupApplicationAssignment gets details about an application group assignment
-func (c *Client) GetGroupApplicationAssignment(ctx context.Context, appID, groupID string) error {
-	assignment, _, err := c.appIface.GetApplicationGroupAssignment(ctx, appID, groupID, &query.Params{})
-	if err != nil {
-		return err
-	}
-
-	c.logger.Debug("output from application group assignment", zap.Any("okta.assignment", assignment))
-
-	return nil
-}
-
 // ListGroupApplicationAssignment returns a list of the groups assigned to an application
 func (c *Client) ListGroupApplicationAssignment(ctx context.Context, appID string) ([]string, error) {
+	if appID == "" {
+		return nil, ErrApplicationBadParameters
+	}
+
 	groups := []string{}
 
 	assignments, resp, err := c.appIface.ListApplicationGroupAssignments(ctx, appID, &query.Params{Limit: defaultPageLimit})

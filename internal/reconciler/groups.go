@@ -24,13 +24,13 @@ func (r *Reconciler) GroupsApplicationAssignments(ctx context.Context, ids ...st
 		logger.Debug("got governor group response", zap.Any("group details", group))
 
 		// get the okta id for the governor group
-		og, err := r.oktaClient.GetGroupByGovernorID(ctx, id)
+		oktaGID, err := r.oktaClient.GetGroupByGovernorID(ctx, id)
 		if err != nil {
 			logger.Error("error getting okta group by governor id", zap.Error(err))
 			continue
 		}
 
-		groupMap[og] = group
+		groupMap[oktaGID] = group
 	}
 
 	if err := r.reconcileGroupApplicationAssignments(ctx, groupMap); err != nil {

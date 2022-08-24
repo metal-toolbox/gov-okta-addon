@@ -25,49 +25,56 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 
 	ctx := context.Background()
 
+	logger := s.Logger.With(zap.String("governor.group.id", payload.GroupID))
+
 	switch payload.Action {
 	case v1alpha.GovernorEventCreate:
-		s.Logger.Info("creating group", zap.String("governor.group.id", payload.GroupID))
+		logger.Info("creating group")
 
-		out, err := s.Reconciler.ReconcileGroupExists(ctx, payload.GroupID)
+		gid, err := s.Reconciler.GroupCreate(ctx, payload.GroupID)
 		if err != nil {
-			s.Logger.Error("error reconciling group creation", zap.Error(err))
+			logger.Error("error reconciling group creation", zap.Error(err))
 			return
 		}
 
-		if err := s.Reconciler.ReconcileGroupsApplicationAssignments(ctx, payload.GroupID); err != nil {
-			s.Logger.Error("error reconciling group creation application assignment", zap.Error(err))
+		if err := s.Reconciler.GroupsApplicationAssignments(ctx, payload.GroupID); err != nil {
+			logger.Error("error reconciling group creation application assignment", zap.Error(err))
 			return
 		}
 
-		s.Logger.Info("successfully created group", zap.String("governor.group.id", payload.GroupID), zap.String("okta.group.id", out))
+		if err := s.Reconciler.GroupMembership(ctx, payload.GroupID, gid); err != nil {
+			logger.Error("error reconciling group creation membership", zap.Error(err))
+			return
+		}
+
+		logger.Info("successfully created group", zap.String("okta.group.id", gid))
 	case v1alpha.GovernorEventUpdate:
-		s.Logger.Info("updating group", zap.String("governor.group.id", payload.GroupID))
+		logger.Info("updating group")
 
-		out, err := s.Reconciler.ReconcileGroupUpdate(context.Background(), payload.GroupID)
+		gid, err := s.Reconciler.GroupUpdate(context.Background(), payload.GroupID)
 		if err != nil {
-			s.Logger.Error("error reconciling group update", zap.Error(err))
+			logger.Error("error reconciling group update", zap.Error(err))
 			return
 		}
 
-		if err := s.Reconciler.ReconcileGroupsApplicationAssignments(ctx, payload.GroupID); err != nil {
-			s.Logger.Error("error reconciling group creation application assignment", zap.Error(err))
+		if err := s.Reconciler.GroupsApplicationAssignments(ctx, payload.GroupID); err != nil {
+			logger.Error("error reconciling group creation application assignment", zap.Error(err))
 			return
 		}
 
-		s.Logger.Info("successfully updated group", zap.String("governor.group.id", payload.GroupID), zap.String("okta.group.id", out))
+		logger.Info("successfully updated group", zap.String("okta.group.id", gid))
 	case v1alpha.GovernorEventDelete:
-		s.Logger.Info("deleting group", zap.String("governor.group.id", payload.GroupID))
+		logger.Info("deleting group")
 
-		out, err := s.Reconciler.ReconcileGroupDelete(context.TODO(), payload.GroupID)
+		gid, err := s.Reconciler.GroupDelete(ctx, payload.GroupID)
 		if err != nil {
-			s.Logger.Error("error deleting group", zap.Error(err))
+			logger.Error("error deleting group", zap.Error(err))
 			return
 		}
 
-		s.Logger.Info("successfully deleted group", zap.String("governor.group.id", payload.GroupID), zap.String("okta.group.id", out))
+		logger.Info("successfully deleted group", zap.String("okta.group.id", gid))
 	default:
-		s.Logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
+		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return
 	}
 }
@@ -80,52 +87,33 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 		return
 	}
 
+	ctx := context.Background()
+
+	logger := s.Logger.With(zap.String("governor.group.id", payload.GroupID), zap.String("governor.user.id", payload.UserID))
+
 	switch payload.Action {
 	case v1alpha.GovernorEventCreate:
-		s.Logger.Info("creating group membership", zap.String("governor.id", payload.GroupID), zap.String("governor.id", payload.UserID))
+		logger.Info("creating group membership")
 
-		// TODO validate the user is a member of the group from governor API (requires https://packet.atlassian.net/browse/DEL-1236)?
-		gid, err := s.OktaClient.GetGroupByGovernorID(context.Background(), payload.GroupID)
+		gid, uid, err := s.Reconciler.GroupMembershipCreate(ctx, payload.GroupID, payload.UserID)
 		if err != nil {
-			s.Logger.Error("error getting group by governor id", zap.String("governor.id", payload.GroupID), zap.Error(err))
+			logger.Error("error creating group membership", zap.Error(err))
 			return
 		}
 
-		// TODO get the email address of the user from governor API (requires https://packet.atlassian.net/browse/DEL-1236)
-		uid, err := s.OktaClient.GetUserIDByEmail(context.Background(), "test@example.com")
-		if err != nil {
-			s.Logger.Error("error getting user by email address", zap.String("user.email", "test@example.com"), zap.Error(err))
-			return
-		}
-
-		if err := s.OktaClient.AddGroupUser(context.Background(), gid, uid); err != nil {
-			s.Logger.Error("failed to add user to group", zap.String("user.email", "test@example.com"), zap.String("okta.user.id", uid), zap.String("okta.group.id", gid), zap.Error(err))
-			return
-		}
-
+		logger.Info("successfully created group membership", zap.String("okta.group.id", gid), zap.String("okta.user.id", uid))
 	case v1alpha.GovernorEventDelete:
-		s.Logger.Info("deleting group", zap.String("governor.id", payload.GroupID), zap.String("governor.id", payload.UserID))
+		logger.Info("deleting group membership")
 
-		// TODO validate the user is not a member of the group from governor API (requires https://packet.atlassian.net/browse/DEL-1236)?
-		gid, err := s.OktaClient.GetGroupByGovernorID(context.Background(), payload.GroupID)
+		gid, uid, err := s.Reconciler.GroupMembershipDelete(ctx, payload.GroupID, payload.UserID)
 		if err != nil {
-			s.Logger.Error("error getting group by governor id", zap.String("governor.id", payload.GroupID), zap.Error(err))
+			logger.Error("error deleting group membership", zap.Error(err))
 			return
 		}
 
-		// TODO get the email address of the user from governor API (requires https://packet.atlassian.net/browse/DEL-1236)
-		uid, err := s.OktaClient.GetUserIDByEmail(context.Background(), "test@example.com")
-		if err != nil {
-			s.Logger.Error("error getting user by email address", zap.String("user.email", "test@example.com"), zap.Error(err))
-			return
-		}
-
-		if err := s.OktaClient.RemoveGroupUser(context.Background(), gid, uid); err != nil {
-			s.Logger.Error("failed to remove user from group", zap.String("user.email", "test@example.com"), zap.String("okta.user.id", uid), zap.String("okta.group.id", gid), zap.Error(err))
-			return
-		}
+		logger.Info("successfully deleted group membership", zap.String("okta.group.id", gid), zap.String("okta.user.id", uid))
 	default:
-		s.Logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
+		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return
 	}
 }

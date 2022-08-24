@@ -10,9 +10,9 @@ import (
 
 // GetUserIDByEmail gets an okta user id from the user's email address
 func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
-	c.logger.Info("getting user by email address", zap.String("user.email", email))
+	c.logger.Info("getting okta user by email", zap.String("user.email", email))
 
-	f := fmt.Sprintf("profile.email eq %s", email)
+	f := fmt.Sprintf("profile.email eq \"%s\"", email)
 
 	users, _, err := c.userIface.ListUsers(ctx, &query.Params{Search: f})
 	if err != nil {

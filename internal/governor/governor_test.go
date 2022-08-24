@@ -104,6 +104,65 @@ var (
 	"slug": "green-party"
 }
 `)
+
+	testUsersResponse = []byte(`
+[
+    {
+        "id": "9fd9408e-08a7-4572-b694-0541fdb80574",
+        "external_id": "",
+        "name": "Ned Lamont",
+        "email": "nlamont@ct.gov",
+        "login_count": 2,
+        "avatar_url": "https://bit.ly/3QISvfa",
+        "last_login_at": "2022-05-24T20:26:58.590207Z",
+        "created_at": "2018-11-04T23:59:59.999999Z",
+        "updated_at": "2018-11-04T23:59:59.999999Z",
+        "github_id": 12345678,
+        "github_username": "neddy"
+    },
+    {
+        "id": "c5095b8c-9109-4b31-a7ce-ca779aae13de",
+        "external_id": "",
+        "name": "Dannel Malloy",
+        "email": "dmalloy@ct.gov",
+        "login_count": 7,
+        "avatar_url": "https://bit.ly/3woIRpY",
+        "last_login_at": "2018-12-30T18:29:27.372569Z",
+        "created_at": "2010-11-04T23:59:59.999999Z",
+        "updated_at": "2014-11-04T23:59:59.999999Z",
+        "github_id": 11223344,
+        "github_username": "dantheman"
+    },
+    {
+        "id": "41f0e5a6-8c68-4693-a86b-37f4447fef57",
+        "external_id": "",
+        "name": "Mary Rell",
+        "email": "mcrell@ct.gov",
+        "login_count": 13,
+        "avatar_url": "https://bit.ly/3R1BNHw",
+        "last_login_at": "2010-12-28T19:52:45.539714Z",
+        "created_at": "2004-07-11T00:00:00.00000Z",
+        "updated_at": "2006-11-04T23:59:59.99999Z",
+        "github_id": 44332211,
+        "github_username": "jodi"
+    }
+]`)
+
+	testUserResponse = []byte(`
+{
+	"id": "18d4f247-cb23-47fc-9c84-e624294027ec",
+	"external_id": "",
+	"name": "John Trumbull",
+	"email": "nlamont@ct.gov",
+	"login_count": 27,
+	"avatar_url": "https://bit.ly/3pGBA0E",
+	"last_login_at": "1775-08-17T20:26:58.590207Z",
+	"created_at": "1769-11-04T23:59:59.999999Z",
+	"updated_at": "1783-11-04T23:59:59.999999Z",
+	"github_id": 10000001,
+	"github_username": "johnnyTog"
+}
+`)
 )
 
 func TestClient_newGovernorRequest(t *testing.T) {
@@ -418,6 +477,168 @@ func TestClient_Organization(t *testing.T) {
 				token:                  &oauth2.Token{AccessToken: "topSekret"},
 			}
 			got, err := c.Organization(context.TODO(), tt.id)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClient_Users(t *testing.T) {
+	testResp := func(r []byte) []*v1alpha.User {
+		resp := []*v1alpha.User{}
+		if err := json.Unmarshal(r, &resp); err != nil {
+			t.Error(err)
+		}
+
+		return resp
+	}
+
+	type fields struct {
+		httpClient HTTPDoer
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		want    []*v1alpha.User
+		wantErr bool
+	}{
+		{
+			name: "example request",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					resp:       testUsersResponse,
+					statusCode: http.StatusOK,
+				},
+			},
+			want: testResp(testUsersResponse),
+		},
+		{
+			name: "non-success",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusInternalServerError,
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad json response",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusOK,
+					resp:       []byte(`{`),
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.fields.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			got, err := c.Users(context.TODO())
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClient_User(t *testing.T) {
+	testResp := func(r []byte) *v1alpha.User {
+		resp := v1alpha.User{}
+		if err := json.Unmarshal(r, &resp); err != nil {
+			t.Error(err)
+		}
+
+		return &resp
+	}
+
+	type fields struct {
+		httpClient HTTPDoer
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		id      string
+		want    *v1alpha.User
+		wantErr bool
+	}{
+		{
+			name: "example request",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					resp:       testUserResponse,
+					statusCode: http.StatusOK,
+				},
+			},
+			id:   "186c5a52-4421-4573-8bbf-78d85d3c277e",
+			want: testResp(testUserResponse),
+		},
+		{
+			name: "non-success",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusInternalServerError,
+				},
+			},
+			id:      "186c5a52-4421-4573-8bbf-78d85d3c277e",
+			wantErr: true,
+		},
+		{
+			name: "bad json response",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusOK,
+					resp:       []byte(`{`),
+				},
+			},
+			id:      "186c5a52-4421-4573-8bbf-78d85d3c277e",
+			wantErr: true,
+		},
+		{
+			name: "missing id in request",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusOK,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.fields.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			got, err := c.User(context.TODO(), tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

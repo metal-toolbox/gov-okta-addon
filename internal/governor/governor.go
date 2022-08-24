@@ -255,3 +255,59 @@ func (c *Client) Organization(ctx context.Context, id string) (*v1alpha.Organiza
 
 	return &out, nil
 }
+
+// Users gets the list of users from governor
+func (c *Client) Users(ctx context.Context) ([]*v1alpha.User, error) {
+	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/users", c.url, governorAPIVersion))
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrRequestNonSuccess
+	}
+
+	out := []*v1alpha.User{}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+// User gets the details of a user from governor
+func (c *Client) User(ctx context.Context, id string) (*v1alpha.User, error) {
+	if id == "" {
+		return nil, ErrMissingGroupID
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/users/%s", c.url, governorAPIVersion, id))
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrRequestNonSuccess
+	}
+
+	out := v1alpha.User{}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}

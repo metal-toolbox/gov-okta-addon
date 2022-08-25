@@ -47,6 +47,8 @@ steps:
   - label: ":docker: docker build and publish"
     key: "build"
     depends_on: ["lint", "test", "gobuild"]
+    agents:
+      queue: "test-em-quay"
     commands: |
       #!/bin/bash
       echo --- Retrieve Artifacts

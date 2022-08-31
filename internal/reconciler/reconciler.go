@@ -7,7 +7,8 @@ import (
 
 	"go.equinixmetal.net/gov-okta-addon/internal/governor"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.equinixmetal.net/governor/pkg/api/v1alpha"
+	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
+
 	"go.uber.org/zap"
 )
 
@@ -98,7 +99,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 
 			// collect a map of okta group ids to governor groups so we don't have to
 			// go back to the okta API for this data and risk getting throttled
-			groupMap := map[string]*v1alpha.Group{}
+			groupMap := map[string]*v1alpha1.Group{}
 
 			for _, g := range groups {
 				logger := r.logger.With(zap.String("governor.group.id", g.ID), zap.String("governor.group.slug", g.Slug))
@@ -143,7 +144,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 // of okta group ids to governor groups and does it's best to make as few calls to okta as possible to prevent
 // throttling.  A call to this function without any changes will result in n+1 calls to the Okta API where
 // n is the number of Okta github cloud applications.
-func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, groupMap map[string]*v1alpha.Group) error {
+func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, groupMap map[string]*v1alpha1.Group) error {
 	// get the github cloud apps first from okta
 	oktaAppOrgs, err := r.oktaClient.GithubCloudApplications(ctx)
 	if err != nil {

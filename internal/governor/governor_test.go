@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"go.equinixmetal.net/governor/pkg/api/v1alpha"
+	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 )
@@ -109,7 +109,7 @@ var (
 [
     {
         "id": "9fd9408e-08a7-4572-b694-0541fdb80574",
-        "external_id": "",
+        "external_id": "000089",
         "name": "Ned Lamont",
         "email": "nlamont@ct.gov",
         "login_count": 2,
@@ -122,7 +122,7 @@ var (
     },
     {
         "id": "c5095b8c-9109-4b31-a7ce-ca779aae13de",
-        "external_id": "",
+        "external_id": "000088",
         "name": "Dannel Malloy",
         "email": "dmalloy@ct.gov",
         "login_count": 7,
@@ -135,7 +135,7 @@ var (
     },
     {
         "id": "41f0e5a6-8c68-4693-a86b-37f4447fef57",
-        "external_id": "",
+        "external_id": "000087",
         "name": "Mary Rell",
         "email": "mcrell@ct.gov",
         "login_count": 13,
@@ -151,9 +151,9 @@ var (
 	testUserResponse = []byte(`
 {
 	"id": "18d4f247-cb23-47fc-9c84-e624294027ec",
-	"external_id": "",
+	"external_id": "000016",
 	"name": "John Trumbull",
-	"email": "nlamont@ct.gov",
+	"email": "jtrumbull@ct.gov",
 	"login_count": 27,
 	"avatar_url": "https://bit.ly/3pGBA0E",
 	"last_login_at": "1775-08-17T20:26:58.590207Z",
@@ -235,8 +235,8 @@ func TestClient_newGovernorRequest(t *testing.T) {
 }
 
 func TestClient_Groups(t *testing.T) {
-	testResp := func(r []byte) []*v1alpha.Group {
-		resp := []*v1alpha.Group{}
+	testResp := func(r []byte) []*v1alpha1.Group {
+		resp := []*v1alpha1.Group{}
 		if err := json.Unmarshal(r, &resp); err != nil {
 			t.Error(err)
 		}
@@ -251,7 +251,7 @@ func TestClient_Groups(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
-		want    []*v1alpha.Group
+		want    []*v1alpha1.Group
 		wantErr bool
 	}{
 		{
@@ -310,8 +310,8 @@ func TestClient_Groups(t *testing.T) {
 }
 
 func TestClient_Group(t *testing.T) {
-	testResp := func(r []byte) *v1alpha.Group {
-		resp := v1alpha.Group{}
+	testResp := func(r []byte) *v1alpha1.Group {
+		resp := v1alpha1.Group{}
 		if err := json.Unmarshal(r, &resp); err != nil {
 			t.Error(err)
 		}
@@ -327,7 +327,7 @@ func TestClient_Group(t *testing.T) {
 		name    string
 		fields  fields
 		id      string
-		want    *v1alpha.Group
+		want    *v1alpha1.Group
 		wantErr bool
 	}{
 
@@ -400,8 +400,8 @@ func TestClient_Group(t *testing.T) {
 }
 
 func TestClient_Organization(t *testing.T) {
-	testResp := func(r []byte) *v1alpha.Organization {
-		resp := v1alpha.Organization{}
+	testResp := func(r []byte) *v1alpha1.Organization {
+		resp := v1alpha1.Organization{}
 		if err := json.Unmarshal(r, &resp); err != nil {
 			t.Error(err)
 		}
@@ -417,7 +417,7 @@ func TestClient_Organization(t *testing.T) {
 		name    string
 		fields  fields
 		id      string
-		want    *v1alpha.Organization
+		want    *v1alpha1.Organization
 		wantErr bool
 	}{
 		{
@@ -489,8 +489,8 @@ func TestClient_Organization(t *testing.T) {
 }
 
 func TestClient_Users(t *testing.T) {
-	testResp := func(r []byte) []*v1alpha.User {
-		resp := []*v1alpha.User{}
+	testResp := func(r []byte) []*v1alpha1.User {
+		resp := []*v1alpha1.User{}
 		if err := json.Unmarshal(r, &resp); err != nil {
 			t.Error(err)
 		}
@@ -505,7 +505,7 @@ func TestClient_Users(t *testing.T) {
 	tests := []struct {
 		name    string
 		fields  fields
-		want    []*v1alpha.User
+		want    []*v1alpha1.User
 		wantErr bool
 	}{
 		{
@@ -563,8 +563,8 @@ func TestClient_Users(t *testing.T) {
 }
 
 func TestClient_User(t *testing.T) {
-	testResp := func(r []byte) *v1alpha.User {
-		resp := v1alpha.User{}
+	testResp := func(r []byte) *v1alpha1.User {
+		resp := v1alpha1.User{}
 		if err := json.Unmarshal(r, &resp); err != nil {
 			t.Error(err)
 		}
@@ -580,7 +580,7 @@ func TestClient_User(t *testing.T) {
 		name    string
 		fields  fields
 		id      string
-		want    *v1alpha.User
+		want    *v1alpha1.User
 		wantErr bool
 	}{
 		{
@@ -646,6 +646,187 @@ func TestClient_User(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClient_CreateUser(t *testing.T) {
+	testResp := func(r []byte) *v1alpha1.User {
+		resp := v1alpha1.User{}
+		if err := json.Unmarshal(r, &resp); err != nil {
+			t.Error(err)
+		}
+
+		return &resp
+	}
+
+	type fields struct {
+		httpClient HTTPDoer
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		req     *v1alpha1.UserReq
+		want    *v1alpha1.User
+		wantErr bool
+	}{
+		{
+			name: "example request",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					resp:       testUserResponse,
+					statusCode: http.StatusOK,
+				},
+			},
+			req: &v1alpha1.UserReq{
+				ExternalID: "000001",
+				Name:       "John Trumbull",
+				Email:      "jtrumbull@ct.gov",
+			},
+			want: testResp(testUserResponse),
+		},
+		{
+			name: "example request status accepted",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					resp:       testUserResponse,
+					statusCode: http.StatusAccepted,
+				},
+			},
+			req: &v1alpha1.UserReq{
+				ExternalID: "000001",
+				Name:       "John Trumbull",
+				Email:      "jtrumbull@ct.gov",
+			},
+			want: testResp(testUserResponse),
+		},
+		{
+			name: "non-success",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusInternalServerError,
+				},
+			},
+			req: &v1alpha1.UserReq{
+				ExternalID: "999991",
+				Name:       "Test One",
+				Email:      "test1@test.gov",
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad json response",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusOK,
+					resp:       []byte(`{`),
+				},
+			},
+			req: &v1alpha1.UserReq{
+				ExternalID: "999992",
+				Name:       "Test Two",
+				Email:      "test2@test.gov",
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.fields.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			got, err := c.CreateUser(context.TODO(), tt.req)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClient_DeleteUser(t *testing.T) {
+	type fields struct {
+		httpClient HTTPDoer
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		id      string
+		wantErr bool
+	}{
+		{
+			name: "example request",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					resp:       testUserResponse,
+					statusCode: http.StatusOK,
+				},
+			},
+			id: "186c5a52-4421-4573-8bbf-78d85d3c277e",
+		},
+		{
+			name: "example request accepted",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					resp:       testUserResponse,
+					statusCode: http.StatusAccepted,
+				},
+			},
+			id: "186c5a52-4421-4573-8bbf-78d85d3c277e",
+		},
+		{
+			name: "non-success",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusInternalServerError,
+				},
+			},
+			id:      "186c5a52-4421-4573-8bbf-78d85d3c277e",
+			wantErr: true,
+		},
+		{
+			name: "missing id in request",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusOK,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.fields.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			err := c.DeleteUser(context.TODO(), tt.id)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
 		})
 	}
 }

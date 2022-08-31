@@ -7,7 +7,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
-	"go.equinixmetal.net/governor/pkg/api/v1alpha"
+	"go.equinixmetal.net/governor/pkg/events/v1alpha1"
 )
 
 // groupsMessageHandler handles messages for governor group events
@@ -28,7 +28,7 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 	logger := s.Logger.With(zap.String("governor.group.id", payload.GroupID))
 
 	switch payload.Action {
-	case v1alpha.GovernorEventCreate:
+	case v1alpha1.GovernorEventCreate:
 		logger.Info("creating group")
 
 		gid, err := s.Reconciler.GroupCreate(ctx, payload.GroupID)
@@ -48,7 +48,7 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully created group", zap.String("okta.group.id", gid))
-	case v1alpha.GovernorEventUpdate:
+	case v1alpha1.GovernorEventUpdate:
 		logger.Info("updating group")
 
 		gid, err := s.Reconciler.GroupUpdate(context.Background(), payload.GroupID)
@@ -63,7 +63,7 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully updated group", zap.String("okta.group.id", gid))
-	case v1alpha.GovernorEventDelete:
+	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting group")
 
 		gid, err := s.Reconciler.GroupDelete(ctx, payload.GroupID)
@@ -92,7 +92,7 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 	logger := s.Logger.With(zap.String("governor.group.id", payload.GroupID), zap.String("governor.user.id", payload.UserID))
 
 	switch payload.Action {
-	case v1alpha.GovernorEventCreate:
+	case v1alpha1.GovernorEventCreate:
 		logger.Info("creating group membership")
 
 		gid, uid, err := s.Reconciler.GroupMembershipCreate(ctx, payload.GroupID, payload.UserID)
@@ -102,7 +102,7 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully created group membership", zap.String("okta.group.id", gid), zap.String("okta.user.id", uid))
-	case v1alpha.GovernorEventDelete:
+	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting group membership")
 
 		gid, uid, err := s.Reconciler.GroupMembershipDelete(ctx, payload.GroupID, payload.UserID)
@@ -127,10 +127,10 @@ func (s *Server) usersMessageHandler(m *nats.Msg) {
 	}
 }
 
-func (s *Server) unmarshalPayload(m *nats.Msg) (*v1alpha.Event, error) {
+func (s *Server) unmarshalPayload(m *nats.Msg) (*v1alpha1.Event, error) {
 	s.Logger.Debug("received a message:", zap.String("nats.data", string(m.Data)), zap.String("nats.subject", m.Subject))
 
-	payload := v1alpha.Event{}
+	payload := v1alpha1.Event{}
 	if err := json.Unmarshal(m.Data, &payload); err != nil {
 		return nil, err
 	}

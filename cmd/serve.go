@@ -20,7 +20,7 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-// serveCmd startes the gov-okta-addon service
+// serveCmd starts the gov-okta-addon service
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "starts the gov-okta-addon service",

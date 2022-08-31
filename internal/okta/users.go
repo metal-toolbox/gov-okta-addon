@@ -34,7 +34,8 @@ func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, er
 	return uid, nil
 }
 
-// ListUsersWithModifier lists okta users and modifies the user response with the given UserModifierFunc
+// ListUsersWithModifier lists okta users and modifies the user response with the given UserModifierFunc.  If nil is
+// returned from the UserModifierFunc, the user will not be returned in the response.
 func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, q *query.Params) ([]*okta.User, error) {
 	c.logger.Info("listing users with func")
 

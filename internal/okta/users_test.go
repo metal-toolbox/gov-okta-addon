@@ -3,7 +3,6 @@ package okta
 import (
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 
 	"github.com/okta/okta-sdk-golang/v2/okta"
@@ -170,13 +169,13 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 				},
 			}
 			got, err := c.ListUsersWithModifier(context.TODO(), tt.args.f, tt.args.q)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Client.ListUsersWithModifier() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				assert.Error(t, err)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Client.ListUsersWithModifier() = %v, want %v", got, tt.want)
-			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

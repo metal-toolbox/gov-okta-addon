@@ -350,8 +350,12 @@ func (c *Client) User(ctx context.Context, id string) (*v1alpha1.User, error) {
 	return &out, nil
 }
 
-// CreateUser creates a user in governor and returns the ID
+// CreateUser creates a user in governor and returns the user
 func (c *Client) CreateUser(ctx context.Context, user *v1alpha1.UserReq) (*v1alpha1.User, error) {
+	if user == nil {
+		return nil, ErrNilUserRequest
+	}
+
 	req, err := c.newGovernorRequest(ctx, http.MethodPost, fmt.Sprintf("%s/api/%s/users", c.url, governorAPIVersion))
 	if err != nil {
 		return nil, err

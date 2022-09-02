@@ -1,15 +1,17 @@
 package governor
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"sync"
 	"time"
 
 	"github.com/goccy/go-json"
-	"go.equinixmetal.net/governor/pkg/api/v1alpha"
+	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
@@ -145,7 +147,7 @@ func (c *Client) newGovernorRequest(ctx context.Context, method, u string) (*htt
 }
 
 // Groups gets the list of groups from governor
-func (c *Client) Groups(ctx context.Context) ([]*v1alpha.Group, error) {
+func (c *Client) Groups(ctx context.Context) ([]*v1alpha1.Group, error) {
 	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/groups", c.url, governorAPIVersion))
 	if err != nil {
 		return nil, err
@@ -162,7 +164,7 @@ func (c *Client) Groups(ctx context.Context) ([]*v1alpha.Group, error) {
 		return nil, ErrRequestNonSuccess
 	}
 
-	out := []*v1alpha.Group{}
+	out := []*v1alpha1.Group{}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
 	}
@@ -171,7 +173,7 @@ func (c *Client) Groups(ctx context.Context) ([]*v1alpha.Group, error) {
 }
 
 // Group gets the details of a group from governor
-func (c *Client) Group(ctx context.Context, id string) (*v1alpha.Group, error) {
+func (c *Client) Group(ctx context.Context, id string) (*v1alpha1.Group, error) {
 	if id == "" {
 		return nil, ErrMissingGroupID
 	}
@@ -192,7 +194,7 @@ func (c *Client) Group(ctx context.Context, id string) (*v1alpha.Group, error) {
 		return nil, ErrRequestNonSuccess
 	}
 
-	out := v1alpha.Group{}
+	out := v1alpha1.Group{}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
 	}
@@ -201,7 +203,7 @@ func (c *Client) Group(ctx context.Context, id string) (*v1alpha.Group, error) {
 }
 
 // Organizations gets the list of organizations from governor
-func (c *Client) Organizations(ctx context.Context) ([]*v1alpha.Organization, error) {
+func (c *Client) Organizations(ctx context.Context) ([]*v1alpha1.Organization, error) {
 	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/organizations", c.url, governorAPIVersion))
 	if err != nil {
 		return nil, err
@@ -218,7 +220,7 @@ func (c *Client) Organizations(ctx context.Context) ([]*v1alpha.Organization, er
 		return nil, ErrRequestNonSuccess
 	}
 
-	out := []*v1alpha.Organization{}
+	out := []*v1alpha1.Organization{}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
 	}
@@ -227,7 +229,7 @@ func (c *Client) Organizations(ctx context.Context) ([]*v1alpha.Organization, er
 }
 
 // Organization gets the details of an org from governor
-func (c *Client) Organization(ctx context.Context, id string) (*v1alpha.Organization, error) {
+func (c *Client) Organization(ctx context.Context, id string) (*v1alpha1.Organization, error) {
 	if id == "" {
 		return nil, ErrMissingOrganizationID
 	}
@@ -248,7 +250,7 @@ func (c *Client) Organization(ctx context.Context, id string) (*v1alpha.Organiza
 		return nil, ErrRequestNonSuccess
 	}
 
-	out := v1alpha.Organization{}
+	out := v1alpha1.Organization{}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
 	}
@@ -256,8 +258,44 @@ func (c *Client) Organization(ctx context.Context, id string) (*v1alpha.Organiza
 	return &out, nil
 }
 
+// UsersQuery searches for a user in governor with the passed query
+func (c *Client) UsersQuery(ctx context.Context, query map[string][]string) ([]*v1alpha1.User, error) {
+	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/users", c.url, governorAPIVersion))
+	if err != nil {
+		return nil, err
+	}
+
+	q := url.Values{}
+
+	for k, vals := range query {
+		for _, v := range vals {
+			q.Add(k, v)
+		}
+	}
+
+	req.URL.RawQuery = q.Encode()
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrRequestNonSuccess
+	}
+
+	out := []*v1alpha1.User{}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
 // Users gets the list of users from governor
-func (c *Client) Users(ctx context.Context) ([]*v1alpha.User, error) {
+func (c *Client) Users(ctx context.Context) ([]*v1alpha1.User, error) {
 	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/users", c.url, governorAPIVersion))
 	if err != nil {
 		return nil, err
@@ -274,7 +312,7 @@ func (c *Client) Users(ctx context.Context) ([]*v1alpha.User, error) {
 		return nil, ErrRequestNonSuccess
 	}
 
-	out := []*v1alpha.User{}
+	out := []*v1alpha1.User{}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
 	}
@@ -283,9 +321,9 @@ func (c *Client) Users(ctx context.Context) ([]*v1alpha.User, error) {
 }
 
 // User gets the details of a user from governor
-func (c *Client) User(ctx context.Context, id string) (*v1alpha.User, error) {
+func (c *Client) User(ctx context.Context, id string) (*v1alpha1.User, error) {
 	if id == "" {
-		return nil, ErrMissingGroupID
+		return nil, ErrMissingUserID
 	}
 
 	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/users/%s", c.url, governorAPIVersion, id))
@@ -304,10 +342,72 @@ func (c *Client) User(ctx context.Context, id string) (*v1alpha.User, error) {
 		return nil, ErrRequestNonSuccess
 	}
 
-	out := v1alpha.User{}
+	out := v1alpha1.User{}
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
 	}
 
 	return &out, nil
+}
+
+// CreateUser creates a user in governor and returns the user
+func (c *Client) CreateUser(ctx context.Context, user *v1alpha1.UserReq) (*v1alpha1.User, error) {
+	if user == nil {
+		return nil, ErrNilUserRequest
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodPost, fmt.Sprintf("%s/api/%s/users", c.url, governorAPIVersion))
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := json.Marshal(user)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Body = io.NopCloser(bytes.NewBuffer(b))
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return nil, ErrRequestNonSuccess
+	}
+
+	out := v1alpha1.User{}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// DeleteUser deletes a user in governor
+func (c *Client) DeleteUser(ctx context.Context, id string) error {
+	if id == "" {
+		return ErrMissingUserID
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodDelete, fmt.Sprintf("%s/api/%s/users/%s", c.url, governorAPIVersion, id))
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return ErrRequestNonSuccess
+	}
+
+	return nil
 }

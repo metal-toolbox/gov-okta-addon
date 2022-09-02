@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.equinixmetal.net/governor/pkg/api/v1alpha"
+	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
 )
 
 var testOrganizationsList = []byte(`
@@ -48,8 +48,8 @@ var testOrganizationsList = []byte(`
 ]
 `)
 
-func testOrganizationSlice(t *testing.T) []*v1alpha.Organization {
-	out := []*v1alpha.Organization{}
+func testOrganizationSlice(t *testing.T) []*v1alpha1.Organization {
+	out := []*v1alpha1.Organization{}
 
 	if err := json.Unmarshal(testOrganizationsList, &out); err != nil {
 		assert.NoError(t, err)
@@ -61,13 +61,13 @@ func testOrganizationSlice(t *testing.T) []*v1alpha.Organization {
 func Test_getGroupOrgSlugs(t *testing.T) {
 	tests := []struct {
 		name  string
-		group *v1alpha.Group
-		orgs  []*v1alpha.Organization
+		group *v1alpha1.Group
+		orgs  []*v1alpha1.Organization
 		want  []string
 	}{
 		{
 			name: "example org slugs",
-			group: &v1alpha.Group{
+			group: &v1alpha1.Group{
 				Organizations: []string{
 					"7b1e8b5a-17ad-454f-ba4f-841191b70d44",
 					"dd934f26-fc25-4e39-984d-1c7bff566bac",
@@ -81,19 +81,19 @@ func Test_getGroupOrgSlugs(t *testing.T) {
 		},
 		{
 			name:  "empty group orgs list",
-			group: &v1alpha.Group{},
+			group: &v1alpha1.Group{},
 			orgs:  testOrganizationSlice(t),
 			want:  []string{},
 		},
 		{
 			name: "empty governor orgs list",
-			group: &v1alpha.Group{
+			group: &v1alpha1.Group{
 				Organizations: []string{
 					"7b1e8b5a-17ad-454f-ba4f-841191b70d44",
 					"dd934f26-fc25-4e39-984d-1c7bff566bac",
 				},
 			},
-			orgs: []*v1alpha.Organization{},
+			orgs: []*v1alpha1.Organization{},
 			want: []string{},
 		},
 	}

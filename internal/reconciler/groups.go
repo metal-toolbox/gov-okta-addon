@@ -3,13 +3,13 @@ package reconciler
 import (
 	"context"
 
-	"go.equinixmetal.net/governor/pkg/api/v1alpha"
+	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 )
 
 // GroupsApplicationAssignments reconciles application assignments in okta for a list of governor groups
 func (r *Reconciler) GroupsApplicationAssignments(ctx context.Context, ids ...string) error {
-	groupMap := map[string]*v1alpha.Group{}
+	groupMap := map[string]*v1alpha1.Group{}
 
 	for _, id := range ids {
 		logger := r.logger.With(zap.String("group.id", id))
@@ -103,7 +103,7 @@ func (r *Reconciler) GroupDelete(ctx context.Context, id string) (string, error)
 }
 
 // getGroupOrgSlugs returns the github organization slugs assigned to a governor group
-func getGroupOrgSlugs(group *v1alpha.Group, orgs []*v1alpha.Organization) []string {
+func getGroupOrgSlugs(group *v1alpha1.Group, orgs []*v1alpha1.Organization) []string {
 	slugs := []string{}
 
 	for _, g := range group.Organizations {

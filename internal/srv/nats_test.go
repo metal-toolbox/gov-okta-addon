@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"go.equinixmetal.net/governor/pkg/api/v1alpha"
+	"go.equinixmetal.net/governor/pkg/events/v1alpha1"
 )
 
 func TestServer_unmarshalPayload(t *testing.T) {
 	tests := []struct {
 		name    string
 		message *nats.Msg
-		want    *v1alpha.Event
+		want    *v1alpha1.Event
 		wantErr bool
 	}{
 		{
@@ -23,7 +23,7 @@ func TestServer_unmarshalPayload(t *testing.T) {
 				Subject: "foobar",
 				Data:    []byte(`{"version": "v1", "action": "CREATE", "group_id": "12345"}`),
 			},
-			want: &v1alpha.Event{
+			want: &v1alpha1.Event{
 				Version: "v1",
 				Action:  "CREATE",
 				GroupID: "12345",

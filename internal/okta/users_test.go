@@ -98,7 +98,7 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 			return nil, nil
 		}
 
-		return nil, nil
+		return u, nil
 	}
 
 	errMe := func(ctx context.Context, u *okta.User) (*okta.User, error) {
@@ -128,7 +128,7 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 				{Id: "heyThere"},
 				{Id: "skipMe"},
 			},
-			want: []*okta.User{},
+			want: []*okta.User{{Id: "heyThere"}},
 		},
 		{
 			name: "okta error",

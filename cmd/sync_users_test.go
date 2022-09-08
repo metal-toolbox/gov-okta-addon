@@ -19,80 +19,73 @@ func Test_uniqueExternalIDs(t *testing.T) {
 			name: "example external ids",
 			users: []*okt.User{
 				{
+					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
 					},
 				},
 				{
+					Id: "oktaid2",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test2",
 					},
 				},
 				{
+					Id: "oktaid3",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test3",
 					},
 				},
 			},
-			want: map[string]struct{}{"ping|test1": {}, "ping|test2": {}, "ping|test3": {}},
+			want: map[string]struct{}{"okta|oktaid1": {}, "okta|oktaid2": {}, "okta|oktaid3": {}},
 		},
 		{
 			name: "example non unique values",
 			users: []*okt.User{
 				{
+					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
 					},
 				},
 				{
+					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
 					},
 				},
 				{
+					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
 					},
 				},
 			},
-			want: map[string]struct{}{"ping|test1": {}},
+			want: map[string]struct{}{"okta|oktaid1": {}},
 		},
 		{
 			name: "example empty values",
 			users: []*okt.User{
 				{
+					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
 					},
 				},
 				{
+					Id: "",
 					Profile: &okt.UserProfile{
 						"pingSubject": "",
 					},
 				},
 				{
+					Id: "",
 					Profile: &okt.UserProfile{
 						"pingSubject": "",
 					},
 				},
 			},
-			want: map[string]struct{}{"ping|test1": {}},
-		},
-		{
-			name: "bad values",
-			users: []*okt.User{
-				{
-					Profile: &okt.UserProfile{
-						"pingSubject": "test1",
-					},
-				},
-				{
-					Profile: &okt.UserProfile{
-						"pingSubject": 12345,
-					},
-				},
-			},
-			want: map[string]struct{}{"ping|test1": {}},
+			want: map[string]struct{}{"okta|oktaid1": {}},
 		},
 	}
 	for _, tt := range tests {
@@ -164,26 +157,16 @@ func Test_externalID(t *testing.T) {
 		{
 			name: "example external id",
 			user: &okt.User{
+				Id: "oktaid1",
 				Profile: &okt.UserProfile{
 					"pingSubject": "test1",
 				},
 			},
-			want: "test1",
+			want: "oktaid1",
 		},
 		{
-			name: "not found",
-			user: &okt.User{
-				Profile: &okt.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okt.User{
-				Profile: &okt.UserProfile{
-					"pingSubject": 12345,
-				},
-			},
+			name:    "not found",
+			user:    &okt.User{},
 			wantErr: true,
 		},
 	}
@@ -224,6 +207,7 @@ func Test_userType(t *testing.T) {
 			user: &okt.User{
 				Profile: &okt.UserProfile{},
 			},
+			want:    "",
 			wantErr: true,
 		},
 		{
@@ -233,6 +217,7 @@ func Test_userType(t *testing.T) {
 					"userType": 12345,
 				},
 			},
+			want:    "",
 			wantErr: true,
 		},
 	}

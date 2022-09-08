@@ -21,7 +21,7 @@ changes in Okta.
 
 ### Sync users
 
-`gov-okta-addon sync users` will sync users from Okta to governor based on the `pingSubject` in their Okta profile
+`gov-okta-addon sync users` will sync users from Okta to governor based on the `id` in their Okta profile
 and their `external_id` in Governor.
 
 ## Development

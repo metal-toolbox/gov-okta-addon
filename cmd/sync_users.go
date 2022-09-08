@@ -27,12 +27,22 @@ var syncUsersCmd = &cobra.Command{
 
 func init() {
 	syncCmd.AddCommand(syncUsersCmd)
+
+	syncUsersCmd.Flags().Bool("dry-run", false, "only show what would be changed")
+	viperBindFlag("sync.dryrun", syncUsersCmd.Flags().Lookup("dry-run"))
 }
 
 // syncUsersToGovernor syncs users from okta to governor
 func syncUsersToGovernor(ctx context.Context) error {
 	l := logger.Desugar()
-	l.Info("starting sync to governor")
+
+	dryrun := viper.GetBool("sync.dryrun")
+
+	if dryrun {
+		l.Info("starting sync to governor (dry-run mode)")
+	} else {
+		l.Info("starting sync to governor")
+	}
 
 	oc, err := okta.NewClient(
 		okta.WithLogger(logger.Desugar()),
@@ -69,8 +79,8 @@ func syncUsersToGovernor(ctx context.Context) error {
 		l.Debug("processing okta user", zap.String("okta.user.id", u.Id))
 
 		userType, _ := userType(u)
-		if userType == "contractor" || userType == "serviceuser" {
-			l.Debug("skipping contractor or service user", zap.String("okta.user.id", u.Id))
+		if userType == "serviceuser" {
+			l.Debug("skipping service user", zap.String("okta.user.id", u.Id))
 
 			ignored++
 
@@ -97,8 +107,8 @@ func syncUsersToGovernor(ctx context.Context) error {
 			return nil, err
 		}
 
-		// currently we use pingid here, and this is how external ids live in governor
-		extID := fmt.Sprintf("ping|%s", externalID)
+		// this is the format of external ids in governor
+		extID := fmt.Sprintf("okta|%s", externalID)
 
 		// check if user exists in governor
 		gUsers, err := gc.UsersQuery(ctx, map[string][]string{"external_id": {extID}})
@@ -109,7 +119,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 		l.Debug("got governor users response for external id", zap.Any("governor.users", gUsers))
 
 		if len(gUsers) > 1 {
-			logger.Warn("unexpected user count for pingId",
+			logger.Warn("unexpected user count for external_id",
 				zap.String("external.id", externalID),
 				zap.String("okta.user.id", u.Id),
 				zap.Int("num.governor.users", len(gUsers)),
@@ -134,28 +144,30 @@ func syncUsersToGovernor(ctx context.Context) error {
 			zap.String("okta.user.email", email),
 		)
 
-		gUser, err := gc.CreateUser(ctx, &v1alpha1.UserReq{
-			Email:      email,
-			ExternalID: extID,
-			Name:       fmt.Sprintf("%s %s", first, last),
-		})
-		if err != nil {
-			return nil, err
-		}
+		if !dryrun {
+			gUser, err := gc.CreateUser(ctx, &v1alpha1.UserReq{
+				Email:      email,
+				ExternalID: extID,
+				Name:       fmt.Sprintf("%s %s", first, last),
+			})
+			if err != nil {
+				return nil, err
+			}
 
-		l.Debug("created governor user from okta sync",
-			zap.String("governor.user.id", gUser.ID),
-			zap.String("external.id", externalID),
-			zap.String("okta.user.id", u.Id),
-			zap.String("okta.user.email", email),
-		)
+			l.Debug("created governor user from okta sync",
+				zap.String("governor.user.id", gUser.ID),
+				zap.String("external.id", externalID),
+				zap.String("okta.user.id", u.Id),
+				zap.String("okta.user.email", email),
+			)
+		}
 
 		created++
 
 		return u, nil
 	}
 
-	l.Info("starting to sync missing okta users into governor")
+	l.Info("starting to sync missing okta users into governor", zap.Bool("dry-run", dryrun))
 
 	users, err := oc.ListUsersWithModifier(ctx, syncFunc, &query.Params{})
 	if err != nil {
@@ -178,8 +190,10 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 // deleteOrphanGovernorUsers is a helper function to delete governor users that not longer exist in okta
 func deleteOrphanGovernorUsers(ctx context.Context, gc *governor.Client, extIDMap map[string]struct{}) (int, error) {
+	dryrun := viper.GetBool("sync.dryrun")
+
 	l := logger.Desugar()
-	l.Info("starting to clean orphan governor users")
+	l.Info("starting to clean orphan governor users", zap.Bool("dry-run", dryrun))
 
 	var deleted int
 
@@ -219,8 +233,10 @@ func deleteOrphanGovernorUsers(ctx context.Context, gc *governor.Client, extIDMa
 			zap.String("governor.user.email", gu.Email),
 		)
 
-		if err := gc.DeleteUser(ctx, gu.ID); err != nil {
-			return deleted, err
+		if !dryrun {
+			if err := gc.DeleteUser(ctx, gu.ID); err != nil {
+				return deleted, err
+			}
 		}
 
 		deleted++
@@ -250,16 +266,7 @@ func uniqueExternalIDs(users []*okt.User) map[string]struct{} {
 			continue
 		}
 
-		if extID == "" {
-			l.Error("empty external id from okta user",
-				zap.Error(err),
-				zap.String("okta.user.id", u.Id),
-			)
-
-			continue
-		}
-
-		e := fmt.Sprintf("ping|%s", extID)
+		e := fmt.Sprintf("okta|%s", extID)
 
 		if _, ok := extIDs[e]; ok {
 			l.Warn("external id already exists in list of external ids",
@@ -298,24 +305,13 @@ func email(u *okt.User) (string, error) {
 	return "", fmt.Errorf("email not found for user %s", u.Id) //nolint:goerr113
 }
 
-// externalID parses the externalID (pingSubject) from the okta user profile
+// externalID returns the id for the okta user
 func externalID(u *okt.User) (string, error) {
-	l := logger.Desugar()
-
-	// get the external id from the user profile
-	for k, v := range *u.Profile {
-		if k == "pingSubject" {
-			if pv, ok := v.(string); ok {
-				return pv, nil
-			}
-
-			l.Warn("okta user pingSubject in profile is not a string", zap.String("okta.user.id", u.Id), zap.Any("pingSubject", v))
-
-			return "", ErrOktaUserExternalIDNotString
-		}
+	if u.Id == "" {
+		return "", ErrOktaUserIDEmpty
 	}
 
-	return "", fmt.Errorf("external id not found for user %s", u.Id) //nolint:goerr113
+	return u.Id, nil
 }
 
 // userType parses the userType from the okta user profile

@@ -27,6 +27,8 @@ var (
 	ErrOktaUserEmailNotString = errors.New("okta user email in profile is not a string")
 	// ErrOktaUserFirstNameNotString is returned when the okta user profile contains a first name that's not a string
 	ErrOktaUserFirstNameNotString = errors.New("okta user first name in profile is not a string")
+	// ErrOktaUserIDEmpty is returned when the okta user has an empty id
+	ErrOktaUserIDEmpty = errors.New("okta user id empty")
 	// ErrOktaUserLastNameNotString is returned when the okta user profile contains a last name that's not a string
 	ErrOktaUserLastNameNotString = errors.New("okta user last name in profile is not a string")
 	// ErrOktaUserTypeNotString is returned when the okta user profile contains a user type that's not a string

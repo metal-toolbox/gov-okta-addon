@@ -1,3 +1,4 @@
+// main
 package main
 
 import "go.equinixmetal.net/gov-okta-addon/cmd"

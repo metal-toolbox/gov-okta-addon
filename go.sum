@@ -621,6 +621,8 @@ github.com/zsais/go-gin-prometheus v0.1.0 h1:bkLv1XCdzqVgQ36ScgRi09MA2UC1t3tAB6n
 github.com/zsais/go-gin-prometheus v0.1.0/go.mod h1:Slirjzuz8uM8Cw0jmPNqbneoqcUtY2GGjn2bEd4NRLY=
 go.equinixmetal.net/governor v0.10.1 h1:4n3xCvYAHo3s58Ofe8qeLUGeIHv+jWRR9faGf8gsXgQ=
 go.equinixmetal.net/governor v0.10.1/go.mod h1:YrYNuSglxrq6AefKSl6oYiII6nusc/geHjtUSMqu9dI=
+go.equinixmetal.net/governor v0.10.2 h1:pejPDMpZh1uUlJ+KWSfIZ9THQ/OxcTg79/LFpFGU8ZA=
+go.equinixmetal.net/governor v0.10.2/go.mod h1:YrYNuSglxrq6AefKSl6oYiII6nusc/geHjtUSMqu9dI=
 go.etcd.io/etcd/api/v3 v3.5.0/go.mod h1:cbVKeC6lCfl7j/8jBhAK6aIYO9XOjdptoxU/nLQcPvs=
 go.etcd.io/etcd/client/pkg/v3 v3.5.0/go.mod h1:IJHfcCEKxYu1Os13ZdwCwIUTUVGYTSAM3YSwc9/Ac1g=
 go.etcd.io/etcd/client/v2 v2.305.0/go.mod h1:h9puh54ZTgAKtEbut2oe9P4L/oqKCVB6xsXlzd7alYQ=

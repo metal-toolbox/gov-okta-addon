@@ -27,9 +27,6 @@ var syncUsersCmd = &cobra.Command{
 
 func init() {
 	syncCmd.AddCommand(syncUsersCmd)
-
-	syncUsersCmd.Flags().Bool("dry-run", false, "only show what would be changed")
-	viperBindFlag("sync.dryrun", syncUsersCmd.Flags().Lookup("dry-run"))
 }
 
 // syncUsersToGovernor syncs users from okta to governor
@@ -38,11 +35,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 	dryrun := viper.GetBool("sync.dryrun")
 
-	if dryrun {
-		l.Info("starting sync to governor (dry-run mode)")
-	} else {
-		l.Info("starting sync to governor")
-	}
+	l.Info("starting sync to governor", zap.Bool("dry-run", dryrun))
 
 	oc, err := okta.NewClient(
 		okta.WithLogger(logger.Desugar()),

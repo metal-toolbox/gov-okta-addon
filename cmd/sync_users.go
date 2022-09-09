@@ -19,7 +19,11 @@ import (
 // syncUsersCmd governor resources
 var syncUsersCmd = &cobra.Command{
 	Use:   "users",
-	Short: "sync governor and okta resources",
+	Short: "sync okta users into governor",
+	Long: `Performs a one-way user sync from Okta to Governor.
+Users that exist in Okta but not in Governor, will be created. Users that exist in Governor but not in Okta, will be deleted.
+This command is intended for doing an initial load of users. It is strongly recommended that you use the dry-run flag first 
+to see what users would be created/deleted in Governor.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return syncUsersToGovernor(cmd.Context())
 	},
@@ -100,8 +104,8 @@ func syncUsersToGovernor(ctx context.Context) error {
 			return nil, err
 		}
 
-		// this is the format of external ids in governor
-		extID := fmt.Sprintf("okta|%s", externalID)
+		// the external id in governor is simply the okta id
+		extID := externalID
 
 		// check if user exists in governor
 		gUsers, err := gc.UsersQuery(ctx, map[string][]string{"external_id": {extID}})
@@ -259,16 +263,14 @@ func uniqueExternalIDs(users []*okt.User) map[string]struct{} {
 			continue
 		}
 
-		e := fmt.Sprintf("okta|%s", extID)
-
-		if _, ok := extIDs[e]; ok {
+		if _, ok := extIDs[extID]; ok {
 			l.Warn("external id already exists in list of external ids",
 				zap.String("okta.user.id", u.Id),
-				zap.String("okta.user.external_id", e),
+				zap.String("okta.user.external_id", extID),
 			)
 		}
 
-		extIDs[e] = struct{}{}
+		extIDs[extID] = struct{}{}
 	}
 
 	l.Debug("returning list of unique external ids from okta users",

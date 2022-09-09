@@ -37,7 +37,7 @@ func Test_uniqueExternalIDs(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]struct{}{"okta|oktaid1": {}, "okta|oktaid2": {}, "okta|oktaid3": {}},
+			want: map[string]struct{}{"oktaid1": {}, "oktaid2": {}, "oktaid3": {}},
 		},
 		{
 			name: "example non unique values",
@@ -61,7 +61,7 @@ func Test_uniqueExternalIDs(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]struct{}{"okta|oktaid1": {}},
+			want: map[string]struct{}{"oktaid1": {}},
 		},
 		{
 			name: "example empty values",
@@ -85,7 +85,7 @@ func Test_uniqueExternalIDs(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]struct{}{"okta|oktaid1": {}},
+			want: map[string]struct{}{"oktaid1": {}},
 		},
 	}
 	for _, tt := range tests {

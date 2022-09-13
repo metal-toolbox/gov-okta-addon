@@ -105,6 +105,39 @@ var (
 }
 `)
 
+	testOrganizationsResponse = []byte(`
+[
+	{
+		"id": "186c5a52-4421-4573-8bbf-78d85d3c277e",
+		"name": "Green Party",
+		"created_at": "2001-04-11T15:19:00.668476Z",
+		"updated_at": "2001-04-11T15:19:00.668476Z",
+		"slug": "green-party"
+	},
+	{
+		"id": "916f580b-01ae-4070-982f-95bf36124c95",
+		"name": "Libertarian Party",
+		"created_at": "1971-12-11T16:20:00.668476Z",
+		"created_at": "1971-12-11T16:20:00.668476Z",
+		"slug": "libertarian-party"
+	},
+	{
+		"id": "613b190a-c5d2-4739-8f65-da37080b16cc",
+		"name": "Independent Party",
+		"created_at": "1967-07-08T07:08:00.668476Z",
+		"created_at": "1967-07-08T07:08:00.668476Z",
+		"slug": "independent-party"
+	},
+	{
+		"id": "6a0594a9-6cb4-4fa1-b04f-7b2e6b8d17b8",
+		"name": "Working Families Party",
+		"created_at": "1998-06-19T07:13:00.668476Z",
+		"created_at": "1998-06-19T07:13:00.668476Z",
+		"slug": "working-families-party"
+	}
+]
+`)
+
 	testUsersResponse = []byte(`
 [
     {
@@ -342,6 +375,17 @@ func TestClient_Group(t *testing.T) {
 			},
 			id:   "8923e54d-0df6-407a-832d-2917915a3ff7",
 			want: testResp(testGroupResponse),
+		},
+		{
+			name: "not found",
+			fields: fields{
+				httpClient: &mockHTTPDoer{
+					t:          t,
+					statusCode: http.StatusNotFound,
+				},
+			},
+			id:      "8923e54d-0df6-407a-832d-2917915a3ff7",
+			wantErr: true,
 		},
 		{
 			name: "non-success",
@@ -827,6 +871,351 @@ func TestClient_DeleteUser(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestClient_DeleteGroup(t *testing.T) {
+	tests := []struct {
+		name       string
+		id         string
+		httpClient HTTPDoer
+		wantErr    bool
+	}{
+		{
+			name: "example ok request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			id: "8923e54d-0df6-407a-832d-2917915a3ff7",
+		},
+		{
+			name: "example accepted request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusAccepted,
+			},
+			id: "8923e54d-0df6-407a-832d-2917915a3ff7",
+		},
+		{
+			name: "not found",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusNotFound,
+			},
+			id:      "8923e54d-0df6-407a-832d-2917915a3ff7",
+			wantErr: true,
+		},
+		{
+			name: "non-success",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusInternalServerError,
+			},
+			id:      "8923e54d-0df6-407a-832d-2917915a3ff7",
+			wantErr: true,
+		},
+		{
+			name: "missing id in request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			err := c.DeleteGroup(context.TODO(), tt.id)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestClient_AddGroupToOrganization(t *testing.T) {
+	tests := []struct {
+		name       string
+		groupID    string
+		orgID      string
+		httpClient HTTPDoer
+		wantErr    bool
+	}{
+		{
+			name: "example ok request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+		},
+		{
+			name: "example accepted request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusAccepted,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+		},
+		{
+			name: "example no content request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusNoContent,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+		},
+		{
+			name: "not found",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusNotFound,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+			wantErr: true,
+		},
+		{
+			name: "non-success",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusInternalServerError,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+			wantErr: true,
+		},
+		{
+			name: "missing groupID in request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			wantErr: true,
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+		},
+		{
+			name: "missing orgID in request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			err := c.AddGroupToOrganization(context.TODO(), tt.groupID, tt.orgID)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestClient_RemoveGroupFromOrganization(t *testing.T) {
+	tests := []struct {
+		name       string
+		groupID    string
+		orgID      string
+		httpClient HTTPDoer
+		wantErr    bool
+	}{
+		{
+			name: "example ok request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+		},
+		{
+			name: "example accepted request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusAccepted,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+		},
+		{
+			name: "example no content request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusNoContent,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+		},
+		{
+			name: "not found",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusNotFound,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+			wantErr: true,
+		},
+		{
+			name: "non-success",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusInternalServerError,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+			wantErr: true,
+		},
+		{
+			name: "missing groupID in request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			wantErr: true,
+			orgID:   "bde11bd6-66b7-4f1b-9d4b-0a8a86b2e097",
+		},
+		{
+			name: "missing orgID in request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			groupID: "8923e54d-0df6-407a-832d-2917915a3ff7",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			err := c.RemoveGroupFromOrganization(context.TODO(), tt.groupID, tt.orgID)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestClient_Organizations(t *testing.T) {
+	testResp := func(r []byte) []*v1alpha1.Organization {
+		resp := []*v1alpha1.Organization{}
+		if err := json.Unmarshal(r, &resp); err != nil {
+			t.Error(err)
+		}
+
+		return resp
+	}
+
+	tests := []struct {
+		name       string
+		httpClient HTTPDoer
+		want       []*v1alpha1.Organization
+		wantErr    bool
+	}{
+		{
+			name: "example request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testOrganizationsResponse,
+				statusCode: http.StatusOK,
+			},
+			want: testResp(testOrganizationsResponse),
+		},
+		{
+			name: "example request status accepted",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testOrganizationsResponse,
+				statusCode: http.StatusOK,
+			},
+			want: testResp(testOrganizationsResponse),
+		},
+		{
+			name: "non-success",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusInternalServerError,
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad json response",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusOK,
+				resp:       []byte(`{`),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			got, err := c.Organizations(context.TODO())
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

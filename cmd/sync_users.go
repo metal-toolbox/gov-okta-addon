@@ -16,7 +16,7 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
-// syncUsersCmd governor resources
+// syncUsersCmd syncs okta users into governor
 var syncUsersCmd = &cobra.Command{
 	Use:   "users",
 	Short: "sync okta users into governor",

@@ -6,6 +6,9 @@ var (
 	// ErrRequestNonSuccess is returned when a call to the governor API returns a non-success status
 	ErrRequestNonSuccess = errors.New("got a non-success response from governor")
 
+	// ErrGroupNotFound is returned when a group is not found
+	ErrGroupNotFound = errors.New("group not found")
+
 	// ErrMissingGroupID is returned when a missing or bad group id is passed to a request
 	ErrMissingGroupID = errors.New("missing group id in request")
 
@@ -17,4 +20,7 @@ var (
 
 	// ErrNilUserRequest is returned when a nil user body is passed to a request
 	ErrNilUserRequest = errors.New("nil user request")
+
+	// ErrNilGroupRequest is returned when a nil group body is passed to a request
+	ErrNilGroupRequest = errors.New("nil group request")
 )

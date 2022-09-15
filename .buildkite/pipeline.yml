@@ -9,7 +9,7 @@ steps:
   - label: ":golangci-lint: lint :lint-roller:"
     key: "lint"
     plugins:
-      - docker#v3.13.0:
+      - docker#v3.14.0:
           image: "registry.hub.docker.com/golangci/golangci-lint:v1.43-alpine"
           command: ["golangci-lint", "run", "-v"]
 
@@ -19,7 +19,7 @@ steps:
       - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.2:
           parameters:
             GITHUB_TOKEN: /buildkite/github/personal-access-token/v1
-      - docker#v3.13.0:
+      - docker#v3.14.0:
           image: "golang:1.19"
           environment:
             - "GOPRIVATE"
@@ -34,7 +34,7 @@ steps:
       - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.2:
           parameters:
             GITHUB_TOKEN: /buildkite/github/personal-access-token/v1
-      - docker#v3.13.0:
+      - docker#v3.14.0:
           image: "golang:1.19"
           environment:
             - GOPRIVATE

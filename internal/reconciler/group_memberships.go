@@ -25,7 +25,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 	oktaUserMap := make(map[string]string)
 
 	for _, uid := range group.Members {
-		user, err := r.governorClient.User(ctx, uid)
+		user, err := r.governorClient.User(ctx, uid, false)
 		if err != nil {
 			logger.Error("error getting governor user", zap.Error(err))
 			continue
@@ -103,7 +103,7 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 
 	r.logger.Debug("got group response", zap.Any("group details", group))
 
-	user, err := r.governorClient.User(ctx, uid)
+	user, err := r.governorClient.User(ctx, uid, false)
 	if err != nil {
 		r.logger.Error("error getting governor user", zap.Error(err))
 		return "", "", err
@@ -167,7 +167,7 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 
 	r.logger.Debug("got group response", zap.Any("group details", group))
 
-	user, err := r.governorClient.User(ctx, uid)
+	user, err := r.governorClient.User(ctx, uid, false)
 	if err != nil {
 		r.logger.Error("error getting governor user", zap.Error(err))
 		return "", "", err

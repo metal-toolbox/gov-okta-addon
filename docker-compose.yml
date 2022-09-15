@@ -17,7 +17,7 @@ services:
       GOA_NATS_NKEY: ${GOA_NATS_NKEY:-./nats.nkey}
       GOA_NATS_TOKEN: topSecret111
       GOA_OKTA_TOKEN: ${GOA_OKTA_TOKEN}
-      GOA_OKTA_NOCACHE: true
+      GOA_OKTA_NOCACHE: "true"
       GOA_GOVERNOR_URL: ${GOA_GOVERNOR_URL}
       GOA_GOVERNOR_CLIENT_ID: gov-okta-addon-governor
       GOA_GOVERNOR_CLIENT_SECRET: ${GOA_GOVERNOR_CLIENT_SECRET}

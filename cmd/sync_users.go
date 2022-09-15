@@ -194,7 +194,7 @@ func deleteOrphanGovernorUsers(ctx context.Context, gc *governor.Client, extIDMa
 
 	var deleted int
 
-	govUsers, err := gc.Users(ctx)
+	govUsers, err := gc.Users(ctx, false)
 	if err != nil {
 		return deleted, err
 	}

@@ -43,6 +43,9 @@ type GroupInterface interface {
 
 // UserInterface is the interface for managing users in Okta
 type UserInterface interface {
+	DeactivateUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error)
+	DeactivateOrDeleteUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error)
+	GetUser(ctx context.Context, userID string) (*okta.User, *okta.Response, error)
 	ListUsers(ctx context.Context, qp *query.Params) ([]*okta.User, *okta.Response, error)
 }
 

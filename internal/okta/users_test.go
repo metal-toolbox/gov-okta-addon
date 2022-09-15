@@ -20,6 +20,30 @@ type mockUserClient struct {
 	resp *okta.Response
 }
 
+func (m *mockUserClient) DeactivateUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+
+	return m.resp, nil
+}
+
+func (m *mockUserClient) DeactivateOrDeleteUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+
+	return m.resp, nil
+}
+
+func (m *mockUserClient) GetUser(ctx context.Context, userID string) (*okta.User, *okta.Response, error) {
+	if m.err != nil {
+		return m.users[0], nil, m.err
+	}
+
+	return nil, m.resp, nil
+}
+
 func (m *mockUserClient) ListUsers(ctx context.Context, qp *query.Params) ([]*okta.User, *okta.Response, error) {
 	if m.err != nil {
 		return nil, nil, m.err

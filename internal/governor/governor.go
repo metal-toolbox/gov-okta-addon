@@ -431,8 +431,14 @@ func (c *Client) UsersQuery(ctx context.Context, query map[string][]string) ([]*
 }
 
 // Users gets the list of users from governor
-func (c *Client) Users(ctx context.Context) ([]*v1alpha1.User, error) {
-	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/users", c.url, governorAPIVersion))
+// when deleted is true it will also return deleted users
+func (c *Client) Users(ctx context.Context, deleted bool) ([]*v1alpha1.User, error) {
+	u := fmt.Sprintf("%s/api/%s/users", c.url, governorAPIVersion)
+	if deleted {
+		u += "?deleted"
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodGet, u)
 	if err != nil {
 		return nil, err
 	}
@@ -457,12 +463,18 @@ func (c *Client) Users(ctx context.Context) ([]*v1alpha1.User, error) {
 }
 
 // User gets the details of a user from governor
-func (c *Client) User(ctx context.Context, id string) (*v1alpha1.User, error) {
+// when deleted is true it will return information about a deleted user
+func (c *Client) User(ctx context.Context, id string, deleted bool) (*v1alpha1.User, error) {
 	if id == "" {
 		return nil, ErrMissingUserID
 	}
 
-	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/users/%s", c.url, governorAPIVersion, id))
+	u := fmt.Sprintf("%s/api/%s/users/%s", c.url, governorAPIVersion, id)
+	if deleted {
+		u += "?deleted"
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodGet, u)
 	if err != nil {
 		return nil, err
 	}

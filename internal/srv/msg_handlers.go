@@ -125,9 +125,34 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 
 // usersMessageHandler handles messages for governor user events
 func (s *Server) usersMessageHandler(m *nats.Msg) {
-	_, err := s.unmarshalPayload(m)
+	payload, err := s.unmarshalPayload(m)
 	if err != nil {
 		s.Logger.Warn("unable to unmarshal governor payload", zap.Error(err))
+		return
+	}
+
+	if payload.UserID == "" {
+		s.Logger.Error("bad event payload", zap.Error(ErrEventMissingUserID))
+		return
+	}
+
+	ctx := context.Background()
+
+	logger := s.Logger.With(zap.String("governor.user.id", payload.UserID))
+
+	switch payload.Action {
+	case v1alpha1.GovernorEventDelete:
+		logger.Info("deleting user")
+
+		uid, err := s.Reconciler.UserDelete(ctx, payload.UserID)
+		if err != nil {
+			logger.Error("error deleting user", zap.Error(err))
+			return
+		}
+
+		logger.Info("successfully deleted user", zap.String("okta.user.id", uid))
+	default:
+		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return
 	}
 }

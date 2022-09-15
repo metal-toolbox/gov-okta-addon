@@ -36,3 +36,13 @@ func init() {
 	syncCmd.PersistentFlags().String("governor-audience", "https://api.governor.metalkube.net", "oauth audience for client credential flow")
 	viperBindFlag("governor.audience", syncCmd.PersistentFlags().Lookup("governor-audience"))
 }
+
+func contains(list []string, item string) bool {
+	for _, i := range list {
+		if i == item {
+			return true
+		}
+	}
+
+	return false
+}

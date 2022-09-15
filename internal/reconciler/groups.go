@@ -77,7 +77,7 @@ func (r *Reconciler) GroupUpdate(ctx context.Context, id string) (string, error)
 		return "", err
 	}
 
-	if err := r.oktaClient.UpdateGroup(ctx, gid, group.Name, group.Description, map[string]interface{}{"governor_id": group.ID}); err != nil {
+	if _, err := r.oktaClient.UpdateGroup(ctx, gid, group.Name, group.Description, map[string]interface{}{"governor_id": group.ID}); err != nil {
 		logger.Error("error updating group", zap.Error(err))
 		return "", err
 	}

@@ -190,6 +190,12 @@ func (c *Client) Group(ctx context.Context, id string) (*v1alpha1.Group, error) 
 
 	defer resp.Body.Close()
 
+	c.logger.Debug("status code", zap.String("status code", resp.Status))
+
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, ErrGroupNotFound
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, ErrRequestNonSuccess
 	}
@@ -200,6 +206,136 @@ func (c *Client) Group(ctx context.Context, id string) (*v1alpha1.Group, error) 
 	}
 
 	return &out, nil
+}
+
+// CreateGroup creates a new group in governor
+func (c *Client) CreateGroup(ctx context.Context, group *v1alpha1.GroupReq) (*v1alpha1.Group, error) {
+	if group == nil {
+		return nil, ErrNilGroupRequest
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodPost, fmt.Sprintf("%s/api/%s/groups", c.url, governorAPIVersion))
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := json.Marshal(group)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Body = io.NopCloser(bytes.NewBuffer(b))
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return nil, ErrRequestNonSuccess
+	}
+
+	out := v1alpha1.Group{}
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+// DeleteGroup deletes a group from governor
+func (c *Client) DeleteGroup(ctx context.Context, id string) error {
+	if id == "" {
+		return ErrMissingGroupID
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodDelete, fmt.Sprintf("%s/api/%s/groups/%s", c.url, governorAPIVersion, id))
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	c.logger.Debug("status code", zap.String("status code", resp.Status))
+
+	if resp.StatusCode == http.StatusNotFound {
+		return ErrGroupNotFound
+	}
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
+		return ErrRequestNonSuccess
+	}
+
+	return nil
+}
+
+// AddGroupToOrganization links the group to the organization
+func (c *Client) AddGroupToOrganization(ctx context.Context, groupID, orgID string) error {
+	if groupID == "" {
+		return ErrMissingGroupID
+	}
+
+	if orgID == "" {
+		return ErrMissingOrganizationID
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodPut, fmt.Sprintf("%s/api/%s/groups/%s/organizations/%s", c.url, governorAPIVersion, groupID, orgID))
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusAccepted &&
+		resp.StatusCode != http.StatusNoContent {
+		return ErrRequestNonSuccess
+	}
+
+	return nil
+}
+
+// RemoveGroupFromOrganization unlinks the group from the organization
+func (c *Client) RemoveGroupFromOrganization(ctx context.Context, groupID, orgID string) error {
+	if groupID == "" {
+		return ErrMissingGroupID
+	}
+
+	if orgID == "" {
+		return ErrMissingOrganizationID
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodDelete, fmt.Sprintf("%s/api/%s/groups/%s/organizations/%s", c.url, governorAPIVersion, groupID, orgID))
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusAccepted &&
+		resp.StatusCode != http.StatusNoContent {
+		return ErrRequestNonSuccess
+	}
+
+	return nil
 }
 
 // Organizations gets the list of organizations from governor

@@ -9,6 +9,14 @@ import (
 	"go.uber.org/zap"
 )
 
+const (
+	// GroupProfileGovernorIDKey is the map key for the governor ID in an Okta group profile
+	GroupProfileGovernorIDKey = "governor_id"
+)
+
+// GroupModifierFunc modifies a an okta group response
+type GroupModifierFunc func(context.Context, *okta.Group) (*okta.Group, error)
+
 // CreateGroup creates a simple group in Okta with a name, description and an extended schema profile
 func (c *Client) CreateGroup(ctx context.Context, name, desc string, profile map[string]interface{}) (string, error) {
 	c.logger.Info("creating Okta group",
@@ -33,8 +41,8 @@ func (c *Client) CreateGroup(ctx context.Context, name, desc string, profile map
 	return group.Id, nil
 }
 
-// UpdateGroup updates a group in Okta
-func (c *Client) UpdateGroup(ctx context.Context, id, name, desc string, profile map[string]interface{}) error {
+// UpdateGroup updates a group in Okta and returns the updated group
+func (c *Client) UpdateGroup(ctx context.Context, id, name, desc string, profile map[string]interface{}) (*okta.Group, error) {
 	c.logger.Info("updating Okta group",
 		zap.String("okta.group.id", id),
 		zap.String("okta.group.name", name),
@@ -42,19 +50,20 @@ func (c *Client) UpdateGroup(ctx context.Context, id, name, desc string, profile
 		zap.Any("okta.group.profile", profile),
 	)
 
-	if _, _, err := c.groupIface.UpdateGroup(ctx, id, okta.Group{
+	group, _, err := c.groupIface.UpdateGroup(ctx, id, okta.Group{
 		Profile: &okta.GroupProfile{
 			Name:            name,
 			Description:     desc,
 			GroupProfileMap: okta.GroupProfileMap(profile),
 		},
-	}); err != nil {
-		return err
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	c.logger.Debug("updated okta group", zap.String("okta.group.id", id))
 
-	return nil
+	return group, nil
 }
 
 // DeleteGroup deletes a group in Okta
@@ -149,4 +158,164 @@ func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]string,
 	}
 
 	return members, nil
+}
+
+// ListGroupsWithModifier lists okta groups and modifies the group response with the given
+// GroupModifierFunc.  If nil is returned from the GroupModifierFunc, the group will not be returned
+// in the response.
+func (c *Client) ListGroupsWithModifier(ctx context.Context, f GroupModifierFunc, q *query.Params) ([]*okta.Group, error) {
+	c.logger.Info("listing groups with func")
+
+	groups, resp, err := c.groupIface.ListGroups(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+
+	groupResp := []*okta.Group{}
+
+	for _, g := range groups {
+		c.logger.Debug("running function on group", zap.Any("group", g))
+
+		group, err := f(ctx, g)
+		if err != nil {
+			return nil, err
+		}
+
+		if group != nil {
+			groupResp = append(groupResp, group)
+		}
+	}
+
+	for {
+		if !resp.HasNextPage() {
+			break
+		}
+
+		nextPage := []*okta.Group{}
+
+		resp, err = resp.Next(ctx, &nextPage)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, g := range nextPage {
+			c.logger.Debug("running function on group", zap.Any("group", g))
+
+			group, err := f(ctx, g)
+			if err != nil {
+				return nil, err
+			}
+
+			if group != nil {
+				groupResp = append(groupResp, group)
+			}
+		}
+	}
+
+	c.logger.Debug("returning list of groups", zap.Int("num.okta.groups", len(groupResp)))
+
+	return groupResp, nil
+}
+
+// GroupGovernorID gets the governor group id from the okta group profile
+func GroupGovernorID(group *okta.Group) (string, error) {
+	if group == nil {
+		return "", ErrBadOktaGroupParameter
+	}
+
+	if group.Profile == nil {
+		return "", ErrNilGroupProfile
+	}
+
+	for k, v := range group.Profile.GroupProfileMap {
+		if k == GroupProfileGovernorIDKey {
+			kv, ok := v.(string)
+			if !ok {
+				return "", ErrGroupGovernorIDNotString
+			}
+
+			if kv == "" {
+				return "", ErrGroupGovernorIDNotFound
+			}
+
+			return kv, nil
+		}
+	}
+
+	return "", ErrGroupGovernorIDNotFound
+}
+
+// GroupGithubCloudApplications returns a map of Okta Github cloud applications assigned to an Okta
+// group with org name as the key and the okta ID as the value
+func (c *Client) GroupGithubCloudApplications(ctx context.Context, groupID string) (map[string]string, error) {
+	c.logger.Info("listing okta githubcloud application for group", zap.String("okta.group.id", groupID))
+
+	applications, err := c.listAssignedApplicationsForGroup(ctx, groupID, &query.Params{Filter: "name eq \"githubcloud\"", Limit: defaultPageLimit})
+	if err != nil {
+		return nil, err
+	}
+
+	c.logger.Debug("applications list from Okta", zap.Any("okta.apps", applications))
+
+	apps := map[string]string{}
+
+	for _, a := range applications {
+		app, ok := a.(*okta.Application)
+		if !ok {
+			continue
+		}
+
+		// trudge through the app settings looking for the github org
+		if app.Settings != nil && app.Settings.App != nil {
+			for k, v := range *app.Settings.App {
+				c.logger.Debug("okta app setting", zap.String("okta.app.setting.key", k), zap.Any("okta.app.setting.value", v))
+
+				if k == "githubOrg" {
+					org, ok := v.(string)
+					if !ok {
+						c.logger.Warn("okta app setting for githubOrg is not a string", zap.Any("okta.app.settings", *app.Settings.App))
+						break
+					}
+
+					apps[org] = app.Id
+				}
+			}
+		}
+	}
+
+	return apps, nil
+}
+
+// listAssignedApplicationsForGroup lists the applications that are assigned to a group ID
+func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID string, qp *query.Params) ([]okta.App, error) {
+	if groupID == "" {
+		return nil, ErrApplicationBadParameters
+	}
+
+	c.logger.Info("listing okta applications assigned to group", zap.Any("okta.group.id", groupID))
+
+	apps, resp, err := c.groupIface.ListAssignedApplicationsForGroup(ctx, groupID, qp)
+	if err != nil {
+		return nil, err
+	}
+
+	c.logger.Debug("output from listing application group assignments", zap.Any("okta.applications", apps))
+
+	list := make([]okta.App, len(apps))
+	copy(list, apps)
+
+	for {
+		if !resp.HasNextPage() {
+			break
+		}
+
+		resp, err = resp.Next(ctx, &apps)
+		if err != nil {
+			return nil, err
+		}
+
+		list = append(list, apps...)
+	}
+
+	return list, nil
 }

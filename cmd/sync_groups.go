@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/gosimple/slug"
 	okt "github.com/okta/okta-sdk-golang/v2/okta"
 	"github.com/okta/okta-sdk-golang/v2/okta/query"
 	"github.com/spf13/cobra"
@@ -35,10 +36,14 @@ func init() {
 
 	syncCmd.PersistentFlags().Bool("skip-okta-update", false, "do not make changes to okta groups (ie. setting the governor_id)")
 	viperBindFlag("sync.skip-okta-update", syncCmd.PersistentFlags().Lookup("skip-okta-update"))
+
+	syncCmd.PersistentFlags().String("selector-prefix", "", "if set, only group names that start with this string will be processed")
+	viperBindFlag("sync.selector-prefix", syncCmd.PersistentFlags().Lookup("selector-prefix"))
 }
 
 func syncGroupsToGovernor(ctx context.Context) error {
 	dryRun := viper.GetBool("sync.dryrun")
+	selectorPrefix := viper.GetString("sync.selector-prefix")
 
 	logger.Info("starting sync to governor", zap.Bool("dry-run", dryRun))
 
@@ -90,9 +95,8 @@ func syncGroupsToGovernor(ctx context.Context) error {
 
 		l = l.With(zap.String("okta.group.name", groupName))
 
-		// TODO remove this skip when we want to manage non-test groups
-		if !strings.HasPrefix(strings.ToLower(groupName), "testgroup") {
-			l.Info("skipping non-test group")
+		if !strings.HasPrefix(strings.ToLower(groupName), strings.ToLower(selectorPrefix)) {
+			l.Info("skipping non-selected group")
 
 			skipped++
 
@@ -109,9 +113,16 @@ func syncGroupsToGovernor(ctx context.Context) error {
 			}
 		}
 
-		govGroup, err := groupFromGroupID(ctx, gc, governorID, l)
+		govGroup, found, err := groupFromGroupID(ctx, gc, governorID, l)
 		if err != nil {
 			return nil, err
+		}
+
+		if govGroup == nil {
+			govGroup, err = groupFromGroupSlug(ctx, gc, slug.Make(groupName), l)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		if govGroup == nil {
@@ -134,16 +145,20 @@ func syncGroupsToGovernor(ctx context.Context) error {
 				)
 
 				l.Debug("created governor group from okta sync")
-
-				grp, err := updateOktaGroupProfile(ctx, oc, g.Id, groupName, groupDesc, govGroup, l)
-				if err != nil {
-					return nil, err
-				}
-
-				g = grp
 			}
 
 			created++
+		}
+
+		// if we found the group by slug or if we created the group, we should update the okta
+		// group profile to contain the correct governor id
+		if !found {
+			grp, err := updateOktaGroupProfile(ctx, oc, g.Id, groupName, groupDesc, govGroup, l)
+			if err != nil {
+				return nil, err
+			}
+
+			g = grp
 		}
 
 		apps, err := oc.GroupGithubCloudApplications(ctx, g.Id)
@@ -176,15 +191,17 @@ func syncGroupsToGovernor(ctx context.Context) error {
 		return err
 	}
 
+	logger.Desugar().Debug("groups from okta", zap.Any("okta.groups", groups))
+
 	deleted, err := deleteOrphanGovernorGroups(ctx, gc, uniqueGovernorGroupIDs(groups), logger.Desugar())
 	if err != nil {
 		return err
 	}
 
-	logger.Info("completed group sync",
-		zap.Int("created", created),
-		zap.Int("deleted", len(deleted)),
-		zap.Int("skipped", skipped),
+	logger.Desugar().Info("completed group sync",
+		zap.Int("governor.groups.created", created),
+		zap.Int("governor.groups.deleted", len(deleted)),
+		zap.Int("governor.groups.skipped", skipped),
 	)
 
 	return nil
@@ -269,7 +286,7 @@ func pruneOrphanGovernorGroupOrganizations(ctx context.Context, gc *governor.Cli
 			)
 
 			if err := gc.RemoveGroupFromOrganization(ctx, groupID, org); err != nil {
-				l.Warn("failed to add governor group to organization",
+				l.Warn("failed to remove governor group to organization",
 					zap.String("governor.org.id", org),
 				)
 
@@ -283,9 +300,9 @@ func pruneOrphanGovernorGroupOrganizations(ctx context.Context, gc *governor.Cli
 
 // groupFromGroupID gets a governor group from a group id (presumably from an okta group profile).  If the groupID is
 // empty or the group is not found, return a nil group.  Otherwise, return the group we got back from governor.
-func groupFromGroupID(ctx context.Context, gc *governor.Client, groupID string, l *zap.Logger) (*v1alpha1.Group, error) {
+func groupFromGroupID(ctx context.Context, gc *governor.Client, groupID string, l *zap.Logger) (*v1alpha1.Group, bool, error) {
 	if groupID == "" {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	l.Debug("getting group from governor")
@@ -295,12 +312,44 @@ func groupFromGroupID(ctx context.Context, gc *governor.Client, groupID string, 
 	if err != nil {
 		// bail on governor errors other than group not found
 		if !errors.Is(err, governor.ErrGroupNotFound) {
-			return nil, err
+			return nil, false, err
 		}
 
 		l.Warn("governor id found on okta group, but group not found in governor",
 			zap.String("governor.id", groupID),
 		)
+
+		return nil, false, nil
+	}
+
+	l = l.With(
+		zap.String("governor.group.id", govGroup.ID),
+		zap.String("governor.group.slug", govGroup.Slug),
+	)
+
+	l.Debug("group id exists in governor")
+
+	return govGroup, true, nil
+}
+
+// groupFromGroupSlug gets a governor group from a group slug (presumably generated from an okta group name).  If the
+// group slug is empty or the group is not found, return a nil group.  Otherwise, return the group we got back from governor.
+func groupFromGroupSlug(ctx context.Context, gc *governor.Client, slug string, l *zap.Logger) (*v1alpha1.Group, error) {
+	if slug == "" {
+		return nil, nil
+	}
+
+	l.Debug("getting group from governor")
+
+	// if we have a governor slug, try to get the group in governor
+	govGroup, err := gc.Group(ctx, slug)
+	if err != nil {
+		// bail on governor errors other than group not found
+		if !errors.Is(err, governor.ErrGroupNotFound) {
+			return nil, err
+		}
+
+		l.Warn("group slug not found in governor", zap.String("governor.id", slug))
 
 		return nil, nil
 	}
@@ -310,13 +359,14 @@ func groupFromGroupID(ctx context.Context, gc *governor.Client, groupID string, 
 		zap.String("governor.group.slug", govGroup.Slug),
 	)
 
-	l.Debug("group exists in governor")
+	l.Debug("group slug exists in governor")
 
 	return govGroup, nil
 }
 
 func deleteOrphanGovernorGroups(ctx context.Context, gc *governor.Client, gIDs map[string]struct{}, l *zap.Logger) ([]string, error) {
 	dryRun := viper.GetBool("sync.dryrun")
+	selectorPrefix := viper.GetString("sync.selector-prefix")
 
 	groups, err := gc.Groups(ctx)
 	if err != nil {
@@ -327,6 +377,16 @@ func deleteOrphanGovernorGroups(ctx context.Context, gc *governor.Client, gIDs m
 
 	for _, group := range groups {
 		if _, ok := gIDs[group.ID]; !ok {
+			if !strings.HasPrefix(strings.ToLower(group.Slug), strings.ToLower(selectorPrefix)) {
+				l.Debug("skipping delete of non-selected group",
+					zap.String("governor.group.id", group.ID),
+					zap.String("governor.group.name", group.Name),
+					zap.String("governor.group.slug", group.Slug),
+				)
+
+				continue
+			}
+
 			l.Info("deleting orphaned group from governor",
 				zap.String("governor.group.id", group.ID),
 				zap.String("governor.group.name", group.Name),
@@ -335,7 +395,7 @@ func deleteOrphanGovernorGroups(ctx context.Context, gc *governor.Client, gIDs m
 
 			if !dryRun {
 				if err := gc.DeleteGroup(ctx, group.ID); err != nil {
-					logger.Warn("failed to delete orphaned governor group",
+					l.Warn("failed to delete orphaned governor group",
 						zap.String("governor.group.id", group.ID),
 						zap.String("governor.group.name", group.Name),
 						zap.String("governor.group.slug", group.Slug),
@@ -355,14 +415,18 @@ func deleteOrphanGovernorGroups(ctx context.Context, gc *governor.Client, gIDs m
 
 // uniqueGovernorGroupIDs returns a map of unique governor ids from a slice of okta groups
 func uniqueGovernorGroupIDs(groups []*okt.Group) map[string]struct{} {
+	l := logger.Desugar()
+
 	resp := map[string]struct{}{}
 
 	for _, g := range groups {
 		govID, err := okta.GroupGovernorID(g)
 		if err != nil {
-			logger.Warn("unable to get governor id from okta group", zap.Error(err))
+			l.Warn("unable to get governor id from okta group", zap.Error(err))
 			continue
 		}
+
+		l.Debug("found governor group id", zap.String("governor.group.id", govID))
 
 		resp[govID] = struct{}{}
 	}
@@ -379,20 +443,28 @@ func updateOktaGroupProfile(
 	govGroup *v1alpha1.Group,
 	l *zap.Logger) (*okt.Group, error) {
 	skipOkta := viper.GetBool("sync.skip-okta-update")
+	dryRun := viper.GetBool("sync.dryrun")
 
-	if skipOkta {
+	if skipOkta || dryRun {
 		l.Info("skipping okta update of governor id")
 
-		return &okt.Group{
+		grp := &okt.Group{
 			Id: gID,
 			Profile: &okt.GroupProfile{
-				Name:        groupName,
-				Description: groupDesc,
-				GroupProfileMap: okt.GroupProfileMap{
-					okta.GroupProfileGovernorIDKey: govGroup.ID,
-				},
+				Name:            groupName,
+				Description:     groupDesc,
+				GroupProfileMap: okt.GroupProfileMap{},
 			},
-		}, nil
+		}
+
+		if dryRun {
+			grp.Profile.GroupProfileMap[okta.GroupProfileGovernorIDKey] = "FAKE"
+			return grp, nil
+		}
+
+		grp.Profile.GroupProfileMap[okta.GroupProfileGovernorIDKey] = govGroup.ID
+
+		return grp, nil
 	}
 
 	l.Info("writing governor id on okta group profile")

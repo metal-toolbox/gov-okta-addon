@@ -177,9 +177,9 @@ func syncUsersToGovernor(ctx context.Context) error {
 	}
 
 	l.Info("completed user sync",
-		zap.Int("created", created),
-		zap.Int("deleted", deleted),
-		zap.Int("skipped", skipped),
+		zap.Int("governor.users.created", created),
+		zap.Int("governor.users.deleted", deleted),
+		zap.Int("governor.users.skipped", skipped),
 	)
 
 	return nil

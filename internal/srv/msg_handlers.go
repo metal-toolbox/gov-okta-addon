@@ -29,7 +29,7 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 
 	switch payload.Action {
 	case v1alpha1.GovernorEventCreate:
-		if s.Dryrun {
+		if s.DryRun {
 			logger.Info("dryrun creating group")
 			return
 		}

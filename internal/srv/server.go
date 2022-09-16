@@ -26,7 +26,7 @@ type Server struct {
 	Logger          *zap.Logger
 	Listen          string
 	Debug           bool
-	Dryrun          bool
+	DryRun          bool
 	AuditFileWriter io.Writer
 	NATSClient      *NATSClient
 	OktaClient      *okta.Client

@@ -82,13 +82,14 @@ func (r *Reconciler) GroupUpdate(ctx context.Context, id string) (string, error)
 		return "", err
 	}
 
-	if !r.dryrun {
-		if _, err := r.oktaClient.UpdateGroup(ctx, gid, group.Name, group.Description, map[string]interface{}{"governor_id": group.ID}); err != nil {
-			logger.Error("error updating group", zap.Error(err))
-			return "", err
-		}
-	} else {
+	if r.dryrun {
 		logger.Info("dryrun updating okta group")
+		return gid, nil
+	}
+
+	if _, err := r.oktaClient.UpdateGroup(ctx, gid, group.Name, group.Description, map[string]interface{}{"governor_id": group.ID}); err != nil {
+		logger.Error("error updating group", zap.Error(err))
+		return "", err
 	}
 
 	return gid, nil
@@ -103,13 +104,14 @@ func (r *Reconciler) GroupDelete(ctx context.Context, id string) (string, error)
 		return "", err
 	}
 
-	if !r.dryrun {
-		if err := r.oktaClient.DeleteGroup(ctx, gid); err != nil {
-			r.logger.Error("error deleting group", zap.Error(err))
-			return "", err
-		}
-	} else {
+	if r.dryrun {
 		r.logger.Info("dryrun deleting okta group", zap.String("okta.group.id", gid))
+		return gid, nil
+	}
+
+	if err := r.oktaClient.DeleteGroup(ctx, gid); err != nil {
+		r.logger.Error("error deleting group", zap.Error(err))
+		return "", err
 	}
 
 	return gid, nil

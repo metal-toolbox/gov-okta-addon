@@ -42,8 +42,8 @@ func WithLogger(l *zap.Logger) Option {
 	}
 }
 
-// WithDryrun sets dryrun
-func WithDryrun(d bool) Option {
+// WithDryRun sets dryrun
+func WithDryRun(d bool) Option {
 	return func(r *Reconciler) {
 		r.dryrun = d
 	}
@@ -204,13 +204,14 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 				}
 
 				// assign group to the application
-				if !r.dryrun {
-					if err := r.oktaClient.AssignGroupToApplication(ctx, appID, oktaGID); err != nil {
-						logger.Error("error assigning okta group to okta application", zap.String("okta.app.id", appID))
-						return err
-					}
-				} else {
+				if r.dryrun {
 					logger.Info("dryrun assigning okta group to okta application", zap.String("okta.app.id", appID))
+					continue
+				}
+
+				if err := r.oktaClient.AssignGroupToApplication(ctx, appID, oktaGID); err != nil {
+					logger.Error("error assigning okta group to okta application", zap.String("okta.app.id", appID))
+					return err
 				}
 
 				continue
@@ -224,13 +225,13 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 			}
 
 			// remove group from the application
-			if !r.dryrun {
+			if r.dryrun {
+				logger.Info("dryrun removing assignment of okta group from okta application", zap.String("okta.app.id", appID))
+			} else {
 				if err := r.oktaClient.RemoveApplicationGroupAssignment(ctx, appID, oktaGID); err != nil {
 					logger.Error("error removing okta group from okta application", zap.String("okta.app.id", appID))
 					return err
 				}
-			} else {
-				logger.Info("dryrun removing assignment of okta group from okta application", zap.String("okta.app.id", appID))
 			}
 		}
 	}

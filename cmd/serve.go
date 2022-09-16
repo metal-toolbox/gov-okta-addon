@@ -167,12 +167,12 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		reconciler.WithInterval(viper.GetDuration("reconciler.interval")),
 		reconciler.WithGovernorClient(gc),
 		reconciler.WithOktaClient(oc),
-		reconciler.WithDryrun(viper.GetBool("dryrun")),
+		reconciler.WithDryRun(viper.GetBool("dryrun")),
 	)
 
 	server := &srv.Server{
 		Debug:           viper.GetBool("logging.debug"),
-		Dryrun:          viper.GetBool("dryrun"),
+		DryRun:          viper.GetBool("dryrun"),
 		Listen:          viper.GetString("listen"),
 		Logger:          logger.Desugar(),
 		AuditFileWriter: auf,
@@ -181,7 +181,7 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		Reconciler:      rec,
 	}
 
-	logger.Infow("starting server", "address", viper.GetString("listen"), "dryrun", server.Dryrun)
+	logger.Infow("starting server", "address", viper.GetString("listen"), "dryrun", server.DryRun)
 
 	if err := server.Run(ctx); err != nil {
 		logger.Fatalw("failed starting server", "error", err)

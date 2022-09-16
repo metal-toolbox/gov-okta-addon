@@ -234,7 +234,7 @@ func linkGovernorGroupOrganizations(
 
 	// loop over the okta github applications to get the organization
 	// and ensure the governor group is linked with appropriate governor orgs
-	for orgName, _ := range oktaApps {
+	for orgName := range oktaApps {
 		// ensure governor manages the org, otherwise skip over it
 		org, ok := govOrgs[orgName]
 		if !ok {

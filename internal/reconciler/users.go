@@ -2,7 +2,9 @@ package reconciler
 
 import (
 	"context"
+	"time"
 
+	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 )
 
@@ -20,7 +22,7 @@ func (r *Reconciler) UserDelete(ctx context.Context, id string) (string, error) 
 
 	logger.Debug("got governor user response", zap.Any("user details", user))
 
-	if user.DeletedAt.IsZero() {
+	if !userDeleted(user) {
 		logger.Error("user still exists in governor")
 		return "", ErrUserStillExists
 	}
@@ -31,4 +33,29 @@ func (r *Reconciler) UserDelete(ctx context.Context, id string) (string, error) 
 	}
 
 	return user.ExternalID, nil
+}
+
+// userDeleted returns true if the given user has been deleted in governor within the specified time period, currently 24h
+// the function will also perform some basic user validation and will return false if anything with the user doesn't look right
+func userDeleted(user *v1alpha1.User) bool {
+	if user == nil {
+		return false
+	}
+
+	// these fields should always be defined for a user
+	if user.ID == "" || user.ExternalID == "" || user.Name == "" || user.Email == "" {
+		return false
+	}
+
+	cutoff := time.Now().Add(-24 * time.Hour)
+
+	if user.DeletedAt.IsZero() {
+		return false
+	}
+
+	if user.DeletedAt.Time.After(cutoff) {
+		return true
+	}
+
+	return false
 }

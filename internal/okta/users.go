@@ -50,7 +50,7 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 		}
 	}
 
-	// TODO: do we need to clear any sessions in Okta?
+	// TODO clear any sessions in Okta
 
 	c.logger.Debug("deleted okta user", zap.String("okta.user.id", id))
 

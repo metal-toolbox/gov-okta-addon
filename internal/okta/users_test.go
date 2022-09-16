@@ -20,6 +20,8 @@ type mockUserClient struct {
 	resp *okta.Response
 }
 
+var ctrDeactivateOrDeleteUser int
+
 func (m *mockUserClient) DeactivateUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
 	if m.err != nil {
 		return nil, m.err
@@ -29,6 +31,8 @@ func (m *mockUserClient) DeactivateUser(ctx context.Context, userID string, qp *
 }
 
 func (m *mockUserClient) DeactivateOrDeleteUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
+	ctrDeactivateOrDeleteUser++
+
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -38,10 +42,10 @@ func (m *mockUserClient) DeactivateOrDeleteUser(ctx context.Context, userID stri
 
 func (m *mockUserClient) GetUser(ctx context.Context, userID string) (*okta.User, *okta.Response, error) {
 	if m.err != nil {
-		return m.users[0], nil, m.err
+		return nil, nil, m.err
 	}
 
-	return nil, m.resp, nil
+	return m.users[0], m.resp, nil
 }
 
 func (m *mockUserClient) ListUsers(ctx context.Context, qp *query.Params) ([]*okta.User, *okta.Response, error) {
@@ -50,6 +54,103 @@ func (m *mockUserClient) ListUsers(ctx context.Context, qp *query.Params) ([]*ok
 	}
 
 	return m.users, m.resp, nil
+}
+
+func TestClient_DeactivateUser(t *testing.T) {
+	tests := []struct {
+		name    string
+		id      string
+		err     error
+		wantErr bool
+	}{
+		{
+			name: "example deactivate user",
+			id:   "user101",
+		},
+		{
+			name:    "okta error",
+			id:      "user101",
+			err:     errors.New("boom"), //nolint:goerr113
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				logger: zap.NewNop(),
+				userIface: &mockUserClient{
+					t:   t,
+					err: tt.err,
+				},
+			}
+			err := c.DeactivateUser(context.TODO(), tt.id)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestClient_DeleteUser(t *testing.T) {
+	tests := []struct {
+		name    string
+		id      string
+		users   []*okta.User
+		err     error
+		wantCtr int
+		wantErr bool
+	}{
+		{
+			name: "delete active user",
+			id:   "user101",
+			users: []*okta.User{
+				{Id: "11111111", Status: "ACTIVE"},
+			},
+			wantCtr: 2,
+		},
+		{
+			name: "delete deactivated user",
+			id:   "user101",
+			users: []*okta.User{
+				{Id: "11111111", Status: "DEPROVISIONED"},
+			},
+			wantCtr: 1,
+		},
+		{
+			name: "okta error",
+			id:   "user101",
+			users: []*okta.User{
+				{Id: "11111111"},
+			},
+			err:     errors.New("boom"), //nolint:goerr113
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				logger: zap.NewNop(),
+				userIface: &mockUserClient{
+					t:     t,
+					err:   tt.err,
+					users: tt.users,
+					resp:  &okta.Response{},
+				},
+			}
+			ctrDeactivateOrDeleteUser = 0
+			err := c.DeleteUser(context.TODO(), tt.id)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.wantCtr, ctrDeactivateOrDeleteUser)
+		})
+	}
 }
 
 func TestClient_GetUserIDByEmail(t *testing.T) {
@@ -105,6 +206,61 @@ func TestClient_GetUserIDByEmail(t *testing.T) {
 				},
 			}
 			got, err := c.GetUserIDByEmail(context.TODO(), tt.email)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClient_ListUsers(t *testing.T) {
+	tests := []struct {
+		name    string
+		err     error
+		users   []*okta.User
+		want    []*okta.User
+		wantErr bool
+	}{
+		{
+			name: "successful list users",
+			users: []*okta.User{
+				{Id: "user1"},
+				{Id: "user2"},
+			},
+			want: []*okta.User{{Id: "user1"}, {Id: "user2"}},
+		},
+		{
+			name:  "empty list users",
+			users: []*okta.User{},
+			want:  []*okta.User{},
+		},
+		{
+			name: "okta error",
+			users: []*okta.User{
+				{Id: "user1"},
+				{Id: "user1"},
+			},
+			err:     errors.New("boom"), //nolint:goerr113
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				logger: zap.NewNop(),
+				userIface: &mockUserClient{
+					t:     t,
+					err:   tt.err,
+					users: tt.users,
+					resp:  &okta.Response{},
+				},
+			}
+			got, err := c.ListUsers(context.TODO())
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

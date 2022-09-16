@@ -15,6 +15,7 @@ func Test_userDeleted(t *testing.T) {
 		if err := json.Unmarshal(r, &resp); err != nil {
 			t.Error(err)
 		}
+
 		return &resp
 	}
 
@@ -23,13 +24,16 @@ func Test_userDeleted(t *testing.T) {
 		if err := json.Unmarshal(r, &resp); err != nil {
 			t.Error(err)
 		}
+
 		resp.DeletedAt = null.TimeFrom(dt)
+
 		return &resp
 	}
 
 	type args struct {
 		user *v1alpha1.User
 	}
+
 	tests := []struct {
 		name string
 		args args
@@ -161,6 +165,7 @@ func Test_userDeleted(t *testing.T) {
 			want: false,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := userDeleted(tt.args.user); got != tt.want {

@@ -38,16 +38,17 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 
 	c.logger.Debug("got okta user status", zap.String("okta.user.status", user.Status))
 
-	// if a user is already deprovisioned this will delete the user, otherwise, it will deprovision them
-	if _, err := c.userIface.DeactivateOrDeleteUser(ctx, id, &query.Params{}); err != nil {
-		return err
-	}
-
-	// run this again to delete the user, unless they were already deprovisioned
+	// make sure the user is deactivated first
 	if user.Status != "DEPROVISIONED" {
-		if _, err := c.userIface.DeactivateOrDeleteUser(ctx, id, &query.Params{}); err != nil {
+		c.logger.Debug("deactivating user", zap.String("okta.user.id", id))
+
+		if _, err := c.userIface.DeactivateUser(ctx, id, &query.Params{}); err != nil {
 			return err
 		}
+	}
+
+	if _, err := c.userIface.DeactivateOrDeleteUser(ctx, id, &query.Params{}); err != nil {
+		return err
 	}
 
 	// TODO clear any sessions in Okta

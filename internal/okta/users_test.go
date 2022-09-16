@@ -20,9 +20,11 @@ type mockUserClient struct {
 	resp *okta.Response
 }
 
-var ctrDeactivateOrDeleteUser int
+var executedDeactivateUser bool
 
 func (m *mockUserClient) DeactivateUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
+	executedDeactivateUser = true
+
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -31,8 +33,6 @@ func (m *mockUserClient) DeactivateUser(ctx context.Context, userID string, qp *
 }
 
 func (m *mockUserClient) DeactivateOrDeleteUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
-	ctrDeactivateOrDeleteUser++
-
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -100,7 +100,7 @@ func TestClient_DeleteUser(t *testing.T) {
 		id      string
 		users   []*okta.User
 		err     error
-		wantCtr int
+		wantDA  bool
 		wantErr bool
 	}{
 		{
@@ -109,7 +109,7 @@ func TestClient_DeleteUser(t *testing.T) {
 			users: []*okta.User{
 				{Id: "11111111", Status: "ACTIVE"},
 			},
-			wantCtr: 2,
+			wantDA: true,
 		},
 		{
 			name: "delete deactivated user",
@@ -117,7 +117,7 @@ func TestClient_DeleteUser(t *testing.T) {
 			users: []*okta.User{
 				{Id: "11111111", Status: "DEPROVISIONED"},
 			},
-			wantCtr: 1,
+			wantDA: false,
 		},
 		{
 			name: "okta error",
@@ -140,7 +140,7 @@ func TestClient_DeleteUser(t *testing.T) {
 					resp:  &okta.Response{},
 				},
 			}
-			ctrDeactivateOrDeleteUser = 0
+			executedDeactivateUser = false
 			err := c.DeleteUser(context.TODO(), tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -148,7 +148,7 @@ func TestClient_DeleteUser(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.wantCtr, ctrDeactivateOrDeleteUser)
+			assert.Equal(t, tt.wantDA, executedDeactivateUser)
 		})
 	}
 }

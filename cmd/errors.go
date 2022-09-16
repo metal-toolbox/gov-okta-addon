@@ -33,4 +33,6 @@ var (
 	ErrOktaUserLastNameNotString = errors.New("okta user last name in profile is not a string")
 	// ErrOktaUserTypeNotString is returned when the okta user profile contains a user type that's not a string
 	ErrOktaUserTypeNotString = errors.New("okta user type in profile is not a string")
+	// ErrUserNotFound is returned when a user isn't found in the system
+	ErrUserNotFound = errors.New("user not found")
 )

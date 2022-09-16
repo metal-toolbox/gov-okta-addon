@@ -39,7 +39,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 	dryrun := viper.GetBool("sync.dryrun")
 
-	l.Info("starting sync to governor", zap.Bool("dry-run", dryrun))
+	l.Info("starting sync to governor users", zap.Bool("dry-run", dryrun))
 
 	oc, err := okta.NewClient(
 		okta.WithLogger(logger.Desugar()),

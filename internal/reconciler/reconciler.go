@@ -145,7 +145,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 				r.logger.Error("error listing governor users", zap.Error(err))
 			}
 
-			r.logger.Debug("got governor users response", zap.Any("governor.users.num", len(govUsers)))
+			r.logger.Debug("got governor users (including deleted)", zap.Any("num.governor.users", len(govUsers)))
 
 			oktaUsers, err := r.oktaClient.ListUsers(ctx)
 			if err != nil {
@@ -158,7 +158,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 				oktaUserIDs[oktaUser.Id] = struct{}{}
 			}
 
-			r.logger.Debug("got okta users response", zap.Any("okta.user.ids", oktaUserIDs))
+			r.logger.Debug("got okta users", zap.Any("okta.user.ids", oktaUserIDs))
 
 			if err := r.reconcileUsers(ctx, govUsers, oktaUserIDs); err != nil {
 				r.logger.Error("error reconciling users", zap.Error(err))
@@ -277,20 +277,27 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 	r.logger.Debug("reconciling users")
 
 	for _, u := range govUsers {
-		logger := r.logger.With(zap.String("governor.user.id", u.ID), zap.String("okta.user.id", u.ExternalID))
-
 		if u.DeletedAt.IsZero() {
-			logger.Debug("user active in governor")
-			break
+			// active user in governor, skip
+			continue
 		}
+
+		logger := r.logger.With(
+			zap.String("governor.user.id", u.ID),
+			zap.String("okta.user.id", u.ExternalID),
+			zap.String("governor.user.email", u.Email),
+		)
+
+		logger.Debug("got deleted governor user")
 
 		// user has been deleted in governor, so delete it in okta if still there
 		if _, found := oktaUserIDs[u.ExternalID]; found {
 			if err := r.oktaClient.DeleteUser(ctx, u.ExternalID); err != nil {
 				r.logger.Error("error deleting user", zap.Error(err))
+				continue
 			}
 
-			logger.Info("successfully deleted user", zap.String("okta.user.email", u.Email))
+			logger.Info("successfully deleted okta user")
 		}
 	}
 

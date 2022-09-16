@@ -14,7 +14,7 @@ type UserModifierFunc func(context.Context, *okta.User) (*okta.User, error)
 
 // DeactivateUser deactivates a user in Okta
 func (c *Client) DeactivateUser(ctx context.Context, id string) error {
-	c.logger.Info("deactivating Okta user", zap.String("okta.user.id", id))
+	c.logger.Info("deactivating okta user", zap.String("okta.user.id", id))
 
 	if _, err := c.userIface.DeactivateUser(ctx, id, &query.Params{}); err != nil {
 		return err
@@ -28,7 +28,7 @@ func (c *Client) DeactivateUser(ctx context.Context, id string) error {
 // DeleteUser deletes a user in Okta
 // since Okta requires that a user must be first deactivated before being deleted, we do this in two steps
 func (c *Client) DeleteUser(ctx context.Context, id string) error {
-	c.logger.Info("deleting Okta user", zap.String("okta.user.id", id))
+	c.logger.Info("deleting okta user", zap.String("okta.user.id", id))
 
 	// look up the user in okta so we can get their status
 	user, _, err := c.userIface.GetUser(ctx, id)

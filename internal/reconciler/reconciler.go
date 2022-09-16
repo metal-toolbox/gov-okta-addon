@@ -249,11 +249,6 @@ func (r *Reconciler) groupExists(ctx context.Context, id string) (string, error)
 			return "", err
 		}
 
-		// if r.dryrun {
-		// 	logger.Info("creating okta group")
-		// 	return "", err
-		// }
-
 		oktaGID, err := r.GroupCreate(ctx, id)
 		if err != nil {
 			return "", err

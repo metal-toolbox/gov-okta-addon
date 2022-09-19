@@ -81,7 +81,7 @@ func (c *Client) DeleteGroup(ctx context.Context, id string) error {
 
 // GetGroupByGovernorID gets an okta group ID from the governor id by searching for the profile field
 func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, error) {
-	c.logger.Info("getting group by governor id", zap.String("governor.id", id))
+	c.logger.Info("getting okta group by governor id", zap.String("governor.id", id))
 
 	f := fmt.Sprintf("profile.governor_id eq \"%s\"", id)
 

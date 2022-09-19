@@ -338,6 +338,77 @@ func (c *Client) RemoveGroupFromOrganization(ctx context.Context, groupID, orgID
 	return nil
 }
 
+// AddGroupMember adds a user to a group in governor
+func (c *Client) AddGroupMember(ctx context.Context, groupID, userID string, admin bool) error {
+	if groupID == "" {
+		return ErrMissingGroupID
+	}
+
+	if userID == "" {
+		return ErrMissingUserID
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodPut, fmt.Sprintf("%s/api/%s/groups/%s/users/%s", c.url, governorAPIVersion, groupID, userID))
+	if err != nil {
+		return err
+	}
+
+	b, err := json.Marshal(struct {
+		IsAdmin bool `json:"is_admin"`
+	}{admin})
+	if err != nil {
+		return err
+	}
+
+	req.Body = io.NopCloser(bytes.NewBuffer(b))
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusAccepted &&
+		resp.StatusCode != http.StatusNoContent {
+		return ErrRequestNonSuccess
+	}
+
+	return nil
+}
+
+// RemoveGroupMember removes a user from a group in governor
+func (c *Client) RemoveGroupMember(ctx context.Context, groupID, userID string) error {
+	if groupID == "" {
+		return ErrMissingGroupID
+	}
+
+	if userID == "" {
+		return ErrMissingUserID
+	}
+
+	req, err := c.newGovernorRequest(ctx, http.MethodDelete, fmt.Sprintf("%s/api/%s/groups/%s/users/%s", c.url, governorAPIVersion, groupID, userID))
+	if err != nil {
+		return err
+	}
+
+	resp, err := c.httpClient.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK &&
+		resp.StatusCode != http.StatusAccepted &&
+		resp.StatusCode != http.StatusNoContent {
+		return ErrRequestNonSuccess
+	}
+
+	return nil
+}
+
 // Organizations gets the list of organizations from governor
 func (c *Client) Organizations(ctx context.Context) ([]*v1alpha1.Organization, error) {
 	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/organizations", c.url, governorAPIVersion))

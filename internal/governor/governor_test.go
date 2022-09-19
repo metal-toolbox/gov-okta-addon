@@ -1219,3 +1219,201 @@ func TestClient_Organizations(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_AddGroupMember(t *testing.T) {
+	tests := []struct {
+		name       string
+		httpClient HTTPDoer
+		groupID    string
+		userID     string
+		wantErr    bool
+	}{
+		{
+			name: "example ok request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			groupID: "Ninja",
+			userID:  "Zane",
+		},
+		{
+			name: "example accepted request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusAccepted,
+			},
+			groupID: "Ninja",
+			userID:  "Cole",
+		},
+		{
+			name: "example no content request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusNoContent,
+			},
+			groupID: "Ninja",
+			userID:  "JayWalker",
+		},
+		{
+			name: "not found",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusNotFound,
+			},
+			groupID: "Ninja",
+			userID:  "Nya",
+			wantErr: true,
+		},
+		{
+			name: "non-success",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusInternalServerError,
+			},
+			groupID: "Ninja",
+			userID:  "Kruncha",
+			wantErr: true,
+		},
+		{
+			name: "missing groupID in request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			wantErr: true,
+			userID:  "MasterWu",
+		},
+		{
+			name: "missing orgID in request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			groupID: "Skulkin",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			err := c.AddGroupMember(context.TODO(), tt.groupID, tt.userID, false)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestClient_RemoveGroupMember(t *testing.T) {
+	tests := []struct {
+		name       string
+		httpClient HTTPDoer
+		groupID    string
+		userID     string
+		wantErr    bool
+	}{
+		{
+			name: "example ok request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			groupID: "mushroom-kingdom",
+			userID:  "mario",
+		},
+		{
+			name: "example accepted request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusAccepted,
+			},
+			groupID: "mushroom-kingdom",
+			userID:  "peach",
+		},
+		{
+			name: "example no content request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusNoContent,
+			},
+			groupID: "mushroom-kingdom",
+			userID:  "toadstool",
+		},
+		{
+			name: "not found",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusNotFound,
+			},
+			groupID: "mushroom-kingdom",
+			userID:  "kong",
+			wantErr: true,
+		},
+		{
+			name: "non-success",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				statusCode: http.StatusInternalServerError,
+			},
+			groupID: "mushroom-kingdom",
+			userID:  "bowser",
+			wantErr: true,
+		},
+		{
+			name: "missing groupID in request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			wantErr: true,
+			userID:  "cappy",
+		},
+		{
+			name: "missing orgID in request",
+			httpClient: &mockHTTPDoer{
+				t:          t,
+				resp:       testGroupResponse,
+				statusCode: http.StatusOK,
+			},
+			groupID: "mushroom-kingdom",
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				url:                    "https://the.gov/",
+				logger:                 zap.NewNop(),
+				httpClient:             tt.httpClient,
+				clientCredentialConfig: &mockTokener{t: t},
+				token:                  &oauth2.Token{AccessToken: "topSekret"},
+			}
+			err := c.RemoveGroupMember(context.TODO(), tt.groupID, tt.userID)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}

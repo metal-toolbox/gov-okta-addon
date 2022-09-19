@@ -45,7 +45,7 @@ func syncGroupsToGovernor(ctx context.Context) error {
 	dryRun := viper.GetBool("sync.dryrun")
 	selectorPrefix := viper.GetString("sync.selector-prefix")
 
-	logger.Info("starting sync to governor", zap.Bool("dry-run", dryRun))
+	logger.Info("starting sync to governor groups", zap.Bool("dry-run", dryRun))
 
 	oc, err := okta.NewClient(
 		okta.WithLogger(logger.Desugar()),

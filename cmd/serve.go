@@ -35,6 +35,9 @@ func init() {
 	serveCmd.Flags().String("listen", "0.0.0.0:8000", "address to listen on")
 	viperBindFlag("listen", serveCmd.Flags().Lookup("listen"))
 
+	serveCmd.PersistentFlags().Bool("dry-run", false, "do not make any changes, just log what would be done")
+	viperBindFlag("dryrun", serveCmd.PersistentFlags().Lookup("dry-run"))
+
 	serveCmd.Flags().String("nats-url", "nats://127.0.0.1:4222", "NATS server connection url")
 	viperBindFlag("nats.url", serveCmd.Flags().Lookup("nats-url"))
 	serveCmd.Flags().String("nats-token", "", "NATS auth token")
@@ -164,10 +167,12 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		reconciler.WithInterval(viper.GetDuration("reconciler.interval")),
 		reconciler.WithGovernorClient(gc),
 		reconciler.WithOktaClient(oc),
+		reconciler.WithDryRun(viper.GetBool("dryrun")),
 	)
 
 	server := &srv.Server{
 		Debug:           viper.GetBool("logging.debug"),
+		DryRun:          viper.GetBool("dryrun"),
 		Listen:          viper.GetString("listen"),
 		Logger:          logger.Desugar(),
 		AuditFileWriter: auf,
@@ -176,7 +181,7 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		Reconciler:      rec,
 	}
 
-	logger.Infow("starting server", "address", viper.GetString("listen"))
+	logger.Infow("starting server", "address", viper.GetString("listen"), "dryrun", server.DryRun)
 
 	if err := server.Run(ctx); err != nil {
 		logger.Fatalw("failed starting server", "error", err)

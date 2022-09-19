@@ -22,6 +22,7 @@ type Reconciler struct {
 	governorClient *governor.Client
 	logger         *zap.Logger
 	oktaClient     *okta.Client
+	dryrun         bool
 }
 
 // Option is a functional configuration option
@@ -38,6 +39,13 @@ func WithInterval(i time.Duration) Option {
 func WithLogger(l *zap.Logger) Option {
 	return func(r *Reconciler) {
 		r.logger = l
+	}
+}
+
+// WithDryRun sets dryrun
+func WithDryRun(d bool) Option {
+	return func(r *Reconciler) {
+		r.dryrun = d
 	}
 }
 
@@ -80,7 +88,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 	ticker := time.NewTicker(r.interval)
 	defer ticker.Stop()
 
-	r.logger.Info("starting reconciler loop", zap.Duration("interval", r.interval))
+	r.logger.Info("starting reconciler loop", zap.Duration("interval", r.interval), zap.Bool("dryrun", r.dryrun))
 
 	for {
 		select {
@@ -196,7 +204,10 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 				}
 
 				// assign group to the application
-				logger.Info("assigning okta group to okta application", zap.String("okta.app.id", appID))
+				if r.dryrun {
+					logger.Info("dryrun assigning okta group to okta application", zap.String("okta.app.id", appID))
+					continue
+				}
 
 				if err := r.oktaClient.AssignGroupToApplication(ctx, appID, oktaGID); err != nil {
 					logger.Error("error assigning okta group to okta application", zap.String("okta.app.id", appID))
@@ -214,11 +225,13 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 			}
 
 			// remove group from the application
-			logger.Info("removing assignment of okta group from okta application", zap.String("okta.app.id", appID))
-
-			if err := r.oktaClient.RemoveApplicationGroupAssignment(ctx, appID, oktaGID); err != nil {
-				logger.Error("error removing okta group from okta application", zap.String("okta.app.id", appID))
-				return err
+			if r.dryrun {
+				logger.Info("dryrun removing assignment of okta group from okta application", zap.String("okta.app.id", appID))
+			} else {
+				if err := r.oktaClient.RemoveApplicationGroupAssignment(ctx, appID, oktaGID); err != nil {
+					logger.Error("error removing okta group from okta application", zap.String("okta.app.id", appID))
+					return err
+				}
 			}
 		}
 	}

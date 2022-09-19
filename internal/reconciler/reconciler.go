@@ -292,13 +292,19 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 
 		// user has been deleted in governor, so delete it in okta if still there
 		if _, found := oktaUserIDs[u.ExternalID]; found {
-			// TODO: Comment out when dry-run is ready
-			// if err := r.oktaClient.DeleteUser(ctx, u.ExternalID); err != nil {
-			// 	r.logger.Error("error deleting user", zap.Error(err))
-			// 	continue
-			// }
-			//
+			if r.dryrun {
+				logger.Info("dryrun deleting okta user")
+				continue
+			}
+
+			if err := r.oktaClient.DeleteUser(ctx, u.ExternalID); err != nil {
+				logger.Error("error deleting user", zap.Error(err))
+				continue
+			}
+
 			logger.Info("successfully deleted okta user")
+		} else {
+			logger.Debug("user not found in okta")
 		}
 	}
 

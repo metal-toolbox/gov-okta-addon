@@ -50,7 +50,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			if err := r.oktaClient.AddGroupUser(ctx, oktaGID, oktaUID); err != nil {
 				logger.Error("failed to add user to okta group",
 					zap.String("user.email", user.Email),
-					zap.String("okta.user.id", oktaGID),
+					zap.String("okta.user.id", oktaUID),
 					zap.Error(err),
 				)
 
@@ -59,7 +59,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 		} else {
 			logger.Info("dryrun adding user to okta group",
 				zap.String("user.email", user.Email),
-				zap.String("okta.user.id", oktaGID),
+				zap.String("okta.user.id", oktaUID),
 			)
 		}
 	}
@@ -75,8 +75,8 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 		if !r.dryrun {
 			if err := r.oktaClient.RemoveGroupUser(ctx, oktaGID, oktaUID); err != nil {
 				logger.Error("failed to remove user from okta group",
-					zap.String("okta.user.id", oktaGID),
-					zap.String("okta.group.id", oktaUID),
+					zap.String("okta.user.id", oktaUID),
+					zap.String("okta.group.id", oktaGID),
 					zap.Error(err),
 				)
 
@@ -84,8 +84,8 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			}
 		} else {
 			logger.Info("dryrun removing user from okta group",
-				zap.String("okta.user.id", oktaGID),
-				zap.String("okta.group.id", oktaUID),
+				zap.String("okta.user.id", oktaUID),
+				zap.String("okta.group.id", oktaGID),
 			)
 		}
 	}
@@ -136,8 +136,8 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 	if r.dryrun {
 		logger.Info("dryrun adding user to okta group",
 			zap.String("user.email", user.Email),
-			zap.String("okta.user.id", oktaGID),
-			zap.String("okta.group.id", oktaUID),
+			zap.String("okta.user.id", oktaUID),
+			zap.String("okta.group.id", oktaGID),
 		)
 
 		return oktaGID, oktaUID, nil
@@ -146,8 +146,8 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 	if err := r.oktaClient.AddGroupUser(ctx, oktaGID, oktaUID); err != nil {
 		logger.Error("failed to add user to group",
 			zap.String("user.email", user.Email),
-			zap.String("okta.user.id", oktaGID),
-			zap.String("okta.group.id", oktaUID),
+			zap.String("okta.user.id", oktaUID),
+			zap.String("okta.group.id", oktaGID),
 			zap.Error(err),
 		)
 
@@ -200,8 +200,8 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 	if r.dryrun {
 		logger.Info("dryrun removing user from okta group",
 			zap.String("user.email", user.Email),
-			zap.String("okta.user.id", oktaGID),
-			zap.String("okta.group.id", oktaUID),
+			zap.String("okta.user.id", oktaUID),
+			zap.String("okta.group.id", oktaGID),
 		)
 
 		return oktaGID, oktaUID, nil
@@ -210,8 +210,8 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 	if err := r.oktaClient.RemoveGroupUser(context.Background(), oktaGID, oktaUID); err != nil {
 		logger.Error("failed to remove user from group",
 			zap.String("user.email", user.Email),
-			zap.String("okta.user.id", oktaGID),
-			zap.String("okta.group.id", oktaUID),
+			zap.String("okta.user.id", oktaUID),
+			zap.String("okta.group.id", oktaGID),
 			zap.Error(err),
 		)
 

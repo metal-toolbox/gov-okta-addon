@@ -29,11 +29,6 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 
 	switch payload.Action {
 	case v1alpha1.GovernorEventCreate:
-		if s.DryRun {
-			logger.Info("dryrun creating group")
-			return
-		}
-
 		logger.Info("creating group")
 
 		gid, err := s.Reconciler.GroupCreate(ctx, payload.GroupID)

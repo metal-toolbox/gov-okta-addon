@@ -11,24 +11,33 @@ import (
 // UserDelete deletes an okta user that has already been deleted in governor
 // an error will be returned if the user still exists in governor
 func (r *Reconciler) UserDelete(ctx context.Context, id string) (string, error) {
-	logger := r.logger.With(zap.String("user.id", id))
-
 	// get details about this user and verify it was actually deleted in governor
 	user, err := r.governorClient.User(ctx, id, true)
 	if err != nil {
-		logger.Error("failed to get user from governor", zap.Error(err))
+		r.logger.Error("failed to get user from governor", zap.Error(err))
 		return "", err
 	}
 
-	logger.Debug("got governor user response", zap.Any("user details", user))
+	r.logger.Debug("got governor user response", zap.Any("user details", user))
+
+	logger := r.logger.With(
+		zap.String("governor.user.id", user.ID),
+		zap.String("okta.user.id", user.ExternalID),
+		zap.String("governor.user.email", user.Email),
+	)
 
 	if !userDeleted(user) {
 		logger.Error("user still exists in governor")
 		return "", ErrUserStillExists
 	}
 
+	if r.dryrun {
+		logger.Info("dryrun deleting okta user")
+		return user.ExternalID, nil
+	}
+
 	if err := r.oktaClient.DeleteUser(ctx, user.ExternalID); err != nil {
-		r.logger.Error("error deleting user", zap.Error(err))
+		logger.Error("error deleting okta user", zap.Error(err))
 		return "", err
 	}
 

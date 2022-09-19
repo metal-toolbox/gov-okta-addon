@@ -138,6 +138,32 @@ func (r *Reconciler) Run(ctx context.Context) {
 				r.logger.Error("error reconciling group application links", zap.Error(err))
 			}
 
+			// reconcile users
+
+			govUsers, err := r.governorClient.Users(ctx, true)
+			if err != nil {
+				r.logger.Error("error listing governor users", zap.Error(err))
+			}
+
+			r.logger.Debug("got governor users (including deleted)", zap.Any("num.governor.users", len(govUsers)))
+
+			oktaUsers, err := r.oktaClient.ListUsers(ctx)
+			if err != nil {
+				r.logger.Error("error listing okta users", zap.Error(err))
+			}
+
+			oktaUserIDs := map[string]struct{}{}
+
+			for _, oktaUser := range oktaUsers {
+				oktaUserIDs[oktaUser.Id] = struct{}{}
+			}
+
+			r.logger.Debug("got okta users", zap.Any("okta.user.ids", oktaUserIDs))
+
+			if err := r.reconcileUsers(ctx, govUsers, oktaUserIDs); err != nil {
+				r.logger.Error("error reconciling users", zap.Error(err))
+			}
+
 		case <-ctx.Done():
 			r.logger.Info("shutting down reconciler",
 				zap.String("time", time.Now().UTC().Format(time.RFC3339)),
@@ -233,6 +259,53 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 					return err
 				}
 			}
+		}
+	}
+
+	return nil
+}
+
+// reconcileUsers gets a list of governor users and a map of all user ids from okta, and
+// deletes any okta users that have been deleted in governor. Note that we are specifically
+// targeting users who have existed in governor and have been deleted, and not just users who
+// do not exist in governor
+func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.User, oktaUserIDs map[string]struct{}) error {
+	if govUsers == nil || oktaUserIDs == nil {
+		return ErrUserListEmpty
+	}
+
+	r.logger.Debug("reconciling users")
+
+	for _, u := range govUsers {
+		if !userDeleted(u) {
+			// active user in governor, skip
+			continue
+		}
+
+		logger := r.logger.With(
+			zap.String("governor.user.id", u.ID),
+			zap.String("okta.user.id", u.ExternalID),
+			zap.String("governor.user.email", u.Email),
+		)
+
+		logger.Debug("got deleted governor user")
+
+		// user has been deleted in governor, so delete it in okta if still there
+		if _, found := oktaUserIDs[u.ExternalID]; found {
+			if r.dryrun {
+				logger.Info("dryrun deleting okta user")
+				continue
+			}
+			// TODO: re-enable when we feel confident, or when we dry-run
+			// if err := r.oktaClient.DeleteUser(ctx, u.ExternalID); err != nil {
+			// 	logger.Error("error deleting user", zap.Error(err))
+			// 	continue
+			// }
+			//
+			// logger.Info("successfully deleted okta user")
+			logger.Debug("skipping user deletion in okta")
+		} else {
+			logger.Debug("user not found in okta")
 		}
 	}
 

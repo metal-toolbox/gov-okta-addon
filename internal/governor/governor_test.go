@@ -594,7 +594,7 @@ func TestClient_Users(t *testing.T) {
 				clientCredentialConfig: &mockTokener{t: t},
 				token:                  &oauth2.Token{AccessToken: "topSekret"},
 			}
-			got, err := c.Users(context.TODO())
+			got, err := c.Users(context.TODO(), false)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -682,7 +682,7 @@ func TestClient_User(t *testing.T) {
 				clientCredentialConfig: &mockTokener{t: t},
 				token:                  &oauth2.Token{AccessToken: "topSekret"},
 			}
-			got, err := c.User(context.TODO(), tt.id)
+			got, err := c.User(context.TODO(), tt.id, false)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

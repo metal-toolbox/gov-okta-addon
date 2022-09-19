@@ -363,40 +363,6 @@ func groupFromGroupSlug(ctx context.Context, gc *governor.Client, slug string, l
 	return govGroup, nil
 }
 
-// groupFromSlug gets a governor group from a group slug (generated from an okta group name).  If the slug is
-// empty or the group is not found, return a nil group.  Otherwise, return the group we got back from governor.
-func groupFromSlug(ctx context.Context, gc *governor.Client, groupSlug string, l *zap.Logger) (*v1alpha1.Group, error) {
-	if groupSlug == "" {
-		return nil, nil
-	}
-
-	l.Debug("getting group from governor")
-
-	// if we have a governor slug from okta group, try to get the group in governor
-	govGroup, err := gc.Group(ctx, groupSlug)
-	if err != nil {
-		// bail on governor errors other than group not found
-		if !errors.Is(err, governor.ErrGroupNotFound) {
-			return nil, err
-		}
-
-		l.Warn("governor slug generated from okta group, but group not found in governor",
-			zap.String("governor.slug", groupSlug),
-		)
-
-		return nil, nil
-	}
-
-	l = l.With(
-		zap.String("governor.group.id", govGroup.ID),
-		zap.String("governor.group.slug", govGroup.Slug),
-	)
-
-	l.Debug("group exists in governor based on slug")
-
-	return govGroup, nil
-}
-
 func deleteOrphanGovernorGroups(ctx context.Context, gc *governor.Client, gIDs map[string]struct{}, l *zap.Logger) ([]string, error) {
 	dryRun := viper.GetBool("sync.dryrun")
 	selectorPrefix := viper.GetString("sync.selector-prefix")

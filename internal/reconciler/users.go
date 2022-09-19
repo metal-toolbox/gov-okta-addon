@@ -8,6 +8,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// cutoffUserDeleted is used to determine which deleted governor users will be removed from Okta
+var cutoffUserDeleted = time.Now().Add(-24 * time.Hour)
+
 // UserDelete deletes an okta user that has already been deleted in governor
 // an error will be returned if the user still exists in governor
 func (r *Reconciler) UserDelete(ctx context.Context, id string) (string, error) {
@@ -44,8 +47,8 @@ func (r *Reconciler) UserDelete(ctx context.Context, id string) (string, error) 
 	return user.ExternalID, nil
 }
 
-// userDeleted returns true if the given user has been deleted in governor within the specified time period, currently 24h
-// the function will also perform some basic user validation and will return false if anything with the user doesn't look right
+// userDeleted returns true if the given user has been deleted in governor within the specified cutoff time period.
+// The function also performs some basic user validation and will return false if anything with the user doesn't look right
 func userDeleted(user *v1alpha1.User) bool {
 	if user == nil {
 		return false
@@ -56,13 +59,11 @@ func userDeleted(user *v1alpha1.User) bool {
 		return false
 	}
 
-	cutoff := time.Now().Add(-24 * time.Hour)
-
 	if user.DeletedAt.IsZero() {
 		return false
 	}
 
-	if user.DeletedAt.Time.After(cutoff) {
+	if user.DeletedAt.Time.After(cutoffUserDeleted) {
 		return true
 	}
 

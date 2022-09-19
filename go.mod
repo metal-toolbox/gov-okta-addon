@@ -10,7 +10,7 @@ require (
 	github.com/gosimple/slug v1.12.0
 	github.com/metal-toolbox/auditevent v0.3.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/nats-io/nats.go v1.16.0
+	github.com/nats-io/nats.go v1.17.0
 	github.com/okta/okta-sdk-golang/v2 v2.14.0
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/pflag v1.0.5

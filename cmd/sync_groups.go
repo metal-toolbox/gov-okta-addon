@@ -117,6 +117,7 @@ func syncGroupsToGovernor(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
+
 		if govGroup == nil {
 			govGroup, err = groupFromGroupSlug(ctx, gc, slug.Make(groupName), l)
 			if err != nil {

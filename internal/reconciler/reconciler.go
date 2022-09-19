@@ -297,12 +297,13 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 				continue
 			}
 
-			if err := r.oktaClient.DeleteUser(ctx, u.ExternalID); err != nil {
-				logger.Error("error deleting user", zap.Error(err))
-				continue
-			}
+			// TODO: re-enable when we feel confident, or when we dry-run
+			// if err := r.oktaClient.DeleteUser(ctx, u.ExternalID); err != nil {
+			// 	logger.Error("error deleting user", zap.Error(err))
+			// 	continue
+			// }
 
-			logger.Info("successfully deleted okta user")
+			// logger.Info("successfully deleted okta user")
 		} else {
 			logger.Debug("user not found in okta")
 		}

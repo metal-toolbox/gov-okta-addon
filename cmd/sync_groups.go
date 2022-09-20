@@ -376,17 +376,17 @@ func deleteOrphanGovernorGroups(ctx context.Context, gc *governor.Client, gIDs m
 	deleted := []string{}
 
 	for _, group := range groups {
+		if !strings.HasPrefix(strings.ToLower(group.Name), strings.ToLower(selectorPrefix)) {
+			l.Debug("skipping delete of non-selected group",
+				zap.String("governor.group.id", group.ID),
+				zap.String("governor.group.name", group.Name),
+				zap.String("governor.group.slug", group.Slug),
+			)
+
+			continue
+		}
+
 		if _, ok := gIDs[group.ID]; !ok {
-			if !strings.HasPrefix(strings.ToLower(group.Slug), strings.ToLower(selectorPrefix)) {
-				l.Debug("skipping delete of non-selected group",
-					zap.String("governor.group.id", group.ID),
-					zap.String("governor.group.name", group.Name),
-					zap.String("governor.group.slug", group.Slug),
-				)
-
-				continue
-			}
-
 			l.Info("deleting orphaned group from governor",
 				zap.String("governor.group.id", group.ID),
 				zap.String("governor.group.name", group.Name),

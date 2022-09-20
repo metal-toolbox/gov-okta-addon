@@ -34,21 +34,22 @@ to see what groups would be created/deleted in Governor.`,
 func init() {
 	syncCmd.AddCommand(syncGroupsCmd)
 
-	syncCmd.PersistentFlags().Bool("skip-okta-update", false, "do not make changes to okta groups (ie. setting the governor_id)")
-	viperBindFlag("sync.skip-okta-update", syncCmd.PersistentFlags().Lookup("skip-okta-update"))
+	syncGroupsCmd.PersistentFlags().Bool("skip-okta-update", false, "do not make changes to okta groups (ie. setting the governor_id)")
+	viperBindFlag("sync.skip-okta-update", syncGroupsCmd.PersistentFlags().Lookup("skip-okta-update"))
 
-	syncCmd.PersistentFlags().String("selector-prefix", "", "if set, only group names that start with this string will be processed")
-	viperBindFlag("sync.selector-prefix", syncCmd.PersistentFlags().Lookup("selector-prefix"))
+	syncGroupsCmd.PersistentFlags().String("selector-prefix", "", "if set, only group names that start with this string will be processed")
+	viperBindFlag("sync.selector-prefix", syncGroupsCmd.PersistentFlags().Lookup("selector-prefix"))
 }
 
 func syncGroupsToGovernor(ctx context.Context) error {
+	logger := logger.Desugar()
 	dryRun := viper.GetBool("sync.dryrun")
 	selectorPrefix := viper.GetString("sync.selector-prefix")
 
 	logger.Info("starting sync to governor groups", zap.Bool("dry-run", dryRun))
 
 	oc, err := okta.NewClient(
-		okta.WithLogger(logger.Desugar()),
+		okta.WithLogger(logger),
 		okta.WithURL(viper.GetString("okta.url")),
 		okta.WithToken(viper.GetString("okta.token")),
 		okta.WithCache((!viper.GetBool("okta.nocache"))),
@@ -58,7 +59,7 @@ func syncGroupsToGovernor(ctx context.Context) error {
 	}
 
 	gc, err := governor.NewClient(
-		governor.WithLogger(logger.Desugar()),
+		governor.WithLogger(logger),
 		governor.WithURL(viper.GetString("governor.url")),
 		governor.WithClientCredentialConfig(&clientcredentials.Config{
 			ClientID:       viper.GetString("governor.client-id"),
@@ -84,7 +85,7 @@ func syncGroupsToGovernor(ctx context.Context) error {
 	}
 
 	syncFunc := func(ctx context.Context, g *okt.Group) (*okt.Group, error) {
-		l := logger.Desugar().With(zap.String("okta.group.id", g.Id))
+		l := logger.With(zap.String("okta.group.id", g.Id))
 
 		if g.Profile == nil {
 			return nil, okta.ErrNilGroupProfile
@@ -191,14 +192,14 @@ func syncGroupsToGovernor(ctx context.Context) error {
 		return err
 	}
 
-	logger.Desugar().Debug("groups from okta", zap.Any("okta.groups", groups))
+	logger.Debug("groups from okta", zap.Any("okta.groups", groups))
 
-	deleted, err := deleteOrphanGovernorGroups(ctx, gc, uniqueGovernorGroupIDs(groups), logger.Desugar())
+	deleted, err := deleteOrphanGovernorGroups(ctx, gc, uniqueGovernorGroupIDs(groups), logger)
 	if err != nil {
 		return err
 	}
 
-	logger.Desugar().Info("completed group sync",
+	logger.Info("completed group sync",
 		zap.Int("governor.groups.created", created),
 		zap.Int("governor.groups.deleted", len(deleted)),
 		zap.Int("governor.groups.skipped", skipped),

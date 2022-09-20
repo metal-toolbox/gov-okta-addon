@@ -17,12 +17,29 @@ changes in Okta.
 
 ## Syncing to governor
 
-`gov-okta-addon` ships with a sync command to sync resources from Okta into `governor`.
+`gov-okta-addon` ships with a sync command to sync resources from Okta into `governor`. It has a `--dry-run` flag which
+is helpful to see what resources would be affected.
 
 ### Sync users
 
 `gov-okta-addon sync users` will sync users from Okta to governor based on the `id` in their Okta profile
 and their `external_id` in Governor.
+
+### Sync groups
+
+`gov-okta-addon sync groups` will sync groups from Okta to governor based on the group slug and the `governor_id`
+in their Okta profile. Groups that exist in Okta but not in governor will be created, and groups that exist in
+governor but not in Okta will be deleted. Optionally, you can specify `--skip-okta-update` to avoid making changes
+to the Okta group (i.e. setting the `governor_id`), and `--selector-prefix` to only sync specific groups.
+
+This command will also associate any organizations with the group based on the assigned applications in Okta, but
+it will not sync the members of the group.
+
+### Sync group members
+
+`gov-okta-addon sync members` will sync group members from Okta to governor. Group members that exist in Okta but not
+in governor will be added to the governor group, and governor group members that do not exist in the Okta group will
+be removed from the group. The groups and users must already exist in governor or they will be skipped.
 
 ## Development
 

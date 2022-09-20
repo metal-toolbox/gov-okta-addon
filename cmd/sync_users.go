@@ -35,14 +35,13 @@ func init() {
 
 // syncUsersToGovernor syncs users from okta to governor
 func syncUsersToGovernor(ctx context.Context) error {
-	l := logger.Desugar()
+	logger := logger.Desugar()
+	dryRun := viper.GetBool("sync.dryrun")
 
-	dryrun := viper.GetBool("sync.dryrun")
-
-	l.Info("starting sync to governor users", zap.Bool("dry-run", dryrun))
+	logger.Info("starting sync to governor users", zap.Bool("dry-run", dryRun))
 
 	oc, err := okta.NewClient(
-		okta.WithLogger(logger.Desugar()),
+		okta.WithLogger(logger),
 		okta.WithURL(viper.GetString("okta.url")),
 		okta.WithToken(viper.GetString("okta.token")),
 		okta.WithCache((!viper.GetBool("okta.nocache"))),
@@ -52,7 +51,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 	}
 
 	gc, err := governor.NewClient(
-		governor.WithLogger(logger.Desugar()),
+		governor.WithLogger(logger),
 		governor.WithURL(viper.GetString("governor.url")),
 		governor.WithClientCredentialConfig(&clientcredentials.Config{
 			ClientID:       viper.GetString("governor.client-id"),
@@ -73,11 +72,11 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 	// modifier function to get okta users that don't exist in governor and create them
 	syncFunc := func(ctx context.Context, u *okt.User) (*okt.User, error) {
-		l.Debug("processing okta user", zap.String("okta.user.id", u.Id))
+		logger.Debug("processing okta user", zap.String("okta.user.id", u.Id))
 
 		userType, _ := userType(u)
 		if userType == "serviceuser" {
-			l.Debug("skipping service user", zap.String("okta.user.id", u.Id))
+			logger.Debug("skipping service user", zap.String("okta.user.id", u.Id))
 
 			ignored++
 
@@ -113,7 +112,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 			return nil, err
 		}
 
-		l.Debug("got governor users response for external id", zap.Any("governor.users", gUsers))
+		logger.Debug("got governor users response for external id", zap.Any("governor.users", gUsers))
 
 		if len(gUsers) > 1 {
 			logger.Warn("unexpected user count for external_id",
@@ -135,13 +134,13 @@ func syncUsersToGovernor(ctx context.Context) error {
 			return u, nil
 		}
 
-		l.Info("user not found in governor, creating",
+		logger.Info("user not found in governor, creating",
 			zap.String("external.id", externalID),
 			zap.String("okta.user.id", u.Id),
 			zap.String("okta.user.email", email),
 		)
 
-		if !dryrun {
+		if !dryRun {
 			gUser, err := gc.CreateUser(ctx, &v1alpha1.UserReq{
 				Email:      email,
 				ExternalID: extID,
@@ -151,7 +150,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 				return nil, err
 			}
 
-			l.Debug("created governor user from okta sync",
+			logger.Debug("created governor user from okta sync",
 				zap.String("governor.user.id", gUser.ID),
 				zap.String("external.id", externalID),
 				zap.String("okta.user.id", u.Id),
@@ -164,7 +163,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 		return u, nil
 	}
 
-	l.Info("starting to sync missing okta users into governor", zap.Bool("dry-run", dryrun))
+	logger.Info("starting to sync missing okta users into governor", zap.Bool("dry-run", dryRun))
 
 	users, err := oc.ListUsersWithModifier(ctx, syncFunc, &query.Params{})
 	if err != nil {
@@ -176,7 +175,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 		return err
 	}
 
-	l.Info("completed user sync",
+	logger.Info("completed user sync",
 		zap.Int("governor.users.created", created),
 		zap.Int("governor.users.deleted", deleted),
 		zap.Int("governor.users.skipped", skipped),
@@ -187,10 +186,10 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 // deleteOrphanGovernorUsers is a helper function to delete governor users that not longer exist in okta
 func deleteOrphanGovernorUsers(ctx context.Context, gc *governor.Client, extIDMap map[string]struct{}) (int, error) {
-	dryrun := viper.GetBool("sync.dryrun")
-
+	dryRun := viper.GetBool("sync.dryrun")
 	l := logger.Desugar()
-	l.Info("starting to clean orphan governor users", zap.Bool("dry-run", dryrun))
+
+	l.Info("starting to clean orphan governor users", zap.Bool("dry-run", dryRun))
 
 	var deleted int
 
@@ -230,7 +229,7 @@ func deleteOrphanGovernorUsers(ctx context.Context, gc *governor.Client, extIDMa
 			zap.String("governor.user.email", gu.Email),
 		)
 
-		if !dryrun {
+		if !dryRun {
 			if err := gc.DeleteUser(ctx, gu.ID); err != nil {
 				return deleted, err
 			}

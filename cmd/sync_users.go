@@ -179,6 +179,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 		zap.Int("governor.users.created", created),
 		zap.Int("governor.users.deleted", deleted),
 		zap.Int("governor.users.skipped", skipped),
+		zap.Int("governor.users.ignored", ignored),
 	)
 
 	return nil

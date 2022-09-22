@@ -68,20 +68,11 @@ func syncUsersToGovernor(ctx context.Context) error {
 		return err
 	}
 
-	created, ignored, skipped := 0, 0, 0
+	created, skipped := 0, 0
 
 	// modifier function to get okta users that don't exist in governor and create them
 	syncFunc := func(ctx context.Context, u *okt.User) (*okt.User, error) {
 		logger.Debug("processing okta user", zap.String("okta.user.id", u.Id))
-
-		userType, _ := userType(u)
-		if userType == "serviceuser" {
-			logger.Debug("skipping service user", zap.String("okta.user.id", u.Id))
-
-			ignored++
-
-			return nil, nil
-		}
 
 		externalID, err := externalID(u)
 		if err != nil {
@@ -179,7 +170,6 @@ func syncUsersToGovernor(ctx context.Context) error {
 		zap.Int("governor.users.created", created),
 		zap.Int("governor.users.deleted", deleted),
 		zap.Int("governor.users.skipped", skipped),
-		zap.Int("governor.users.ignored", ignored),
 	)
 
 	return nil

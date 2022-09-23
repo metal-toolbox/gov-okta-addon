@@ -72,7 +72,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 		}
 
 		// otherwise remove the member
-		if !r.dryrun || !r.skipDelete {
+		if !r.dryrun && !r.skipDelete {
 			if err := r.oktaClient.RemoveGroupUser(ctx, oktaGID, oktaUID); err != nil {
 				logger.Error("failed to remove user from okta group",
 					zap.String("okta.user.id", oktaUID),

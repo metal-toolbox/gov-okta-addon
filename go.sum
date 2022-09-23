@@ -443,6 +443,8 @@ github.com/matttproud/golang_protobuf_extensions v1.0.1 h1:4hp9jkHxhMHkqkrB3Ix0j
 github.com/matttproud/golang_protobuf_extensions v1.0.1/go.mod h1:D8He9yQNgCq6Z5Ld7szi9bcBfOoFv/3dc6xSMkL2PC0=
 github.com/metal-toolbox/auditevent v0.3.0 h1:ikvGyrLz37IxRNf0dEsQ9I720QjrG/qWAAjOP+7PwXA=
 github.com/metal-toolbox/auditevent v0.3.0/go.mod h1:wg3VvUcm2vGfvnyfX5IqYL5IVgZ1STINEyTvc+PDSqM=
+github.com/metal-toolbox/auditevent v0.4.0 h1:XOOXH9CAQ22mXKqnOvhRHABzzkhzOQMJogvzzIklLXc=
+github.com/metal-toolbox/auditevent v0.4.0/go.mod h1:kmCQn6mmcIHgrHy1ECUzQkSu0JS+OABuRFj/BLxrODc=
 github.com/microsoft/go-mssqldb v0.15.0/go.mod h1:Wr+jfynAR4lYmHA093AL8njUw2T6ovxe2jjBQKxBIco=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
 github.com/miekg/dns v1.1.26/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKjuso=

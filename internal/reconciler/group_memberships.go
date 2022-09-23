@@ -57,7 +57,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 				continue
 			}
 		} else {
-			logger.Info("FAKE adding user to okta group",
+			logger.Info("SKIP adding user to okta group",
 				zap.String("user.email", user.Email),
 				zap.String("okta.user.id", oktaUID),
 			)
@@ -83,7 +83,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 				continue
 			}
 		} else {
-			logger.Info("FAKE removing user from okta group",
+			logger.Info("SKIP removing user from okta group",
 				zap.String("okta.user.id", oktaUID),
 				zap.String("okta.group.id", oktaGID),
 			)
@@ -134,7 +134,7 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 	}
 
 	if r.dryrun {
-		logger.Info("FAKE adding user to okta group",
+		logger.Info("SKIP adding user to okta group",
 			zap.String("user.email", user.Email),
 			zap.String("okta.user.id", oktaUID),
 			zap.String("okta.group.id", oktaGID),
@@ -198,7 +198,7 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 	}
 
 	if r.dryrun {
-		logger.Info("FAKE removing user from okta group",
+		logger.Info("SKIP removing user from okta group",
 			zap.String("user.email", user.Email),
 			zap.String("okta.user.id", oktaUID),
 			zap.String("okta.group.id", oktaGID),

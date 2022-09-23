@@ -15,6 +15,16 @@ dedicated to the resource type ie. `equinixmetal.governor.events.groups` for gro
 an event, it reacts by requesting information from Governor about the included resource IDs and making the required
 changes in Okta.
 
+### Safe mode
+
+There are two flags that can limit the changes that `gov-okta-addon` makes and just log `SKIP` messages instead.
+
+`--skip-delete` is currently enabled by default and it will prevent the timed reconcile loop from deleting stuff in Okta (this
+includes removing group members, removing application group assignments, or removing users). This flag does not apply to any of
+the NATS events which will be processed normally.
+
+`--dry-run` will prevent any changes from being made while the addon is running, including the reconcile loop and NATS events.
+
 ## Syncing to governor
 
 `gov-okta-addon` ships with a sync command to sync resources from Okta into `governor`. It has a `--dry-run` flag which

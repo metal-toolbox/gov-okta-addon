@@ -51,8 +51,8 @@ func (r *Reconciler) GroupCreate(ctx context.Context, id string) (string, error)
 	logger := r.logger.With(zap.String("governor.group.id", group.ID), zap.String("governor.group.slug", group.Slug))
 
 	if r.dryrun {
-		logger.Info("dryrun creating okta group")
-		return "dryrun", nil
+		logger.Info("FAKE creating okta group")
+		return "FAKE", nil
 	}
 
 	oktaGID, err := r.oktaClient.CreateGroup(ctx, group.Name, group.Description, map[string]interface{}{"governor_id": group.ID})
@@ -83,7 +83,7 @@ func (r *Reconciler) GroupUpdate(ctx context.Context, id string) (string, error)
 	}
 
 	if r.dryrun {
-		logger.Info("dryrun updating okta group")
+		logger.Info("FAKE updating okta group")
 		return gid, nil
 	}
 

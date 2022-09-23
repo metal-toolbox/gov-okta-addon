@@ -37,6 +37,8 @@ func init() {
 
 	serveCmd.PersistentFlags().Bool("dry-run", false, "do not make any changes, just log what would be done")
 	viperBindFlag("dryrun", serveCmd.PersistentFlags().Lookup("dry-run"))
+	serveCmd.PersistentFlags().Bool("skip-delete", false, "do not delete anything in okta during reconcile loop")
+	viperBindFlag("skip-delete", serveCmd.PersistentFlags().Lookup("skip-delete"))
 
 	serveCmd.Flags().String("nats-url", "nats://127.0.0.1:4222", "NATS server connection url")
 	viperBindFlag("nats.url", serveCmd.Flags().Lookup("nats-url"))
@@ -168,11 +170,13 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		reconciler.WithGovernorClient(gc),
 		reconciler.WithOktaClient(oc),
 		reconciler.WithDryRun(viper.GetBool("dryrun")),
+		reconciler.WithSkipDelete(viper.GetBool("skip-delete")),
 	)
 
 	server := &srv.Server{
 		Debug:           viper.GetBool("logging.debug"),
 		DryRun:          viper.GetBool("dryrun"),
+		SkipDelete:      viper.GetBool("skip-delete"),
 		Listen:          viper.GetString("listen"),
 		Logger:          logger.Desugar(),
 		AuditFileWriter: auf,
@@ -181,7 +185,7 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		Reconciler:      rec,
 	}
 
-	logger.Infow("starting server", "address", viper.GetString("listen"), "dryrun", server.DryRun)
+	logger.Infow("starting server", "address", viper.GetString("listen"), "dryrun", server.DryRun, "skip-delete", server.SkipDelete)
 
 	if err := server.Run(ctx); err != nil {
 		logger.Fatalw("failed starting server", "error", err)

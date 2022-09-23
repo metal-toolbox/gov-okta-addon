@@ -81,7 +81,7 @@ func (c *Client) DeleteGroup(ctx context.Context, id string) error {
 
 // GetGroupByGovernorID gets an okta group ID from the governor id by searching for the profile field
 func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, error) {
-	c.logger.Info("getting okta group by governor id", zap.String("governor.id", id))
+	c.logger.Debug("getting okta group by governor id", zap.String("governor.id", id))
 
 	f := fmt.Sprintf("profile.governor_id eq \"%s\"", id)
 
@@ -105,7 +105,7 @@ func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, e
 
 // AddGroupUser adds a user to a group by user id and group id
 func (c *Client) AddGroupUser(ctx context.Context, groupID, userID string) error {
-	c.logger.Info("adding user to okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
+	c.logger.Debug("adding user to okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
 
 	if _, err := c.groupIface.AddUserToGroup(ctx, groupID, userID); err != nil {
 		return err
@@ -116,7 +116,7 @@ func (c *Client) AddGroupUser(ctx context.Context, groupID, userID string) error
 
 // RemoveGroupUser removes a user from a group by user id and group id
 func (c *Client) RemoveGroupUser(ctx context.Context, groupID, userID string) error {
-	c.logger.Info("removing user from okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
+	c.logger.Debug("removing user from okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
 
 	if _, err := c.groupIface.RemoveUserFromGroup(ctx, groupID, userID); err != nil {
 		return err
@@ -127,7 +127,7 @@ func (c *Client) RemoveGroupUser(ctx context.Context, groupID, userID string) er
 
 // ListGroupMembership returns the full list of members of an okta group
 func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]string, error) {
-	c.logger.Info("listing okta group members", zap.String("okta.group.id", gid))
+	c.logger.Debug("listing okta group members", zap.String("okta.group.id", gid))
 
 	members := []string{}
 
@@ -164,7 +164,7 @@ func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]string,
 // GroupModifierFunc.  If nil is returned from the GroupModifierFunc, the group will not be returned
 // in the response.
 func (c *Client) ListGroupsWithModifier(ctx context.Context, f GroupModifierFunc, q *query.Params) ([]*okta.Group, error) {
-	c.logger.Info("listing groups with func")
+	c.logger.Debug("listing groups with func")
 
 	groups, resp, err := c.groupIface.ListGroups(ctx, q)
 	if err != nil {

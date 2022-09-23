@@ -14,7 +14,7 @@ const (
 
 // GithubCloudApplications returns a map of all Okta Github cloud applications with org name as the key and the okta ID as the value
 func (c *Client) GithubCloudApplications(ctx context.Context) (map[string]string, error) {
-	c.logger.Info("listing okta githubcloud application")
+	c.logger.Debug("listing okta githubcloud application")
 
 	applications, err := c.listApplications(ctx, &query.Params{Filter: "name eq \"githubcloud\"", Limit: defaultPageLimit})
 	if err != nil {
@@ -119,7 +119,7 @@ func (c *Client) ListGroupApplicationAssignment(ctx context.Context, appID strin
 		return nil, ErrApplicationBadParameters
 	}
 
-	c.logger.Info("listing okta application group assignments", zap.Any("okta.application.id", appID))
+	c.logger.Debug("listing okta application group assignments", zap.Any("okta.application.id", appID))
 
 	groups := []string{}
 

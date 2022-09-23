@@ -292,7 +292,7 @@ func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID s
 		return nil, ErrApplicationBadParameters
 	}
 
-	c.logger.Info("listing okta applications assigned to group", zap.Any("okta.group.id", groupID))
+	c.logger.Debug("listing okta applications assigned to group", zap.Any("okta.group.id", groupID))
 
 	apps, resp, err := c.groupIface.ListAssignedApplicationsForGroup(ctx, groupID, qp)
 	if err != nil {

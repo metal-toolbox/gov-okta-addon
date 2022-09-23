@@ -37,7 +37,7 @@ func init() {
 
 	serveCmd.PersistentFlags().Bool("dry-run", false, "do not make any changes, just log what would be done")
 	viperBindFlag("dryrun", serveCmd.PersistentFlags().Lookup("dry-run"))
-	serveCmd.PersistentFlags().Bool("skip-delete", false, "do not delete anything in okta during reconcile loop")
+	serveCmd.PersistentFlags().Bool("skip-delete", true, "do not delete anything in okta during reconcile loop")
 	viperBindFlag("skip-delete", serveCmd.PersistentFlags().Lookup("skip-delete"))
 
 	serveCmd.Flags().String("nats-url", "nats://127.0.0.1:4222", "NATS server connection url")

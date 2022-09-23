@@ -105,7 +105,7 @@ func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, e
 
 // AddGroupUser adds a user to a group by user id and group id
 func (c *Client) AddGroupUser(ctx context.Context, groupID, userID string) error {
-	c.logger.Debug("adding user to okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
+	c.logger.Info("adding user to okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
 
 	if _, err := c.groupIface.AddUserToGroup(ctx, groupID, userID); err != nil {
 		return err
@@ -116,7 +116,7 @@ func (c *Client) AddGroupUser(ctx context.Context, groupID, userID string) error
 
 // RemoveGroupUser removes a user from a group by user id and group id
 func (c *Client) RemoveGroupUser(ctx context.Context, groupID, userID string) error {
-	c.logger.Debug("removing user from okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
+	c.logger.Info("removing user from okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
 
 	if _, err := c.groupIface.RemoveUserFromGroup(ctx, groupID, userID); err != nil {
 		return err

@@ -239,7 +239,7 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 
 				// assign group to the application
 				if r.dryrun {
-					logger.Info("FAKE assigning okta group to okta application", zap.String("okta.app.id", appID))
+					logger.Info("SKIP assigning okta group to okta application", zap.String("okta.app.id", appID))
 					continue
 				}
 
@@ -260,7 +260,7 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 
 			// remove group from the application
 			if r.dryrun || r.skipDelete {
-				logger.Info("FAKE removing assignment of okta group from okta application", zap.String("okta.app.id", appID))
+				logger.Info("SKIP removing assignment of okta group from okta application", zap.String("okta.app.id", appID))
 			} else {
 				if err := r.oktaClient.RemoveApplicationGroupAssignment(ctx, appID, oktaGID); err != nil {
 					logger.Error("error removing okta group from okta application", zap.String("okta.app.id", appID))
@@ -301,7 +301,7 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 		// user has been deleted in governor, so delete it in okta if still there
 		if _, found := oktaUserIDs[u.ExternalID]; found {
 			if r.dryrun || r.skipDelete {
-				logger.Info("FAKE deleting okta user")
+				logger.Info("SKIP deleting okta user")
 				continue
 			}
 			// TODO: re-enable when we feel confident, or when we dry-run

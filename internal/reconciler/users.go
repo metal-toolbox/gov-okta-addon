@@ -35,7 +35,7 @@ func (r *Reconciler) UserDelete(ctx context.Context, id string) (string, error) 
 	}
 
 	if r.dryrun {
-		logger.Info("FAKE deleting okta user")
+		logger.Info("SKIP deleting okta user")
 		return user.ExternalID, nil
 	}
 

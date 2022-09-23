@@ -23,6 +23,7 @@ type Reconciler struct {
 	logger         *zap.Logger
 	oktaClient     *okta.Client
 	dryrun         bool
+	skipDelete     bool
 }
 
 // Option is a functional configuration option
@@ -46,6 +47,13 @@ func WithLogger(l *zap.Logger) Option {
 func WithDryRun(d bool) Option {
 	return func(r *Reconciler) {
 		r.dryrun = d
+	}
+}
+
+// WithSkipDelete sets skipDelete
+func WithSkipDelete(s bool) Option {
+	return func(r *Reconciler) {
+		r.skipDelete = s
 	}
 }
 
@@ -88,7 +96,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 	ticker := time.NewTicker(r.interval)
 	defer ticker.Stop()
 
-	r.logger.Info("starting reconciler loop", zap.Duration("interval", r.interval), zap.Bool("dryrun", r.dryrun))
+	r.logger.Info("starting reconciler loop", zap.Duration("interval", r.interval), zap.Bool("dryrun", r.dryrun), zap.Bool("skip-delete", r.skipDelete))
 
 	for {
 		select {
@@ -231,7 +239,7 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 
 				// assign group to the application
 				if r.dryrun {
-					logger.Info("dryrun assigning okta group to okta application", zap.String("okta.app.id", appID))
+					logger.Info("SKIP assigning okta group to okta application", zap.String("okta.app.id", appID))
 					continue
 				}
 
@@ -251,8 +259,8 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 			}
 
 			// remove group from the application
-			if r.dryrun {
-				logger.Info("dryrun removing assignment of okta group from okta application", zap.String("okta.app.id", appID))
+			if r.dryrun || r.skipDelete {
+				logger.Info("SKIP removing assignment of okta group from okta application", zap.String("okta.app.id", appID))
 			} else {
 				if err := r.oktaClient.RemoveApplicationGroupAssignment(ctx, appID, oktaGID); err != nil {
 					logger.Error("error removing okta group from okta application", zap.String("okta.app.id", appID))
@@ -292,8 +300,8 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 
 		// user has been deleted in governor, so delete it in okta if still there
 		if _, found := oktaUserIDs[u.ExternalID]; found {
-			if r.dryrun {
-				logger.Info("dryrun deleting okta user")
+			if r.dryrun || r.skipDelete {
+				logger.Info("SKIP deleting okta user")
 				continue
 			}
 			// TODO: re-enable when we feel confident, or when we dry-run

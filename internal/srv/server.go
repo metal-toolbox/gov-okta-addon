@@ -27,6 +27,7 @@ type Server struct {
 	Listen          string
 	Debug           bool
 	DryRun          bool
+	SkipDelete      bool
 	AuditFileWriter io.Writer
 	NATSClient      *NATSClient
 	OktaClient      *okta.Client

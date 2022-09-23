@@ -60,7 +60,7 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 
 // GetUserIDByEmail gets an okta user id from the user's email address
 func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
-	c.logger.Info("getting okta user by email", zap.String("user.email", email))
+	c.logger.Debug("getting okta user by email", zap.String("user.email", email))
 
 	f := fmt.Sprintf("profile.email eq \"%s\"", email)
 

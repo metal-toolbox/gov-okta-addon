@@ -82,7 +82,7 @@ export GOA_GOVERNOR_TOKEN_URL="http://127.0.0.1:4444/oauth2/token"
 export GOA_GOVERNOR_CLIENT_ID="gov-okta-addon-governor"
 ```
 
-Export the following secrets:
+Also ensure you have the following secrets exported:
 
 ```
 export GOA_OKTA_TOKEN="REPLACE"

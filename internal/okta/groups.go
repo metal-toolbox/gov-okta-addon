@@ -248,7 +248,7 @@ func GroupGovernorID(group *okta.Group) (string, error) {
 // GroupGithubCloudApplications returns a map of Okta Github cloud applications assigned to an Okta
 // group with org name as the key and the okta ID as the value
 func (c *Client) GroupGithubCloudApplications(ctx context.Context, groupID string) (map[string]string, error) {
-	c.logger.Info("listing okta githubcloud application for group", zap.String("okta.group.id", groupID))
+	c.logger.Debug("listing okta githubcloud application for group", zap.String("okta.group.id", groupID))
 
 	applications, err := c.listAssignedApplicationsForGroup(ctx, groupID, &query.Params{Filter: "name eq \"githubcloud\"", Limit: defaultPageLimit})
 	if err != nil {
@@ -292,7 +292,7 @@ func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID s
 		return nil, ErrApplicationBadParameters
 	}
 
-	c.logger.Info("listing okta applications assigned to group", zap.Any("okta.group.id", groupID))
+	c.logger.Debug("listing okta applications assigned to group", zap.Any("okta.group.id", groupID))
 
 	apps, resp, err := c.groupIface.ListAssignedApplicationsForGroup(ctx, groupID, qp)
 	if err != nil {

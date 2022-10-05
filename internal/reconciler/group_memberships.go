@@ -31,12 +31,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			continue
 		}
 
-		oktaUID, err := r.oktaClient.GetUserIDByEmail(ctx, user.Email)
-		if err != nil {
-			logger.Error("error getting user by email address", zap.String("user.email", user.Email), zap.Error(err))
-			continue
-		}
-
+		oktaUID := user.ExternalID
 		oktaUserMap[oktaUID] = uid
 
 		// if the okta group already contains the uid, continue
@@ -109,6 +104,8 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 		return "", "", err
 	}
 
+	oktaUID := user.ExternalID
+
 	logger := r.logger.With(
 		zap.String("governor.group.id", group.ID),
 		zap.String("governor.group.slug", group.Slug),
@@ -124,12 +121,6 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 	oktaGID, err := r.oktaClient.GetGroupByGovernorID(ctx, gid)
 	if err != nil {
 		logger.Error("error getting group by governor id", zap.String("governor.group.id", gid), zap.Error(err))
-		return "", "", err
-	}
-
-	oktaUID, err := r.oktaClient.GetUserIDByEmail(ctx, user.Email)
-	if err != nil {
-		logger.Error("error getting user by email address", zap.String("user.email", user.Email), zap.Error(err))
 		return "", "", err
 	}
 
@@ -173,6 +164,8 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 		return "", "", err
 	}
 
+	oktaUID := user.ExternalID
+
 	logger := r.logger.With(
 		zap.String("governor.group.id", group.ID),
 		zap.String("governor.group.slug", group.Slug),
@@ -188,12 +181,6 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 	oktaGID, err := r.oktaClient.GetGroupByGovernorID(ctx, gid)
 	if err != nil {
 		logger.Error("error getting group by governor id", zap.String("governor.group.id", gid), zap.Error(err))
-		return "", "", err
-	}
-
-	oktaUID, err := r.oktaClient.GetUserIDByEmail(ctx, user.Email)
-	if err != nil {
-		logger.Error("error getting user by email address", zap.String("user.email", user.Email), zap.Error(err))
 		return "", "", err
 	}
 

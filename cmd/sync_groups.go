@@ -39,6 +39,9 @@ func init() {
 
 	syncGroupsCmd.PersistentFlags().String("selector-prefix", "", "if set, only group names that start with this string will be processed")
 	viperBindFlag("sync.selector-prefix", syncGroupsCmd.PersistentFlags().Lookup("selector-prefix"))
+
+	syncGroupsCmd.PersistentFlags().StringSlice("skip-groups", []string{"Everyone", "catchall"}, "groups to skip during the sync")
+	viperBindFlag("sync.skip-groups", syncGroupsCmd.PersistentFlags().Lookup("skip-groups"))
 }
 
 func syncGroupsToGovernor(ctx context.Context) error {
@@ -102,6 +105,16 @@ func syncGroupsToGovernor(ctx context.Context) error {
 			skipped++
 
 			return nil, nil
+		}
+
+		for _, g := range viper.GetStringSlice("sync.skip-groups") {
+			if strings.EqualFold(groupName, g) {
+				l.Info("skipping group in skip list")
+
+				skipped++
+
+				return nil, nil
+			}
 		}
 
 		l.Debug("processing okta group")

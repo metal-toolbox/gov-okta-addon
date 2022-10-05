@@ -101,7 +101,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 	for {
 		select {
 		case <-ticker.C:
-			r.logger.Debug("executing reconciler loop",
+			r.logger.Info("executing reconciler loop",
 				zap.String("time", time.Now().UTC().Format(time.RFC3339)),
 			)
 

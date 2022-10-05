@@ -40,7 +40,8 @@ and their `external_id` in Governor.
 `gov-okta-addon sync groups` will sync groups from Okta to governor based on the group slug and the `governor_id`
 in their Okta profile. Groups that exist in Okta but not in governor will be created, and groups that exist in
 governor but not in Okta will be deleted. Optionally, you can specify `--skip-okta-update` to avoid making changes
-to the Okta group (i.e. setting the `governor_id`), and `--selector-prefix` to only sync specific groups.
+to the Okta group (i.e. setting the `governor_id`),  `--selector-prefix` to only sync specific groups, and
+`--skip-groups "foo,bar,baz"` to skip syncing groups named `foo`, `bar` and `baz`.
 
 This command will also associate any organizations with the group based on the assigned applications in Okta, but
 it will not sync the members of the group.

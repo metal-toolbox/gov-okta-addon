@@ -185,7 +185,13 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		Reconciler:      rec,
 	}
 
-	logger.Infow("starting server", "address", viper.GetString("listen"), "dryrun", server.DryRun, "skip-delete", server.SkipDelete)
+	logger.Infow("starting server",
+		"address", viper.GetString("listen"),
+		"dryrun", server.DryRun,
+		"skip-delete", server.SkipDelete,
+		"governor-url", viper.GetString("governor.url"),
+		"okta-url", viper.GetString("okta.url"),
+	)
 
 	if err := server.Run(ctx); err != nil {
 		logger.Fatalw("failed starting server", "error", err)

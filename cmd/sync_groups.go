@@ -40,7 +40,7 @@ func init() {
 	syncGroupsCmd.PersistentFlags().String("selector-prefix", "", "if set, only group names that start with this string will be processed")
 	viperBindFlag("sync.selector-prefix", syncGroupsCmd.PersistentFlags().Lookup("selector-prefix"))
 
-	syncGroupsCmd.PersistentFlags().StringSlice("skip-groups", []string{}, "groups to skip during the sync")
+	syncGroupsCmd.PersistentFlags().StringSlice("skip-groups", []string{"Everyone", "catchall"}, "groups to skip during the sync")
 	viperBindFlag("sync.skip-groups", syncGroupsCmd.PersistentFlags().Lookup("skip-groups"))
 }
 

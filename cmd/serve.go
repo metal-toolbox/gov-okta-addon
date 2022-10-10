@@ -176,7 +176,6 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 	server := &srv.Server{
 		Debug:           viper.GetBool("logging.debug"),
 		DryRun:          viper.GetBool("dryrun"),
-		SkipDelete:      viper.GetBool("skip-delete"),
 		Listen:          viper.GetString("listen"),
 		Logger:          logger.Desugar(),
 		AuditFileWriter: auf,
@@ -188,7 +187,7 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 	logger.Infow("starting server",
 		"address", viper.GetString("listen"),
 		"dryrun", server.DryRun,
-		"skip-delete", server.SkipDelete,
+		"skip-delete", viper.GetBool("skip-delete"),
 		"governor-url", viper.GetString("governor.url"),
 		"okta-url", viper.GetString("okta.url"),
 	)

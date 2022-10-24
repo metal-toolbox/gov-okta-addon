@@ -50,6 +50,8 @@ func init() {
 	viperBindFlag("nats.subject-prefix", serveCmd.Flags().Lookup("nats-subject-prefix"))
 	serveCmd.Flags().String("nats-queue-group", "equinixmetal.governor.addons.gov-okta-addon", "queue group for load balancing messages across NATS consumers")
 	viperBindFlag("nats.queue-group", serveCmd.Flags().Lookup("nats-queue-group"))
+	serveCmd.Flags().Int("nats-queue-size", 10, "queue size for load balancing messages across NATS consumers")
+	viperBindFlag("nats.queue-size", serveCmd.Flags().Lookup("nats-queue-size"))
 
 	// Tracing Flags
 	serveCmd.Flags().Bool("tracing", false, "enable tracing support")
@@ -129,7 +131,7 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		srv.WithNATSLogger(logger.Desugar()),
 		srv.WithNATSConn(nc),
 		srv.WithNATSPrefix(viper.GetString("nats.subject-prefix")),
-		srv.WithNATSQueueGroup(viper.GetString(("nats.queue-group"))),
+		srv.WithNATSQueueGroup(viper.GetString(("nats.queue-group")), viper.GetInt(("nats.queue-size"))),
 	)
 	if err != nil {
 		logger.Fatalw("failed creating new NATS client", "error", err)

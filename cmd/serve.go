@@ -20,6 +20,11 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 )
 
+const (
+	// defaultNATSQueueSize is the default for the number of subscribers per subject and queue group
+	defaultNATSQueueSize = 10
+)
+
 // serveCmd starts the gov-okta-addon service
 var serveCmd = &cobra.Command{
 	Use:   "serve",
@@ -50,7 +55,7 @@ func init() {
 	viperBindFlag("nats.subject-prefix", serveCmd.Flags().Lookup("nats-subject-prefix"))
 	serveCmd.Flags().String("nats-queue-group", "equinixmetal.governor.addons.gov-okta-addon", "queue group for load balancing messages across NATS consumers")
 	viperBindFlag("nats.queue-group", serveCmd.Flags().Lookup("nats-queue-group"))
-	serveCmd.Flags().Int("nats-queue-size", 10, "queue size for load balancing messages across NATS consumers")
+	serveCmd.Flags().Int("nats-queue-size", defaultNATSQueueSize, "queue size for load balancing messages across NATS consumers")
 	viperBindFlag("nats.queue-size", serveCmd.Flags().Lookup("nats-queue-size"))
 
 	// Tracing Flags

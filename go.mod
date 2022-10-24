@@ -8,7 +8,7 @@ require (
 	github.com/gin-gonic/gin v1.8.1
 	github.com/goccy/go-json v0.9.11
 	github.com/gosimple/slug v1.13.1
-	github.com/metal-toolbox/auditevent v0.4.0
+	github.com/metal-toolbox/auditevent v0.5.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nats-io/nats.go v1.17.0
 	github.com/okta/okta-sdk-golang/v2 v2.14.0

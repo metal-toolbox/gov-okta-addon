@@ -18,7 +18,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/zsais/go-gin-prometheus v0.1.0
-	go.equinixmetal.net/governor v0.12.0
+	go.equinixmetal.net/governor v0.13.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.36.4
 	go.opentelemetry.io/otel v1.11.1
 	go.opentelemetry.io/otel/exporters/jaeger v1.11.1
@@ -36,7 +36,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20211103172832-aca2edc11f73 // indirect
 	github.com/friendsofgo/errors v0.9.2 // indirect
-	github.com/fsnotify/fsnotify v1.5.4 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -95,11 +95,11 @@ require (
 	github.com/volatiletech/randomize v0.0.1 // indirect
 	github.com/volatiletech/sqlboiler/v4 v4.13.0 // indirect
 	github.com/volatiletech/strmangle v0.0.4 // indirect
-	go.hollow.sh/toolbox v0.3.1 // indirect
+	go.hollow.sh/toolbox v0.4.0 // indirect
 	go.opentelemetry.io/otel/trace v1.11.1 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
-	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2 // indirect
+	golang.org/x/crypto v0.0.0-20221012134737-56aed061732a // indirect
 	golang.org/x/net v0.1.0 // indirect
 	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/text v0.4.0 // indirect

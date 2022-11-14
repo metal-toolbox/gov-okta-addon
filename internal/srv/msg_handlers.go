@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/metal-toolbox/auditevent"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
@@ -48,6 +49,26 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully created group", zap.String("okta.group.id", gid))
+
+		if auwerr := s.AuditEventWriter.Write(auditevent.NewAuditEventWithID(
+			payload.AuditID,
+			"GroupCreate",
+			auditevent.EventSource{
+				Type:  "NATS",
+				Value: s.NATSClient.conn.ConnectedUrlRedacted(),
+			},
+			auditevent.OutcomeSucceeded,
+			map[string]string{
+				"nats.subject":    s.NATSClient.prefix + ".groups",
+				"nats.queuegroup": s.NATSClient.queueGroup,
+			},
+			"gov-okta-addon",
+		).WithTarget(map[string]string{
+			"group.id": payload.GroupID,
+		})); auwerr != nil {
+			logger.Error("GroupCreate: error writing audit event", zap.Error(auwerr))
+		}
+
 	case v1alpha1.GovernorEventUpdate:
 		logger.Info("updating group")
 

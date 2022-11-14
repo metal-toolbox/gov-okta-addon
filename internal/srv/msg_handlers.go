@@ -50,24 +50,9 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 
 		logger.Info("successfully created group", zap.String("okta.group.id", gid))
 
-		if auwerr := s.AuditEventWriter.Write(auditevent.NewAuditEventWithID(
-			payload.AuditID,
-			"GroupCreate",
-			auditevent.EventSource{
-				Type:  "NATS",
-				Value: s.NATSClient.conn.ConnectedUrlRedacted(),
-			},
-			auditevent.OutcomeSucceeded,
-			map[string]string{
-				"nats.subject":    s.NATSClient.prefix + ".groups",
-				"nats.queuegroup": s.NATSClient.queueGroup,
-			},
-			"gov-okta-addon",
-		).WithTarget(map[string]string{
+		s.logAuditEventNATS("GroupCreate", m.Subject, payload, map[string]string{
 			"group.id": payload.GroupID,
-		})); auwerr != nil {
-			logger.Error("GroupCreate: error writing audit event", zap.Error(auwerr))
-		}
+		})
 
 	case v1alpha1.GovernorEventUpdate:
 		logger.Info("updating group")
@@ -84,6 +69,11 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully updated group", zap.String("okta.group.id", gid))
+
+		s.logAuditEventNATS("GroupUpdate", m.Subject, payload, map[string]string{
+			"group.id": payload.GroupID,
+		})
+
 	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting group")
 
@@ -94,6 +84,11 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully deleted group", zap.String("okta.group.id", gid))
+
+		s.logAuditEventNATS("GroupDelete", m.Subject, payload, map[string]string{
+			"group.id": payload.GroupID,
+		})
+
 	default:
 		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return
@@ -123,6 +118,12 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully created group membership", zap.String("okta.group.id", gid), zap.String("okta.user.id", uid))
+
+		s.logAuditEventNATS("GroupMembershipCreate", m.Subject, payload, map[string]string{
+			"group.id": payload.GroupID,
+			"user.id":  payload.UserID,
+		})
+
 	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting group membership")
 
@@ -133,6 +134,12 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully deleted group membership", zap.String("okta.group.id", gid), zap.String("okta.user.id", uid))
+
+		s.logAuditEventNATS("GroupMembershipDelete", m.Subject, payload, map[string]string{
+			"group.id": payload.GroupID,
+			"user.id":  payload.UserID,
+		})
+
 	default:
 		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return
@@ -167,6 +174,11 @@ func (s *Server) usersMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully deleted user", zap.String("okta.user.id", uid))
+
+		s.logAuditEventNATS("UserDelete", m.Subject, payload, map[string]string{
+			"user.id": payload.UserID,
+		})
+
 	default:
 		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return
@@ -182,4 +194,26 @@ func (s *Server) unmarshalPayload(m *nats.Msg) (*v1alpha1.Event, error) {
 	}
 
 	return &payload, nil
+}
+
+func (s *Server) logAuditEventNATS(eventType, natsSubj string, event *v1alpha1.Event, target map[string]string) {
+	if auwerr := s.AuditEventWriter.Write(auditevent.NewAuditEventWithID(
+		event.AuditID,
+		eventType,
+		auditevent.EventSource{
+			Type:  "NATS",
+			Value: s.NATSClient.conn.ConnectedUrlRedacted(),
+			Extra: map[string]any{
+				"nats.subject":    natsSubj,
+				"nats.queuegroup": s.NATSClient.queueGroup,
+			},
+		},
+		auditevent.OutcomeSucceeded,
+		map[string]string{
+			"event": "governor",
+		},
+		"gov-okta-addon",
+	).WithTarget(target)); auwerr != nil {
+		s.Logger.Error(eventType+": error writing audit event", zap.Error(auwerr))
+	}
 }

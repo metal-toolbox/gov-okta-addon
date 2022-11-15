@@ -172,6 +172,7 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 	}
 
 	rec := reconciler.New(
+		reconciler.WithAuditEventWriter(auditevent.NewDefaultAuditEventWriter(auf)),
 		reconciler.WithLogger(logger.Desugar()),
 		reconciler.WithInterval(viper.GetDuration("reconciler.interval")),
 		reconciler.WithGovernorClient(gc),

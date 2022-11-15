@@ -178,7 +178,7 @@ func (s *Server) auditEventNATS(natsSubj string, event *v1alpha1.Event) *auditev
 		auditevent.EventSource{
 			Type:  "NATS",
 			Value: s.NATSClient.conn.ConnectedUrlRedacted(),
-			Extra: map[string]any{
+			Extra: map[string]interface{}{
 				"nats.subject":    natsSubj,
 				"nats.queuegroup": s.NATSClient.queueGroup,
 			},

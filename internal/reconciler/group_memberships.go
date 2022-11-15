@@ -51,6 +51,8 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 
 				continue
 			}
+
+			groupMembershipCreatedCounter.Inc()
 		} else {
 			logger.Info("SKIP adding user to okta group",
 				zap.String("user.email", user.Email),
@@ -77,6 +79,8 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 
 				continue
 			}
+
+			groupMembershipDeletedCounter.Inc()
 		} else {
 			logger.Info("SKIP removing user from okta group",
 				zap.String("okta.user.id", oktaUID),
@@ -145,6 +149,8 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 		return "", "", err
 	}
 
+	groupMembershipCreatedCounter.Inc()
+
 	return oktaGID, oktaUID, nil
 }
 
@@ -204,6 +210,8 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 
 		return "", "", err
 	}
+
+	groupMembershipDeletedCounter.Inc()
 
 	return oktaGID, oktaUID, nil
 }

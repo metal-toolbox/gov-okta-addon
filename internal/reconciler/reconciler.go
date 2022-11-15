@@ -248,6 +248,8 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 					return err
 				}
 
+				groupsApplicationAssignedCounter.Inc()
+
 				continue
 			}
 
@@ -266,6 +268,8 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 					logger.Error("error removing okta group from okta application", zap.String("okta.app.id", appID))
 					return err
 				}
+
+				groupsApplicationUnassignedCounter.Inc()
 			}
 		}
 	}

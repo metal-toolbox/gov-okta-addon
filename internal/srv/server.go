@@ -17,7 +17,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 
-	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.equinixmetal.net/gov-okta-addon/internal/reconciler"
 )
 
@@ -29,7 +28,6 @@ type Server struct {
 	DryRun          bool
 	AuditFileWriter io.Writer
 	NATSClient      *NATSClient
-	OktaClient      *okta.Client
 	Reconciler      *reconciler.Reconciler
 }
 

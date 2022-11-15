@@ -61,6 +61,8 @@ func (r *Reconciler) GroupCreate(ctx context.Context, id string) (string, error)
 		return "", err
 	}
 
+	groupsCreatedCounter.Inc()
+
 	logger.Info("created okta group", zap.String("okta.group.id", oktaGID))
 
 	return oktaGID, nil
@@ -92,6 +94,8 @@ func (r *Reconciler) GroupUpdate(ctx context.Context, id string) (string, error)
 		return "", err
 	}
 
+	groupsUpdatedCounter.Inc()
+
 	return gid, nil
 }
 
@@ -113,6 +117,8 @@ func (r *Reconciler) GroupDelete(ctx context.Context, id string) (string, error)
 		r.logger.Error("error deleting group", zap.Error(err))
 		return "", err
 	}
+
+	groupsDeletedCounter.Inc()
 
 	return gid, nil
 }

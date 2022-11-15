@@ -187,7 +187,6 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		Logger:          logger.Desugar(),
 		AuditFileWriter: auf,
 		NATSClient:      natsClient,
-		OktaClient:      oc,
 		Reconciler:      rec,
 	}
 

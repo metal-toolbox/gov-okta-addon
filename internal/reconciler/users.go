@@ -44,6 +44,8 @@ func (r *Reconciler) UserDelete(ctx context.Context, id string) (string, error) 
 		return "", err
 	}
 
+	usersDeletedCounter.Inc()
+
 	return user.ExternalID, nil
 }
 

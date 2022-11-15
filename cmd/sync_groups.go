@@ -251,7 +251,8 @@ func linkGovernorGroupOrganizations(
 	oktaApps map[string]string,
 	govGroup *v1alpha1.Group,
 	govOrgs map[string]*v1alpha1.Organization,
-	l *zap.Logger) ([]string, error) {
+	l *zap.Logger,
+) ([]string, error) {
 	govExpectedOrganizations := []string{}
 
 	// loop over the okta github applications to get the organization
@@ -463,7 +464,8 @@ func updateOktaGroupProfile(
 	oc *okta.Client,
 	gID, groupName, groupDesc string,
 	govGroup *v1alpha1.Group,
-	l *zap.Logger) (*okt.Group, error) {
+	l *zap.Logger,
+) (*okt.Group, error) {
 	skipOkta := viper.GetBool("sync.skip-okta-update")
 	dryRun := viper.GetBool("sync.dryrun")
 

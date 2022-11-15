@@ -24,7 +24,7 @@ linters:
     - gocyclo
     - goerr113
     - gofmt
-    # - gofumpt
+    - gofumpt
     - goimports
     - gomnd
     - govet
@@ -35,7 +35,6 @@ linters:
     - whitespace
     - wsl
 
-    # - bod
 issues:
   exclude:
     # Default excludes from `golangci-lint run --help` with EXC0002 removed

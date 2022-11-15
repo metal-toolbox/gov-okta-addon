@@ -23,9 +23,9 @@ type Client struct {
 // ApplicationInterface abstracts the interactions with okta applications
 type ApplicationInterface interface {
 	ListApplications(context.Context, *query.Params) ([]okta.App, *okta.Response, error)
-	CreateApplicationGroupAssignment(ctx context.Context, appID string, groupID string, body okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error)
-	DeleteApplicationGroupAssignment(ctx context.Context, appID string, groupID string) (*okta.Response, error)
-	GetApplicationGroupAssignment(ctx context.Context, appID string, groupID string, qp *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error)
+	CreateApplicationGroupAssignment(ctx context.Context, appID, groupID string, body okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error)
+	DeleteApplicationGroupAssignment(ctx context.Context, appID, groupID string) (*okta.Response, error)
+	GetApplicationGroupAssignment(ctx context.Context, appID, groupID string, qp *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error)
 	ListApplicationGroupAssignments(ctx context.Context, appID string, qp *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error)
 }
 
@@ -35,8 +35,8 @@ type GroupInterface interface {
 	UpdateGroup(ctx context.Context, groupID string, body okta.Group) (*okta.Group, *okta.Response, error)
 	DeleteGroup(ctx context.Context, groupID string) (*okta.Response, error)
 	ListGroups(ctx context.Context, qp *query.Params) ([]*okta.Group, *okta.Response, error)
-	AddUserToGroup(ctx context.Context, groupID string, userID string) (*okta.Response, error)
-	RemoveUserFromGroup(ctx context.Context, groupID string, userID string) (*okta.Response, error)
+	AddUserToGroup(ctx context.Context, groupID, userID string) (*okta.Response, error)
+	RemoveUserFromGroup(ctx context.Context, groupID, userID string) (*okta.Response, error)
 	ListGroupUsers(ctx context.Context, groupID string, qp *query.Params) ([]*okta.User, *okta.Response, error)
 	ListAssignedApplicationsForGroup(ctx context.Context, groupID string, qp *query.Params) ([]okta.App, *okta.Response, error)
 }

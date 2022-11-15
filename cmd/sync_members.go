@@ -176,7 +176,7 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 		user, err := governorUserFromOktaID(ctx, gc, oktaMemberUserID, l)
 		if err != nil {
 			if errors.Is(err, ErrUserNotFound) {
-				l.Warn("user not found in governor, skipping",
+				l.Info("user not found in governor, skipping",
 					zap.String("okta.user.id", oktaMemberUserID),
 					zap.Error(err),
 				)

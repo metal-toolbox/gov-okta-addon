@@ -99,6 +99,14 @@ func syncGroupsToGovernor(ctx context.Context) error {
 
 		l = l.With(zap.String("okta.group.name", groupName))
 
+		if g.Type == "APP_GROUP" {
+			l.Info("skipping app group")
+
+			skipped++
+
+			return nil, nil
+		}
+
 		if !strings.HasPrefix(strings.ToLower(groupName), strings.ToLower(selectorPrefix)) {
 			l.Info("skipping non-selected group")
 
@@ -252,7 +260,7 @@ func linkGovernorGroupOrganizations(
 		// ensure governor manages the org, otherwise skip over it
 		org, ok := govOrgs[orgName]
 		if !ok {
-			l.Warn("assigned application org doesn't exist as a governor organization",
+			l.Info("assigned application org doesn't exist as a governor organization",
 				zap.String("okta.application.org", orgName),
 			)
 
@@ -363,7 +371,7 @@ func groupFromGroupSlug(ctx context.Context, gc *governor.Client, slug string, l
 			return nil, err
 		}
 
-		l.Warn("group slug not found in governor", zap.String("governor.id", slug))
+		l.Info("group slug not found in governor", zap.String("governor.id", slug))
 
 		return nil, nil
 	}

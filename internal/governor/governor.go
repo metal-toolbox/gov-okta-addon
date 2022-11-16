@@ -146,6 +146,7 @@ func (c *Client) newGovernorRequest(ctx context.Context, method, u string) (*htt
 	return req, nil
 }
 
+// URL returns the governor url
 func (c *Client) URL() string {
 	return c.url
 }

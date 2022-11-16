@@ -22,13 +22,13 @@ func WithAuditEvent(ctx context.Context, auevent *auditevent.AuditEvent) context
 
 // GetAuditEvent gets an audit event from the context
 func GetAuditEvent(ctx context.Context) *auditevent.AuditEvent {
-	user, ok := ctx.Value(auditEventKey).(*auditevent.AuditEvent)
+	auEvent, ok := ctx.Value(auditEventKey).(*auditevent.AuditEvent)
 	if !ok {
 		// audit event not found in context
 		return nil
 	}
 
-	return user
+	return auEvent
 }
 
 // WriteAuditEvent assembles a complete audit event and writes it to the event writer

@@ -106,7 +106,12 @@ func (r *Reconciler) Run(ctx context.Context) {
 	ticker := time.NewTicker(r.interval)
 	defer ticker.Stop()
 
-	r.logger.Info("starting reconciler loop", zap.Duration("interval", r.interval), zap.Bool("dryrun", r.dryrun), zap.Bool("skip-delete", r.skipDelete))
+	r.logger.Info("starting reconciler loop",
+		zap.Duration("interval", r.interval),
+		zap.String("governor.url", r.governorClient.URL()),
+		zap.Bool("dryrun", r.dryrun),
+		zap.Bool("skip-delete", r.skipDelete),
+	)
 
 	for {
 		select {
@@ -120,10 +125,13 @@ func (r *Reconciler) Run(ctx context.Context) {
 				auditevent.EventSource{
 					Type:  "local",
 					Value: "ReconcileLoop",
+					Extra: map[string]interface{}{
+						"governor.url": r.governorClient.URL(),
+					},
 				},
 				auditevent.OutcomeSucceeded,
 				map[string]string{
-					"event": "timer",
+					"event": "reconciler",
 				},
 				"gov-okta-addon",
 			))

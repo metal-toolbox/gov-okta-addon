@@ -146,6 +146,10 @@ func (c *Client) newGovernorRequest(ctx context.Context, method, u string) (*htt
 	return req, nil
 }
 
+func (c *Client) URL() string {
+	return c.url
+}
+
 // Groups gets the list of groups from governor
 func (c *Client) Groups(ctx context.Context) ([]*v1alpha1.Group, error) {
 	req, err := c.newGovernorRequest(ctx, http.MethodGet, fmt.Sprintf("%s/api/%s/groups", c.url, governorAPIVersion))

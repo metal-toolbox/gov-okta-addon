@@ -401,11 +401,11 @@ func auditEventReconcile() *auditevent.AuditEvent {
 		"", // eventType to be populated later
 		auditevent.EventSource{
 			Type:  "local",
-			Value: "",
+			Value: "ReconcileLoop",
 		},
 		auditevent.OutcomeSucceeded,
 		map[string]string{
-			"event": "reconciler",
+			"event": "timer",
 		},
 		"gov-okta-addon",
 	)

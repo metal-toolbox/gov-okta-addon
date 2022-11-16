@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/metal-toolbox/auditevent"
 	audithelpers "github.com/metal-toolbox/auditevent/helpers"
 	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/metal-toolbox/auditevent"
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
+	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/governor/pkg/events/v1alpha1"
 )
 
@@ -31,6 +33,8 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 	case v1alpha1.GovernorEventCreate:
 		logger.Info("creating group")
 
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
 		gid, err := s.Reconciler.GroupCreate(ctx, payload.GroupID)
 		if err != nil {
 			logger.Error("error reconciling group creation", zap.Error(err))
@@ -48,10 +52,13 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully created group", zap.String("okta.group.id", gid))
+
 	case v1alpha1.GovernorEventUpdate:
 		logger.Info("updating group")
 
-		gid, err := s.Reconciler.GroupUpdate(context.Background(), payload.GroupID)
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
+		gid, err := s.Reconciler.GroupUpdate(ctx, payload.GroupID)
 		if err != nil {
 			logger.Error("error reconciling group update", zap.Error(err))
 			return
@@ -63,8 +70,11 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully updated group", zap.String("okta.group.id", gid))
+
 	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting group")
+
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
 
 		gid, err := s.Reconciler.GroupDelete(ctx, payload.GroupID)
 		if err != nil {
@@ -73,6 +83,7 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully deleted group", zap.String("okta.group.id", gid))
+
 	default:
 		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return
@@ -95,6 +106,8 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 	case v1alpha1.GovernorEventCreate:
 		logger.Info("creating group membership")
 
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
 		gid, uid, err := s.Reconciler.GroupMembershipCreate(ctx, payload.GroupID, payload.UserID)
 		if err != nil {
 			logger.Error("error creating group membership", zap.Error(err))
@@ -102,8 +115,11 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully created group membership", zap.String("okta.group.id", gid), zap.String("okta.user.id", uid))
+
 	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting group membership")
+
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
 
 		gid, uid, err := s.Reconciler.GroupMembershipDelete(ctx, payload.GroupID, payload.UserID)
 		if err != nil {
@@ -112,6 +128,7 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully deleted group membership", zap.String("okta.group.id", gid), zap.String("okta.user.id", uid))
+
 	default:
 		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return
@@ -139,6 +156,8 @@ func (s *Server) usersMessageHandler(m *nats.Msg) {
 	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting user")
 
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
 		uid, err := s.Reconciler.UserDelete(ctx, payload.UserID)
 		if err != nil {
 			logger.Error("error deleting user", zap.Error(err))
@@ -146,6 +165,7 @@ func (s *Server) usersMessageHandler(m *nats.Msg) {
 		}
 
 		logger.Info("successfully deleted user", zap.String("okta.user.id", uid))
+
 	default:
 		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return
@@ -161,4 +181,25 @@ func (s *Server) unmarshalPayload(m *nats.Msg) (*v1alpha1.Event, error) {
 	}
 
 	return &payload, nil
+}
+
+// auditEventNATS returns a stub NATS audit event
+func (s *Server) auditEventNATS(natsSubj string, event *v1alpha1.Event) *auditevent.AuditEvent {
+	return auditevent.NewAuditEventWithID(
+		event.AuditID,
+		"", // eventType to be populated later
+		auditevent.EventSource{
+			Type:  "NATS",
+			Value: s.NATSClient.conn.ConnectedUrlRedacted(),
+			Extra: map[string]interface{}{
+				"nats.subject":    natsSubj,
+				"nats.queuegroup": s.NATSClient.queueGroup,
+			},
+		},
+		auditevent.OutcomeSucceeded,
+		map[string]string{
+			"event": "governor",
+		},
+		"gov-okta-addon",
+	)
 }

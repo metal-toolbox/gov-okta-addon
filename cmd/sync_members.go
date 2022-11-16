@@ -21,9 +21,7 @@ type memberSummary struct {
 	removed []string
 }
 
-var (
-	userCache = make(map[string]*v1alpha1.User)
-)
+var userCache = make(map[string]*v1alpha1.User)
 
 // syncMembersCmd syncs okta groups members into governor
 var syncMembersCmd = &cobra.Command{

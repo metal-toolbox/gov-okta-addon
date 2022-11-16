@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 )
@@ -45,6 +46,14 @@ func (r *Reconciler) UserDelete(ctx context.Context, id string) (string, error) 
 	}
 
 	usersDeletedCounter.Inc()
+
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "UserDelete", map[string]string{
+		"governor.user.email": user.Email,
+		"governor.user.id":    user.ID,
+		"okta.user.id":        user.ExternalID,
+	}); err != nil {
+		r.logger.Error("error writing audit event", zap.Error(err))
+	}
 
 	return user.ExternalID, nil
 }

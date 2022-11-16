@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,8 +12,7 @@ import (
 
 func TestUnknownRoute(t *testing.T) {
 	hs := Server{
-		Logger:          zap.NewNop(),
-		AuditFileWriter: &strings.Builder{},
+		Logger: zap.NewNop(),
 	}
 	s := hs.NewServer()
 	router := s.Handler
@@ -29,8 +27,7 @@ func TestUnknownRoute(t *testing.T) {
 
 func TestHealthzRoute(t *testing.T) {
 	hs := Server{
-		Logger:          zap.NewNop(),
-		AuditFileWriter: &strings.Builder{},
+		Logger: zap.NewNop(),
 	}
 	s := hs.NewServer()
 	router := s.Handler
@@ -45,8 +42,7 @@ func TestHealthzRoute(t *testing.T) {
 
 func TestLivenessRoute(t *testing.T) {
 	hs := Server{
-		Logger:          zap.NewNop(),
-		AuditFileWriter: &strings.Builder{},
+		Logger: zap.NewNop(),
 	}
 	s := hs.NewServer()
 	router := s.Handler
@@ -61,8 +57,7 @@ func TestLivenessRoute(t *testing.T) {
 
 func TestReadinessRouteUp(t *testing.T) {
 	hs := Server{
-		Logger:          zap.NewNop(),
-		AuditFileWriter: &strings.Builder{},
+		Logger: zap.NewNop(),
 	}
 	s := hs.NewServer()
 	router := s.Handler

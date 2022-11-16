@@ -363,7 +363,6 @@ func TestClient_Group(t *testing.T) {
 		want    *v1alpha1.Group
 		wantErr bool
 	}{
-
 		{
 			name: "example request",
 			fields: fields{

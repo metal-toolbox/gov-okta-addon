@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/metal-toolbox/auditevent"
+	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/gov-okta-addon/internal/governor"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
@@ -18,12 +20,13 @@ const (
 
 // Reconciler reconciles Governor groups/users with Okta
 type Reconciler struct {
-	interval       time.Duration
-	governorClient *governor.Client
-	logger         *zap.Logger
-	oktaClient     *okta.Client
-	dryrun         bool
-	skipDelete     bool
+	auditEventWriter *auditevent.EventWriter
+	interval         time.Duration
+	governorClient   *governor.Client
+	logger           *zap.Logger
+	oktaClient       *okta.Client
+	dryrun           bool
+	skipDelete       bool
 }
 
 // Option is a functional configuration option
@@ -40,6 +43,13 @@ func WithInterval(i time.Duration) Option {
 func WithLogger(l *zap.Logger) Option {
 	return func(r *Reconciler) {
 		r.logger = l
+	}
+}
+
+// WithAuditEventWriter sets auditEventWriter
+func WithAuditEventWriter(a *auditevent.EventWriter) Option {
+	return func(r *Reconciler) {
+		r.auditEventWriter = a
 	}
 }
 
@@ -96,7 +106,12 @@ func (r *Reconciler) Run(ctx context.Context) {
 	ticker := time.NewTicker(r.interval)
 	defer ticker.Stop()
 
-	r.logger.Info("starting reconciler loop", zap.Duration("interval", r.interval), zap.Bool("dryrun", r.dryrun), zap.Bool("skip-delete", r.skipDelete))
+	r.logger.Info("starting reconciler loop",
+		zap.Duration("interval", r.interval),
+		zap.String("governor.url", r.governorClient.URL()),
+		zap.Bool("dryrun", r.dryrun),
+		zap.Bool("skip-delete", r.skipDelete),
+	)
 
 	for {
 		select {
@@ -104,6 +119,22 @@ func (r *Reconciler) Run(ctx context.Context) {
 			r.logger.Info("executing reconciler loop",
 				zap.String("time", time.Now().UTC().Format(time.RFC3339)),
 			)
+
+			ctx = auctx.WithAuditEvent(ctx, auditevent.NewAuditEvent(
+				"", // eventType to be populated later
+				auditevent.EventSource{
+					Type:  "local",
+					Value: "ReconcileLoop",
+					Extra: map[string]interface{}{
+						"governor.url": r.governorClient.URL(),
+					},
+				},
+				auditevent.OutcomeSucceeded,
+				map[string]string{
+					"event": "reconciler",
+				},
+				"gov-okta-addon",
+			))
 
 			groups, err := r.governorClient.Groups(ctx)
 			if err != nil {
@@ -250,6 +281,17 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 
 				groupsApplicationAssignedCounter.Inc()
 
+				if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupApplicationAdd", map[string]string{
+					"governor.group.slug": groupDetails.Slug,
+					"governor.group.id":   groupDetails.ID,
+					"governor.app.slug":   org,
+					"okta.group.id":       oktaGID,
+					"okta.app.id":         appID,
+					"okta.app.slug":       org,
+				}); err != nil {
+					logger.Error("error writing audit event", zap.Error(err))
+				}
+
 				continue
 			}
 
@@ -270,6 +312,17 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 				}
 
 				groupsApplicationUnassignedCounter.Inc()
+
+				if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupApplicationRemove", map[string]string{
+					"governor.group.slug": groupDetails.Slug,
+					"governor.group.id":   groupDetails.ID,
+					"governor.app.slug":   org,
+					"okta.group.id":       oktaGID,
+					"okta.app.id":         appID,
+					"okta.app.slug":       org,
+				}); err != nil {
+					logger.Error("error writing audit event", zap.Error(err))
+				}
 			}
 		}
 	}
@@ -315,6 +368,15 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 			// }
 			//
 			// logger.Info("successfully deleted okta user")
+
+			// if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "UserDelete", map[string]string{
+			// 	"governor.user.email": u.Email,
+			// 	"governor.user.id":    u.ID,
+			// 	"okta.user.id":        u.ExternalID,
+			// }); err != nil {
+			// 	logger.Error("error writing audit event", zap.Error(err))
+			// }
+
 			logger.Debug("skipping user deletion in okta")
 		} else {
 			logger.Debug("user not found in okta")

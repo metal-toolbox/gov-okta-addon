@@ -3,6 +3,7 @@ package reconciler
 import (
 	"context"
 
+	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 )
@@ -65,6 +66,14 @@ func (r *Reconciler) GroupCreate(ctx context.Context, id string) (string, error)
 
 	logger.Info("created okta group", zap.String("okta.group.id", oktaGID))
 
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupCreate", map[string]string{
+		"governor.group.slug": group.Slug,
+		"governor.group.id":   group.ID,
+		"okta.group.id":       oktaGID,
+	}); err != nil {
+		logger.Error("error writing audit event", zap.Error(err))
+	}
+
 	return oktaGID, nil
 }
 
@@ -78,7 +87,7 @@ func (r *Reconciler) GroupUpdate(ctx context.Context, id string) (string, error)
 
 	logger := r.logger.With(zap.String("governor.group.id", group.ID), zap.String("governor.group.slug", group.Slug))
 
-	gid, err := r.oktaClient.GetGroupByGovernorID(ctx, group.ID)
+	oktaGID, err := r.oktaClient.GetGroupByGovernorID(ctx, group.ID)
 	if err != nil {
 		logger.Error("error getting group by governor id", zap.String("governor.group.id", group.ID), zap.Error(err))
 		return "", err
@@ -86,41 +95,56 @@ func (r *Reconciler) GroupUpdate(ctx context.Context, id string) (string, error)
 
 	if r.dryrun {
 		logger.Info("SKIP updating okta group")
-		return gid, nil
+		return oktaGID, nil
 	}
 
-	if _, err := r.oktaClient.UpdateGroup(ctx, gid, group.Name, group.Description, map[string]interface{}{"governor_id": group.ID}); err != nil {
+	if _, err := r.oktaClient.UpdateGroup(ctx, oktaGID, group.Name, group.Description, map[string]interface{}{"governor_id": group.ID}); err != nil {
 		logger.Error("error updating group", zap.Error(err))
 		return "", err
 	}
 
 	groupsUpdatedCounter.Inc()
 
-	return gid, nil
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupUpdate", map[string]string{
+		"governor.group.slug": group.Slug,
+		"governor.group.id":   group.ID,
+		"okta.group.id":       oktaGID,
+	}); err != nil {
+		logger.Error("error writing audit event", zap.Error(err))
+	}
+
+	return oktaGID, nil
 }
 
 // GroupDelete deletes an existing governor group in okta
 func (r *Reconciler) GroupDelete(ctx context.Context, id string) (string, error) {
 	// TODO validate the group is deleted from governor API by ID
-	gid, err := r.oktaClient.GetGroupByGovernorID(ctx, id)
+	oktaGID, err := r.oktaClient.GetGroupByGovernorID(ctx, id)
 	if err != nil {
 		r.logger.Error("error getting okta group by governor id", zap.String("governor.group.id", id), zap.Error(err))
 		return "", err
 	}
 
 	if r.dryrun {
-		r.logger.Info("dryrun deleting okta group", zap.String("okta.group.id", gid))
-		return gid, nil
+		r.logger.Info("dryrun deleting okta group", zap.String("okta.group.id", oktaGID))
+		return oktaGID, nil
 	}
 
-	if err := r.oktaClient.DeleteGroup(ctx, gid); err != nil {
+	if err := r.oktaClient.DeleteGroup(ctx, oktaGID); err != nil {
 		r.logger.Error("error deleting group", zap.Error(err))
 		return "", err
 	}
 
 	groupsDeletedCounter.Inc()
 
-	return gid, nil
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupDelete", map[string]string{
+		"governor.group.id": id,
+		"okta.group.id":     oktaGID,
+	}); err != nil {
+		r.logger.Error("error writing audit event", zap.Error(err))
+	}
+
+	return oktaGID, nil
 }
 
 // getGroupOrgSlugs returns the github organization slugs assigned to a governor group

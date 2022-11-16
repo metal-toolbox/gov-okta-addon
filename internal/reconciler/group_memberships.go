@@ -3,6 +3,7 @@ package reconciler
 import (
 	"context"
 
+	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.uber.org/zap"
 )
 
@@ -53,6 +54,17 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			}
 
 			groupMembershipCreatedCounter.Inc()
+
+			if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupMemberAdd", map[string]string{
+				"governor.group.slug": group.Slug,
+				"governor.group.id":   group.ID,
+				"governor.user.email": user.Email,
+				"governor.user.id":    user.ID,
+				"okta.group.id":       oktaGID,
+				"okta.user.id":        oktaUID,
+			}); err != nil {
+				logger.Error("error writing audit event", zap.Error(err))
+			}
 		} else {
 			logger.Info("SKIP adding user to okta group",
 				zap.String("user.email", user.Email),
@@ -81,6 +93,15 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			}
 
 			groupMembershipDeletedCounter.Inc()
+
+			if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupMemberRemove", map[string]string{
+				"governor.group.slug": group.Slug,
+				"governor.group.id":   group.ID,
+				"okta.group.id":       oktaGID,
+				"okta.user.id":        oktaUID,
+			}); err != nil {
+				logger.Error("error writing audit event", zap.Error(err))
+			}
 		} else {
 			logger.Info("SKIP removing user from okta group",
 				zap.String("okta.user.id", oktaUID),
@@ -151,6 +172,17 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 
 	groupMembershipCreatedCounter.Inc()
 
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupMemberAdd", map[string]string{
+		"governor.group.slug": group.Slug,
+		"governor.group.id":   group.ID,
+		"governor.user.email": user.Email,
+		"governor.user.id":    user.ID,
+		"okta.group.id":       oktaGID,
+		"okta.user.id":        oktaUID,
+	}); err != nil {
+		logger.Error("error writing audit event", zap.Error(err))
+	}
+
 	return oktaGID, oktaUID, nil
 }
 
@@ -212,6 +244,17 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 	}
 
 	groupMembershipDeletedCounter.Inc()
+
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupMemberRemove", map[string]string{
+		"governor.group.slug": group.Slug,
+		"governor.group.id":   group.ID,
+		"governor.user.email": user.Email,
+		"governor.user.id":    user.ID,
+		"okta.group.id":       oktaGID,
+		"okta.user.id":        oktaUID,
+	}); err != nil {
+		logger.Error("error writing audit event", zap.Error(err))
+	}
 
 	return oktaGID, oktaUID, nil
 }

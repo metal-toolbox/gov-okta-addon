@@ -57,7 +57,7 @@ func (m *mockGroupClient) ListGroups(ctx context.Context, qp *query.Params) ([]*
 	return m.groups, m.resp, nil
 }
 
-func (m *mockGroupClient) AddUserToGroup(ctx context.Context, groupID string, userID string) (*okta.Response, error) {
+func (m *mockGroupClient) AddUserToGroup(ctx context.Context, groupID, userID string) (*okta.Response, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -65,7 +65,7 @@ func (m *mockGroupClient) AddUserToGroup(ctx context.Context, groupID string, us
 	return m.resp, nil
 }
 
-func (m *mockGroupClient) RemoveUserFromGroup(ctx context.Context, groupID string, userID string) (*okta.Response, error) {
+func (m *mockGroupClient) RemoveUserFromGroup(ctx context.Context, groupID, userID string) (*okta.Response, error) {
 	if m.err != nil {
 		return nil, m.err
 	}

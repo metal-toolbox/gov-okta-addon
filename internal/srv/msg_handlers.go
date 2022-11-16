@@ -8,6 +8,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
+	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/governor/pkg/events/v1alpha1"
 )
 
@@ -32,18 +33,20 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 	case v1alpha1.GovernorEventCreate:
 		logger.Info("creating group")
 
-		gid, err := s.Reconciler.GroupCreate(ctx, s.auditEventNATS(m.Subject, payload), payload.GroupID)
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
+		gid, err := s.Reconciler.GroupCreate(ctx, payload.GroupID)
 		if err != nil {
 			logger.Error("error reconciling group creation", zap.Error(err))
 			return
 		}
 
-		if err := s.Reconciler.GroupsApplicationAssignments(ctx, s.auditEventNATS(m.Subject, payload), payload.GroupID); err != nil {
+		if err := s.Reconciler.GroupsApplicationAssignments(ctx, payload.GroupID); err != nil {
 			logger.Error("error reconciling group creation application assignment", zap.Error(err))
 			return
 		}
 
-		if err := s.Reconciler.GroupMembership(ctx, s.auditEventNATS(m.Subject, payload), payload.GroupID, gid); err != nil {
+		if err := s.Reconciler.GroupMembership(ctx, payload.GroupID, gid); err != nil {
 			logger.Error("error reconciling group creation membership", zap.Error(err))
 			return
 		}
@@ -53,13 +56,15 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 	case v1alpha1.GovernorEventUpdate:
 		logger.Info("updating group")
 
-		gid, err := s.Reconciler.GroupUpdate(ctx, s.auditEventNATS(m.Subject, payload), payload.GroupID)
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
+		gid, err := s.Reconciler.GroupUpdate(ctx, payload.GroupID)
 		if err != nil {
 			logger.Error("error reconciling group update", zap.Error(err))
 			return
 		}
 
-		if err := s.Reconciler.GroupsApplicationAssignments(ctx, s.auditEventNATS(m.Subject, payload), payload.GroupID); err != nil {
+		if err := s.Reconciler.GroupsApplicationAssignments(ctx, payload.GroupID); err != nil {
 			logger.Error("error reconciling group creation application assignment", zap.Error(err))
 			return
 		}
@@ -69,7 +74,9 @@ func (s *Server) groupsMessageHandler(m *nats.Msg) {
 	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting group")
 
-		gid, err := s.Reconciler.GroupDelete(ctx, s.auditEventNATS(m.Subject, payload), payload.GroupID)
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
+		gid, err := s.Reconciler.GroupDelete(ctx, payload.GroupID)
 		if err != nil {
 			logger.Error("error deleting group", zap.Error(err))
 			return
@@ -99,7 +106,9 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 	case v1alpha1.GovernorEventCreate:
 		logger.Info("creating group membership")
 
-		gid, uid, err := s.Reconciler.GroupMembershipCreate(ctx, s.auditEventNATS(m.Subject, payload), payload.GroupID, payload.UserID)
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
+		gid, uid, err := s.Reconciler.GroupMembershipCreate(ctx, payload.GroupID, payload.UserID)
 		if err != nil {
 			logger.Error("error creating group membership", zap.Error(err))
 			return
@@ -110,7 +119,9 @@ func (s *Server) membersMessageHandler(m *nats.Msg) {
 	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting group membership")
 
-		gid, uid, err := s.Reconciler.GroupMembershipDelete(ctx, s.auditEventNATS(m.Subject, payload), payload.GroupID, payload.UserID)
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
+		gid, uid, err := s.Reconciler.GroupMembershipDelete(ctx, payload.GroupID, payload.UserID)
 		if err != nil {
 			logger.Error("error deleting group membership", zap.Error(err))
 			return
@@ -145,7 +156,9 @@ func (s *Server) usersMessageHandler(m *nats.Msg) {
 	case v1alpha1.GovernorEventDelete:
 		logger.Info("deleting user")
 
-		uid, err := s.Reconciler.UserDelete(ctx, s.auditEventNATS(m.Subject, payload), payload.UserID)
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
+		uid, err := s.Reconciler.UserDelete(ctx, payload.UserID)
 		if err != nil {
 			logger.Error("error deleting user", zap.Error(err))
 			return

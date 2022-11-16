@@ -3,12 +3,12 @@ package reconciler
 import (
 	"context"
 
-	"github.com/metal-toolbox/auditevent"
+	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.uber.org/zap"
 )
 
 // GroupMembership performs a full reconciliation on the membership of a group in okta
-func (r *Reconciler) GroupMembership(ctx context.Context, ae *auditevent.AuditEvent, gid, oktaGID string) error {
+func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) error {
 	group, err := r.governorClient.Group(ctx, gid)
 	if err != nil {
 		r.logger.Error("error getting governor group", zap.Error(err))
@@ -55,18 +55,15 @@ func (r *Reconciler) GroupMembership(ctx context.Context, ae *auditevent.AuditEv
 
 			groupMembershipCreatedCounter.Inc()
 
-			if ae != nil {
-				ae.Type = "GroupMemberAdd"
-				if auwerr := r.auditEventWriter.Write(ae.WithTarget(map[string]string{
-					"governor.group.slug": group.Slug,
-					"governor.group.id":   group.ID,
-					"governor.user.email": user.Email,
-					"governor.user.id":    user.ID,
-					"okta.group.id":       oktaGID,
-					"okta.user.id":        oktaUID,
-				})); auwerr != nil {
-					logger.Error(ae.Type+": error writing audit event", zap.Error(auwerr))
-				}
+			if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupMemberAdd", map[string]string{
+				"governor.group.slug": group.Slug,
+				"governor.group.id":   group.ID,
+				"governor.user.email": user.Email,
+				"governor.user.id":    user.ID,
+				"okta.group.id":       oktaGID,
+				"okta.user.id":        oktaUID,
+			}); err != nil {
+				logger.Error("error writing audit event", zap.Error(err))
 			}
 		} else {
 			logger.Info("SKIP adding user to okta group",
@@ -97,16 +94,13 @@ func (r *Reconciler) GroupMembership(ctx context.Context, ae *auditevent.AuditEv
 
 			groupMembershipDeletedCounter.Inc()
 
-			if ae != nil {
-				ae.Type = "GroupMemberRemove"
-				if auwerr := r.auditEventWriter.Write(ae.WithTarget(map[string]string{
-					"governor.group.slug": group.Slug,
-					"governor.group.id":   group.ID,
-					"okta.group.id":       oktaGID,
-					"okta.user.id":        oktaUID,
-				})); auwerr != nil {
-					logger.Error(ae.Type+": error writing audit event", zap.Error(auwerr))
-				}
+			if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupMemberRemove", map[string]string{
+				"governor.group.slug": group.Slug,
+				"governor.group.id":   group.ID,
+				"okta.group.id":       oktaGID,
+				"okta.user.id":        oktaUID,
+			}); err != nil {
+				logger.Error("error writing audit event", zap.Error(err))
 			}
 		} else {
 			logger.Info("SKIP removing user from okta group",
@@ -120,7 +114,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, ae *auditevent.AuditEv
 }
 
 // GroupMembershipCreate reconciles the existence of a user in an okta group based on the given governor user and group ids
-func (r *Reconciler) GroupMembershipCreate(ctx context.Context, ae *auditevent.AuditEvent, gid, uid string) (string, string, error) {
+func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string) (string, string, error) {
 	group, err := r.governorClient.Group(ctx, gid)
 	if err != nil {
 		r.logger.Error("error getting governor group", zap.Error(err))
@@ -178,25 +172,22 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, ae *auditevent.A
 
 	groupMembershipCreatedCounter.Inc()
 
-	if ae != nil {
-		ae.Type = "GroupMemberAdd"
-		if auwerr := r.auditEventWriter.Write(ae.WithTarget(map[string]string{
-			"governor.group.slug": group.Slug,
-			"governor.group.id":   group.ID,
-			"governor.user.email": user.Email,
-			"governor.user.id":    user.ID,
-			"okta.group.id":       oktaGID,
-			"okta.user.id":        oktaUID,
-		})); auwerr != nil {
-			logger.Error(ae.Type+": error writing audit event", zap.Error(auwerr))
-		}
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupMemberAdd", map[string]string{
+		"governor.group.slug": group.Slug,
+		"governor.group.id":   group.ID,
+		"governor.user.email": user.Email,
+		"governor.user.id":    user.ID,
+		"okta.group.id":       oktaGID,
+		"okta.user.id":        oktaUID,
+	}); err != nil {
+		logger.Error("error writing audit event", zap.Error(err))
 	}
 
 	return oktaGID, oktaUID, nil
 }
 
 // GroupMembershipDelete reconciles the removal a user from an okta group based on the given governor group and user ids
-func (r *Reconciler) GroupMembershipDelete(ctx context.Context, ae *auditevent.AuditEvent, gid, uid string) (string, string, error) {
+func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string) (string, string, error) {
 	group, err := r.governorClient.Group(ctx, gid)
 	if err != nil {
 		r.logger.Error("error getting governor group", zap.Error(err))
@@ -254,18 +245,15 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, ae *auditevent.A
 
 	groupMembershipDeletedCounter.Inc()
 
-	if ae != nil {
-		ae.Type = "GroupMemberRemove"
-		if auwerr := r.auditEventWriter.Write(ae.WithTarget(map[string]string{
-			"governor.group.slug": group.Slug,
-			"governor.group.id":   group.ID,
-			"governor.user.email": user.Email,
-			"governor.user.id":    user.ID,
-			"okta.group.id":       oktaGID,
-			"okta.user.id":        oktaUID,
-		})); auwerr != nil {
-			logger.Error(ae.Type+": error writing audit event", zap.Error(auwerr))
-		}
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupMemberRemove", map[string]string{
+		"governor.group.slug": group.Slug,
+		"governor.group.id":   group.ID,
+		"governor.user.email": user.Email,
+		"governor.user.id":    user.ID,
+		"okta.group.id":       oktaGID,
+		"okta.user.id":        oktaUID,
+	}); err != nil {
+		logger.Error("error writing audit event", zap.Error(err))
 	}
 
 	return oktaGID, oktaUID, nil

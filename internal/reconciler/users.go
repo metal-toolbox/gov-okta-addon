@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/metal-toolbox/auditevent"
+	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 )
@@ -14,7 +14,7 @@ var cutoffUserDeleted = time.Now().Add(-24 * time.Hour)
 
 // UserDelete deletes an okta user that has already been deleted in governor
 // an error will be returned if the user still exists in governor
-func (r *Reconciler) UserDelete(ctx context.Context, ae *auditevent.AuditEvent, id string) (string, error) {
+func (r *Reconciler) UserDelete(ctx context.Context, id string) (string, error) {
 	// get details about this user and verify it was actually deleted in governor
 	user, err := r.governorClient.User(ctx, id, true)
 	if err != nil {
@@ -47,15 +47,12 @@ func (r *Reconciler) UserDelete(ctx context.Context, ae *auditevent.AuditEvent, 
 
 	usersDeletedCounter.Inc()
 
-	if ae != nil {
-		ae.Type = "UserDelete"
-		if auwerr := r.auditEventWriter.Write(ae.WithTarget(map[string]string{
-			"governor.user.email": user.Email,
-			"governor.user.id":    user.ID,
-			"okta.user.id":        user.ExternalID,
-		})); auwerr != nil {
-			logger.Error(ae.Type+": error writing audit event", zap.Error(auwerr))
-		}
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "UserDelete", map[string]string{
+		"governor.user.email": user.Email,
+		"governor.user.id":    user.ID,
+		"okta.user.id":        user.ExternalID,
+	}); err != nil {
+		r.logger.Error("error writing audit event", zap.Error(err))
 	}
 
 	return user.ExternalID, nil

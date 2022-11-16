@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/metal-toolbox/auditevent"
+	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/gov-okta-addon/internal/governor"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
@@ -114,6 +115,19 @@ func (r *Reconciler) Run(ctx context.Context) {
 				zap.String("time", time.Now().UTC().Format(time.RFC3339)),
 			)
 
+			ctx = auctx.WithAuditEvent(ctx, auditevent.NewAuditEvent(
+				"", // eventType to be populated later
+				auditevent.EventSource{
+					Type:  "local",
+					Value: "ReconcileLoop",
+				},
+				auditevent.OutcomeSucceeded,
+				map[string]string{
+					"event": "timer",
+				},
+				"gov-okta-addon",
+			))
+
 			groups, err := r.governorClient.Groups(ctx)
 			if err != nil {
 				r.logger.Error("error listing group", zap.Error(err))
@@ -145,13 +159,13 @@ func (r *Reconciler) Run(ctx context.Context) {
 
 				groupMap[oktaGroupID] = groupDetails
 
-				if err := r.GroupMembership(ctx, auditEventReconcile(), g.ID, oktaGroupID); err != nil {
+				if err := r.GroupMembership(ctx, g.ID, oktaGroupID); err != nil {
 					logger.Error("error reconciling governor group membership")
 					continue
 				}
 			}
 
-			if err := r.reconcileGroupApplicationAssignments(ctx, auditEventReconcile(), groupMap); err != nil {
+			if err := r.reconcileGroupApplicationAssignments(ctx, groupMap); err != nil {
 				r.logger.Error("error reconciling group application links", zap.Error(err))
 			}
 
@@ -177,7 +191,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 
 			r.logger.Debug("got okta users", zap.Any("okta.user.ids", oktaUserIDs))
 
-			if err := r.reconcileUsers(ctx, auditEventReconcile(), govUsers, oktaUserIDs); err != nil {
+			if err := r.reconcileUsers(ctx, govUsers, oktaUserIDs); err != nil {
 				r.logger.Error("error reconciling users", zap.Error(err))
 			}
 
@@ -195,7 +209,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 // of okta group ids to governor groups and does it's best to make as few calls to okta as possible to prevent
 // throttling.  A call to this function without any changes will result in n+1 calls to the Okta API where
 // n is the number of Okta github cloud applications.
-func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, ae *auditevent.AuditEvent, groupMap map[string]*v1alpha1.Group) error {
+func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, groupMap map[string]*v1alpha1.Group) error {
 	// get the github cloud apps first from okta
 	oktaAppOrgs, err := r.oktaClient.GithubCloudApplications(ctx)
 	if err != nil {
@@ -259,18 +273,15 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, a
 
 				groupsApplicationAssignedCounter.Inc()
 
-				if ae != nil {
-					ae.Type = "GroupApplicationAdd"
-					if auwerr := r.auditEventWriter.Write(ae.WithTarget(map[string]string{
-						"governor.group.slug": groupDetails.Slug,
-						"governor.group.id":   groupDetails.ID,
-						"governor.app.slug":   org,
-						"okta.group.id":       oktaGID,
-						"okta.app.id":         appID,
-						"okta.app.slug":       org,
-					})); auwerr != nil {
-						logger.Error(ae.Type+": error writing audit event", zap.Error(auwerr))
-					}
+				if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupApplicationAdd", map[string]string{
+					"governor.group.slug": groupDetails.Slug,
+					"governor.group.id":   groupDetails.ID,
+					"governor.app.slug":   org,
+					"okta.group.id":       oktaGID,
+					"okta.app.id":         appID,
+					"okta.app.slug":       org,
+				}); err != nil {
+					logger.Error("error writing audit event", zap.Error(err))
 				}
 
 				continue
@@ -294,18 +305,15 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, a
 
 				groupsApplicationUnassignedCounter.Inc()
 
-				if ae != nil {
-					ae.Type = "GroupApplicationRemove"
-					if auwerr := r.auditEventWriter.Write(ae.WithTarget(map[string]string{
-						"governor.group.slug": groupDetails.Slug,
-						"governor.group.id":   groupDetails.ID,
-						"governor.app.slug":   org,
-						"okta.group.id":       oktaGID,
-						"okta.app.id":         appID,
-						"okta.app.slug":       org,
-					})); auwerr != nil {
-						logger.Error(ae.Type+": error writing audit event", zap.Error(auwerr))
-					}
+				if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "GroupApplicationRemove", map[string]string{
+					"governor.group.slug": groupDetails.Slug,
+					"governor.group.id":   groupDetails.ID,
+					"governor.app.slug":   org,
+					"okta.group.id":       oktaGID,
+					"okta.app.id":         appID,
+					"okta.app.slug":       org,
+				}); err != nil {
+					logger.Error("error writing audit event", zap.Error(err))
 				}
 			}
 		}
@@ -318,7 +326,7 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, a
 // deletes any okta users that have been deleted in governor. Note that we are specifically
 // targeting users who have existed in governor and have been deleted, and not just users who
 // do not exist in governor
-func (r *Reconciler) reconcileUsers(ctx context.Context, ae *auditevent.AuditEvent, govUsers []*v1alpha1.User, oktaUserIDs map[string]struct{}) error {
+func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.User, oktaUserIDs map[string]struct{}) error {
 	if govUsers == nil || oktaUserIDs == nil {
 		return ErrUserListEmpty
 	}
@@ -352,6 +360,15 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, ae *auditevent.AuditEve
 			// }
 			//
 			// logger.Info("successfully deleted okta user")
+
+			// if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "UserDelete", map[string]string{
+			// 	"governor.user.email": u.Email,
+			// 	"governor.user.id":    u.ID,
+			// 	"okta.user.id":        u.ExternalID,
+			// }); err != nil {
+			// 	logger.Error("error writing audit event", zap.Error(err))
+			// }
+
 			logger.Debug("skipping user deletion in okta")
 		} else {
 			logger.Debug("user not found in okta")
@@ -372,7 +389,7 @@ func (r *Reconciler) groupExists(ctx context.Context, id string) (string, error)
 			return "", err
 		}
 
-		oktaGID, err := r.GroupCreate(ctx, auditEventReconcile(), id)
+		oktaGID, err := r.GroupCreate(ctx, id)
 		if err != nil {
 			return "", err
 		}
@@ -393,20 +410,4 @@ func contains(list []string, item string) bool {
 	}
 
 	return false
-}
-
-// auditEventReconcile returns a stub reconciler audit event
-func auditEventReconcile() *auditevent.AuditEvent {
-	return auditevent.NewAuditEvent(
-		"", // eventType to be populated later
-		auditevent.EventSource{
-			Type:  "local",
-			Value: "ReconcileLoop",
-		},
-		auditevent.OutcomeSucceeded,
-		map[string]string{
-			"event": "timer",
-		},
-		"gov-okta-addon",
-	)
 }

@@ -125,7 +125,7 @@ func TestLogPoller_poll(t *testing.T) {
 	lpErr := New(
 		WithLastRun(testTime),
 		WithInterval(1*time.Microsecond),
-		WithOktaClient(&moktaclient{t, errors.New("boomsauce")}),
+		WithOktaClient(&moktaclient{t, errors.New("boomsauce")}), //nolint:goerr113
 	)
 
 	errEvents := []*okta.LogEvent{}

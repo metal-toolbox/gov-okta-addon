@@ -20,7 +20,7 @@ require (
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/zsais/go-gin-prometheus v0.1.0
 	go.equinixmetal.net/governor v0.15.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.36.4
+	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.37.0
 	go.opentelemetry.io/otel v1.11.2
 	go.opentelemetry.io/otel/exporters/jaeger v1.11.2
 	go.opentelemetry.io/otel/sdk v1.11.2

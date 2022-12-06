@@ -32,7 +32,7 @@ var (
 	testTime = time.Now().UTC()
 )
 
-func (m *moktaclient) GetLogSince(ctx context.Context, since time.Time, _ *query.Params) ([]*okta.LogEvent, error) {
+func (m *moktaclient) GetLogsBounded(ctx context.Context, since, until time.Time, _ *query.Params) ([]*okta.LogEvent, error) {
 	if m.err != nil {
 		return nil, m.err
 	}

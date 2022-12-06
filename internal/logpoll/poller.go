@@ -21,7 +21,7 @@ var (
 type LogEventHandlerFn func(*okta.LogEvent)
 
 type oktaIface interface {
-	GetLogSince(context.Context, time.Time, *query.Params) ([]*okta.LogEvent, error)
+	GetLogsBounded(context.Context, time.Time, time.Time, *query.Params) ([]*okta.LogEvent, error)
 }
 
 // LogPoller is the control structure for long polling okta event logs.
@@ -103,10 +103,9 @@ func (p *LogPoller) poll(ctx context.Context, handler LogEventHandlerFn) {
 		case <-tick.C:
 			p.logger.Debug("running poller loop")
 
-			qp := p.queryParams
 			qTime := time.Now().UTC()
 
-			events, err := p.oktaClient.GetLogSince(ctx, p.last, &qp)
+			events, err := p.oktaClient.GetLogsBounded(ctx, p.last, qTime, &p.queryParams)
 			if err != nil {
 				p.logger.Error("error getting log events from okta", zap.Error(err))
 				continue

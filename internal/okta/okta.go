@@ -109,6 +109,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	client.appIface = c.Application
 	client.groupIface = c.Group
 	client.userIface = c.User
+	client.logEventIface = c.LogEvent
 
 	return &client, nil
 }

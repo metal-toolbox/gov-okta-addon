@@ -44,7 +44,7 @@ func (m *mockLogEventsClient) GetLogs(ctx context.Context, qp *query.Params) ([]
 	return resp, m.resp, nil
 }
 
-func TestClient_GetLogSince(t *testing.T) {
+func TestClient_GetLogsBounded(t *testing.T) {
 	published := func(d time.Time) *time.Time {
 		return &d
 	}
@@ -112,7 +112,7 @@ func TestClient_GetLogSince(t *testing.T) {
 					resp:      &okta.Response{},
 				},
 			}
-			got, err := c.GetLogSince(context.TODO(), tt.since, tt.qp)
+			got, err := c.GetLogsBounded(context.TODO(), tt.since, time.Now().UTC(), tt.qp)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

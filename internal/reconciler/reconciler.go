@@ -198,7 +198,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 			oktaEmailIDs := map[string]string{}
 
 			for _, oktaUser := range oktaUsers {
-				email, err := r.oktaClient.EmailFromUserProfile(oktaUser)
+				email, err := okta.EmailFromUserProfile(oktaUser)
 				if err != nil {
 					r.logger.Error("error getting okta user email from profile", zap.Error(err))
 				}

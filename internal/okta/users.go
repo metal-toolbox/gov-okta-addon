@@ -182,15 +182,13 @@ func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, 
 }
 
 // EmailFromUserProfile parses the email from the okta user profile
-func (c *Client) EmailFromUserProfile(u *okta.User) (string, error) {
+func EmailFromUserProfile(u *okta.User) (string, error) {
 	// get the email from the user profile
 	for k, v := range *u.Profile {
 		if k == "email" {
 			if fv, ok := v.(string); ok {
 				return fv, nil
 			}
-
-			c.logger.Warn("okta user email in profile is not a string", zap.String("okta.user.id", u.Id), zap.Any("okta.user.email", v))
 
 			return "", ErrOktaUserEmailNotString
 		}
@@ -200,15 +198,13 @@ func (c *Client) EmailFromUserProfile(u *okta.User) (string, error) {
 }
 
 // FirstNameFromUserProfile parses the firstName from the okta user profile
-func (c *Client) FirstNameFromUserProfile(u *okta.User) (string, error) {
+func FirstNameFromUserProfile(u *okta.User) (string, error) {
 	// get the firstName from the user profile
 	for k, v := range *u.Profile {
 		if k == "firstName" {
 			if fv, ok := v.(string); ok {
 				return fv, nil
 			}
-
-			c.logger.Warn("okta user first name in profile is not a string", zap.String("okta.user.id", u.Id), zap.Any("okta.user.email", v))
 
 			return "", ErrOktaUserFirstNameNotString
 		}
@@ -218,15 +214,13 @@ func (c *Client) FirstNameFromUserProfile(u *okta.User) (string, error) {
 }
 
 // LastNameFromUserProfile parses the lastName from the okta user profile
-func (c *Client) LastNameFromUserProfile(u *okta.User) (string, error) {
+func LastNameFromUserProfile(u *okta.User) (string, error) {
 	// get the lastName from the user profile
 	for k, v := range *u.Profile {
 		if k == "lastName" {
 			if fv, ok := v.(string); ok {
 				return fv, nil
 			}
-
-			c.logger.Warn("okta user last name in profile is not a string", zap.String("okta.user.id", u.Id), zap.Any("okta.user.email", v))
 
 			return "", ErrOktaUserLastNameNotString
 		}

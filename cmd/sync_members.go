@@ -173,7 +173,7 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 	removed := []string{}
 
 	for _, member := range oktaGroupMembership {
-		user, err := governorUserFromOktaUser(ctx, gc, oc, member, l)
+		user, err := governorUserFromOktaUser(ctx, gc, member, l)
 		if err != nil {
 			if errors.Is(err, ErrUserNotFound) {
 				l.Info("user not found in governor, skipping",
@@ -249,8 +249,8 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 	}, nil
 }
 
-func governorUserFromOktaUser(ctx context.Context, gc *governor.Client, oc *okta.Client, oktaUser *okt.User, l *zap.Logger) (*v1alpha1.User, error) {
-	email, err := oc.EmailFromUserProfile(oktaUser)
+func governorUserFromOktaUser(ctx context.Context, gc *governor.Client, oktaUser *okt.User, l *zap.Logger) (*v1alpha1.User, error) {
+	email, err := okta.EmailFromUserProfile(oktaUser)
 	if err != nil {
 		return nil, err
 	}

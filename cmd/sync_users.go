@@ -74,17 +74,17 @@ func syncUsersToGovernor(ctx context.Context) error {
 	syncFunc := func(ctx context.Context, u *okt.User) (*okt.User, error) {
 		logger.Debug("processing okta user", zap.String("okta.user.id", u.Id))
 
-		email, err := oc.EmailFromUserProfile(u)
+		email, err := okta.EmailFromUserProfile(u)
 		if err != nil {
 			return nil, err
 		}
 
-		first, err := oc.FirstNameFromUserProfile(u)
+		first, err := okta.FirstNameFromUserProfile(u)
 		if err != nil {
 			return nil, err
 		}
 
-		last, err := oc.LastNameFromUserProfile(u)
+		last, err := okta.LastNameFromUserProfile(u)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +183,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 		return err
 	}
 
-	deleted, err := deleteOrphanGovernorUsers(ctx, gc, uniqueEmails(oc, users))
+	deleted, err := deleteOrphanGovernorUsers(ctx, gc, uniqueEmails(users))
 	if err != nil {
 		return err
 	}
@@ -264,7 +264,7 @@ func deleteOrphanGovernorUsers(ctx context.Context, gc *governor.Client, emailID
 }
 
 // uniqueExternalIDs builds a map of unique emails from a list of okta users
-func uniqueEmails(oc *okta.Client, users []*okt.User) map[string]string {
+func uniqueEmails(users []*okt.User) map[string]string {
 	l := logger.Desugar()
 
 	l.Debug("generating list of unique emails from okta users",
@@ -274,7 +274,7 @@ func uniqueEmails(oc *okta.Client, users []*okt.User) map[string]string {
 	emails := map[string]string{}
 
 	for _, u := range users {
-		email, err := oc.EmailFromUserProfile(u)
+		email, err := okta.EmailFromUserProfile(u)
 		if err != nil {
 			l.Error("error getting email address from okta user",
 				zap.Error(err),

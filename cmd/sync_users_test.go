@@ -5,8 +5,6 @@ import (
 
 	okt "github.com/okta/okta-sdk-golang/v2/okta"
 	"github.com/stretchr/testify/assert"
-	"go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.uber.org/zap"
 )
 
 func Test_uniqueEmails(t *testing.T) {
@@ -98,12 +96,8 @@ func Test_uniqueEmails(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		oc, _ := okta.NewClient(
-			okta.WithLogger(zap.NewNop()),
-		)
-
 		t.Run(tt.name, func(t *testing.T) {
-			got := uniqueEmails(oc, tt.users)
+			got := uniqueEmails(tt.users)
 			assert.Equal(t, tt.want, got)
 		})
 	}

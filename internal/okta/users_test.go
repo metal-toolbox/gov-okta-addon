@@ -395,8 +395,7 @@ func TestClient_EmailFromUserProfile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{logger: zap.NewNop()}
-			got, err := c.EmailFromUserProfile(tt.user)
+			got, err := EmailFromUserProfile(tt.user)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -443,8 +442,7 @@ func TestClient_FirstNameFromUserProfile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{logger: zap.NewNop()}
-			got, err := c.FirstNameFromUserProfile(tt.user)
+			got, err := FirstNameFromUserProfile(tt.user)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -491,8 +489,7 @@ func TestClient_LastNameFromUserProfile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{logger: zap.NewNop()}
-			got, err := c.LastNameFromUserProfile(tt.user)
+			got, err := LastNameFromUserProfile(tt.user)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

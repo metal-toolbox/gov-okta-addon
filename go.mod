@@ -2,13 +2,10 @@ module go.equinixmetal.net/gov-okta-addon
 
 go 1.19
 
-replace go.equinixmetal.net/governor => /Users/fish/tmp/equinix/governor
-
 require (
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-contrib/zap v0.1.0
 	github.com/gin-gonic/gin v1.8.1
-	github.com/goccy/go-json v0.10.0
 	github.com/gosimple/slug v1.13.1
 	github.com/metal-toolbox/auditevent v0.5.1
 	github.com/mitchellh/go-homedir v1.1.0
@@ -21,7 +18,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	github.com/volatiletech/null/v8 v8.1.2
 	github.com/zsais/go-gin-prometheus v0.1.0
-	go.equinixmetal.net/governor v0.15.2
+	go.equinixmetal.net/governor v0.15.3
 	go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin v0.37.0
 	go.opentelemetry.io/otel v1.11.2
 	go.opentelemetry.io/otel/exporters/jaeger v1.11.2
@@ -48,6 +45,7 @@ require (
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
 	github.com/go-playground/validator/v10 v10.11.1 // indirect
+	github.com/goccy/go-json v0.10.0 // indirect
 	github.com/gofrs/uuid v4.3.1+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-github/v45 v45.2.0 // indirect

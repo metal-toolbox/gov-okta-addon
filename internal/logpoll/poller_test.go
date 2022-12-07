@@ -111,7 +111,7 @@ func TestLogPoller_poll(t *testing.T) {
 
 	events := []*okta.LogEvent{}
 
-	lp.poll(ctx, func(le *okta.LogEvent) {
+	lp.poll(ctx, func(_ context.Context, le *okta.LogEvent) {
 		events = append(events, le)
 	})
 
@@ -130,7 +130,7 @@ func TestLogPoller_poll(t *testing.T) {
 
 	errEvents := []*okta.LogEvent{}
 
-	lpErr.poll(errCtx, func(le *okta.LogEvent) {
+	lpErr.poll(errCtx, func(_ context.Context, le *okta.LogEvent) {
 		errEvents = append(errEvents, le)
 	})
 

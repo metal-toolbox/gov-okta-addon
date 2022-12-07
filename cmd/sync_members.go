@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"net/url"
 
+	okt "github.com/okta/okta-sdk-golang/v2/okta"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.equinixmetal.net/gov-okta-addon/internal/governor"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
+	governor "go.equinixmetal.net/governor/pkg/client"
+
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -163,23 +165,23 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 		return nil, err
 	}
 
-	l.Debug("got okta group membership", zap.Strings("okta.group.members", oktaGroupMembership))
+	l.Debug("got okta group membership", zap.Any("okta.group.members", oktaGroupMembership))
 
 	expectedMembers := []string{}
 	skipped := []string{}
 	added := []string{}
 	removed := []string{}
 
-	for _, oktaMemberUserID := range oktaGroupMembership {
-		user, err := governorUserFromOktaID(ctx, gc, oktaMemberUserID, l)
+	for _, member := range oktaGroupMembership {
+		user, err := governorUserFromOktaUser(ctx, gc, oc, member, l)
 		if err != nil {
 			if errors.Is(err, ErrUserNotFound) {
 				l.Info("user not found in governor, skipping",
-					zap.String("okta.user.id", oktaMemberUserID),
+					zap.String("okta.user.id", member.Id),
 					zap.Error(err),
 				)
 
-				skipped = append(skipped, oktaMemberUserID)
+				skipped = append(skipped, member.Id)
 
 				continue
 			}
@@ -190,8 +192,8 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 		lg := l.With(
 			zap.String("goveror.user.id", user.ID),
 			zap.String("goveror.user.email", user.Email),
-			zap.String("goveror.user.external_id", user.ExternalID),
-			zap.String("okta.user.id", oktaMemberUserID),
+			zap.String("goveror.user.external_id", user.ExternalID.String),
+			zap.String("okta.user.id", member.Id),
 		)
 
 		expectedMembers = append(expectedMembers, user.ID)
@@ -206,7 +208,7 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 				}
 			}
 
-			added = append(added, oktaMemberUserID)
+			added = append(added, member.Id)
 		}
 	}
 
@@ -215,6 +217,16 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 			l.Info("pruning user from governor group",
 				zap.String("goveror.user.id", m),
 			)
+
+			user, err := gc.User(ctx, m, false)
+			if err != nil {
+				l.Warn("error getting user from governor", zap.String("governor.user.id", m), zap.Error(err))
+				continue
+			}
+
+			if user.Status.String == "pending" {
+				continue
+			}
 
 			if !dryRun {
 				if err := gc.RemoveGroupMember(ctx, govGroup.ID, m); err != nil {
@@ -237,11 +249,16 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 	}, nil
 }
 
-func governorUserFromOktaID(ctx context.Context, gc *governor.Client, oktaID string, l *zap.Logger) (*v1alpha1.User, error) {
+func governorUserFromOktaUser(ctx context.Context, gc *governor.Client, oc *okta.Client, oktaUser *okt.User, l *zap.Logger) (*v1alpha1.User, error) {
+	email, err := oc.EmailFromUserProfile(oktaUser)
+	if err != nil {
+		return nil, err
+	}
+
 	// get the governor user
-	user, ok := userCache[oktaID]
+	user, ok := userCache[email]
 	if !ok {
-		u, err := gc.UsersQuery(ctx, map[string][]string{"external_id": {oktaID}})
+		u, err := gc.UsersQuery(ctx, map[string][]string{"email": {email}})
 		if err != nil {
 			return nil, err
 		}
@@ -255,7 +272,7 @@ func governorUserFromOktaID(ctx context.Context, gc *governor.Client, oktaID str
 			return nil, fmt.Errorf("unexpected user count: %d expected 1", count) //nolint:goerr113
 		}
 
-		userCache[oktaID] = u[0]
+		userCache[email] = u[0]
 		user = u[0]
 	}
 

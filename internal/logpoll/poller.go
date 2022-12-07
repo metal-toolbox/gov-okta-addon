@@ -18,7 +18,7 @@ var (
 )
 
 // LogEventHandlerFn is a handler functions for a log event entry
-type LogEventHandlerFn func(*okta.LogEvent)
+type LogEventHandlerFn func(context.Context, *okta.LogEvent)
 
 type oktaIface interface {
 	GetLogsBounded(context.Context, time.Time, time.Time, *query.Params) ([]*okta.LogEvent, error)
@@ -114,7 +114,7 @@ func (p *LogPoller) poll(ctx context.Context, handler LogEventHandlerFn) {
 			p.last = qTime
 
 			for _, evt := range events {
-				handler(evt)
+				handler(ctx, evt)
 			}
 		case <-ctx.Done():
 			tick.Stop()

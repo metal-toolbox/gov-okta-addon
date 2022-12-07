@@ -5,15 +5,17 @@ import (
 
 	okt "github.com/okta/okta-sdk-golang/v2/okta"
 	"github.com/stretchr/testify/assert"
+	"go.equinixmetal.net/gov-okta-addon/internal/okta"
+	"go.uber.org/zap"
 )
 
-func Test_uniqueExternalIDs(t *testing.T) {
+func Test_uniqueEmails(t *testing.T) {
 	setupLogging()
 
 	tests := []struct {
 		name  string
 		users []*okt.User
-		want  map[string]struct{}
+		want  map[string]string
 	}{
 		{
 			name: "example external ids",
@@ -22,22 +24,25 @@ func Test_uniqueExternalIDs(t *testing.T) {
 					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
+						"email":       "oktaid1@boomsauce.com",
 					},
 				},
 				{
 					Id: "oktaid2",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test2",
+						"email":       "oktaid2@boomsauce.com",
 					},
 				},
 				{
 					Id: "oktaid3",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test3",
+						"email":       "oktaid3@boomsauce.com",
 					},
 				},
 			},
-			want: map[string]struct{}{"oktaid1": {}, "oktaid2": {}, "oktaid3": {}},
+			want: map[string]string{"oktaid1@boomsauce.com": "oktaid1", "oktaid2@boomsauce.com": "oktaid2", "oktaid3@boomsauce.com": "oktaid3"},
 		},
 		{
 			name: "example non unique values",
@@ -46,22 +51,25 @@ func Test_uniqueExternalIDs(t *testing.T) {
 					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
+						"email":       "oktaid1@boomsauce.com",
 					},
 				},
 				{
 					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
+						"email":       "oktaid1@boomsauce.com",
 					},
 				},
 				{
 					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
+						"email":       "oktaid1@boomsauce.com",
 					},
 				},
 			},
-			want: map[string]struct{}{"oktaid1": {}},
+			want: map[string]string{"oktaid1@boomsauce.com": "oktaid1"},
 		},
 		{
 			name: "example empty values",
@@ -70,6 +78,7 @@ func Test_uniqueExternalIDs(t *testing.T) {
 					Id: "oktaid1",
 					Profile: &okt.UserProfile{
 						"pingSubject": "test1",
+						"email":       "oktaid1@boomsauce.com",
 					},
 				},
 				{
@@ -85,100 +94,16 @@ func Test_uniqueExternalIDs(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]struct{}{"oktaid1": {}},
+			want: map[string]string{"oktaid1@boomsauce.com": "oktaid1"},
 		},
 	}
 	for _, tt := range tests {
+		oc, _ := okta.NewClient(
+			okta.WithLogger(zap.NewNop()),
+		)
+
 		t.Run(tt.name, func(t *testing.T) {
-			got := uniqueExternalIDs(tt.users)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func Test_email(t *testing.T) {
-	setupLogging()
-
-	tests := []struct {
-		name    string
-		user    *okt.User
-		want    string
-		wantErr bool
-	}{
-		{
-			name: "example email",
-			user: &okt.User{
-				Profile: &okt.UserProfile{
-					"email": "test1@test.com",
-				},
-			},
-			want: "test1@test.com",
-		},
-		{
-			name: "not found",
-			user: &okt.User{
-				Profile: &okt.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okt.User{
-				Profile: &okt.UserProfile{
-					"email": 12345,
-				},
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := email(tt.user)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func Test_externalID(t *testing.T) {
-	setupLogging()
-
-	tests := []struct {
-		name    string
-		user    *okt.User
-		want    string
-		wantErr bool
-	}{
-		{
-			name: "example external id",
-			user: &okt.User{
-				Id: "oktaid1",
-				Profile: &okt.UserProfile{
-					"pingSubject": "test1",
-				},
-			},
-			want: "oktaid1",
-		},
-		{
-			name:    "not found",
-			user:    &okt.User{},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := externalID(tt.user)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-
-			assert.NoError(t, err)
+			got := uniqueEmails(oc, tt.users)
 			assert.Equal(t, tt.want, got)
 		})
 	}
@@ -224,104 +149,6 @@ func Test_userType(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := userType(tt.user)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func Test_firstName(t *testing.T) {
-	setupLogging()
-
-	tests := []struct {
-		name    string
-		user    *okt.User
-		want    string
-		wantErr bool
-	}{
-		{
-			name: "example firstName",
-			user: &okt.User{
-				Profile: &okt.UserProfile{
-					"firstName": "Test",
-				},
-			},
-			want: "Test",
-		},
-		{
-			name: "not found",
-			user: &okt.User{
-				Profile: &okt.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okt.User{
-				Profile: &okt.UserProfile{
-					"firstName": 12345,
-				},
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := firstName(tt.user)
-			if tt.wantErr {
-				assert.Error(t, err)
-				return
-			}
-
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func Test_lastName(t *testing.T) {
-	setupLogging()
-
-	tests := []struct {
-		name    string
-		user    *okt.User
-		want    string
-		wantErr bool
-	}{
-		{
-			name: "example lastName",
-			user: &okt.User{
-				Profile: &okt.UserProfile{
-					"lastName": "One",
-				},
-			},
-			want: "One",
-		},
-		{
-			name: "not found",
-			user: &okt.User{
-				Profile: &okt.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okt.User{
-				Profile: &okt.UserProfile{
-					"lastName": 12345,
-				},
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := lastName(tt.user)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

@@ -24,6 +24,6 @@ func (r *Reconciler) startEventLogPollerSubscriptions(ctx context.Context) {
 	poller.Poll(ctx, r.oktaLogEventHandler)
 }
 
-func (r *Reconciler) oktaLogEventHandler(evt *okta.LogEvent) {
-	r.logger.Debug("handling event from okta log", zap.String("okta.event.type", evt.EventType))
+func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent) {
+	r.logger.Debug("handling event from okta log", zap.String("okta.event.type", evt.EventType), zap.Any("okta.event", evt))
 }

@@ -7,9 +7,9 @@ import (
 
 	"github.com/metal-toolbox/auditevent"
 	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
-	"go.equinixmetal.net/gov-okta-addon/internal/governor"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
+	governor "go.equinixmetal.net/governor/pkg/client"
 
 	"go.uber.org/zap"
 )
@@ -184,6 +184,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 			govUsers, err := r.governorClient.Users(ctx, true)
 			if err != nil {
 				r.logger.Error("error listing governor users", zap.Error(err))
+				continue
 			}
 
 			r.logger.Debug("got governor users (including deleted)", zap.Any("num.governor.users", len(govUsers)))
@@ -191,20 +192,26 @@ func (r *Reconciler) Run(ctx context.Context) {
 			oktaUsers, err := r.oktaClient.ListUsers(ctx)
 			if err != nil {
 				r.logger.Error("error listing okta users", zap.Error(err))
+				continue
 			}
 
-			oktaUserIDs := map[string]struct{}{}
+			oktaEmailIDs := map[string]string{}
 
 			for _, oktaUser := range oktaUsers {
-				oktaUserIDs[oktaUser.Id] = struct{}{}
+				email, err := r.oktaClient.EmailFromUserProfile(oktaUser)
+				if err != nil {
+					r.logger.Error("error getting okta user email from profile", zap.Error(err))
+				}
+
+				oktaEmailIDs[email] = oktaUser.Id
 			}
 
-			r.logger.Debug("got okta users", zap.Any("okta.user.ids", oktaUserIDs))
+			r.logger.Debug("got okta users", zap.Any("okta.email.ids", oktaEmailIDs))
 
-			if err := r.reconcileUsers(ctx, govUsers, oktaUserIDs); err != nil {
+			if err := r.reconcileUsers(ctx, govUsers, oktaEmailIDs); err != nil {
 				r.logger.Error("error reconciling users", zap.Error(err))
+				continue
 			}
-
 		case <-ctx.Done():
 			r.logger.Info("shutting down reconciler",
 				zap.String("time", time.Now().UTC().Format(time.RFC3339)),
@@ -336,8 +343,8 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 // deletes any okta users that have been deleted in governor. Note that we are specifically
 // targeting users who have existed in governor and have been deleted, and not just users who
 // do not exist in governor
-func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.User, oktaUserIDs map[string]struct{}) error {
-	if govUsers == nil || oktaUserIDs == nil {
+func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.User, oktaEmailIDs map[string]string) error {
+	if govUsers == nil || oktaEmailIDs == nil {
 		return ErrUserListEmpty
 	}
 
@@ -349,22 +356,26 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 			continue
 		}
 
+		if u.Status.String == "pending" {
+			continue
+		}
+
 		logger := r.logger.With(
 			zap.String("governor.user.id", u.ID),
-			zap.String("okta.user.id", u.ExternalID),
+			zap.String("governor.external_id", u.ExternalID.String),
 			zap.String("governor.user.email", u.Email),
 		)
 
 		logger.Debug("got deleted governor user")
 
 		// user has been deleted in governor, so delete it in okta if still there
-		if _, found := oktaUserIDs[u.ExternalID]; found {
+		if _, found := oktaEmailIDs[u.Email]; found {
 			if r.dryrun || r.skipDelete {
 				logger.Info("SKIP deleting okta user")
 				continue
 			}
 			// TODO: re-enable when we feel confident, or when we dry-run
-			// if err := r.oktaClient.DeleteUser(ctx, u.ExternalID); err != nil {
+			// if err := r.oktaClient.DeleteUser(ctx, oktaID); err != nil {
 			// 	logger.Error("error deleting user", zap.Error(err))
 			// 	continue
 			// }
@@ -374,7 +385,8 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 			// if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "UserDelete", map[string]string{
 			// 	"governor.user.email": u.Email,
 			// 	"governor.user.id":    u.ID,
-			// 	"okta.user.id":        u.ExternalID,
+			//  "governor.external_id":    u.ID,
+			// 	"okta.user.id":        oktaID,
 			// }); err != nil {
 			// 	logger.Error("error writing audit event", zap.Error(err))
 			// }

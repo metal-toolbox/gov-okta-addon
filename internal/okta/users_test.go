@@ -359,3 +359,147 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 		})
 	}
 }
+
+func TestClient_EmailFromUserProfile(t *testing.T) {
+	tests := []struct {
+		name    string
+		user    *okta.User
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "example email",
+			user: &okta.User{
+				Profile: &okta.UserProfile{
+					"email": "test1@test.com",
+				},
+			},
+			want: "test1@test.com",
+		},
+		{
+			name: "not found",
+			user: &okta.User{
+				Profile: &okta.UserProfile{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad values",
+			user: &okta.User{
+				Profile: &okta.UserProfile{
+					"email": 12345,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{logger: zap.NewNop()}
+			got, err := c.EmailFromUserProfile(tt.user)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClient_FirstNameFromUserProfile(t *testing.T) {
+	tests := []struct {
+		name    string
+		user    *okta.User
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "example firstName",
+			user: &okta.User{
+				Profile: &okta.UserProfile{
+					"firstName": "Test",
+				},
+			},
+			want: "Test",
+		},
+		{
+			name: "not found",
+			user: &okta.User{
+				Profile: &okta.UserProfile{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad values",
+			user: &okta.User{
+				Profile: &okta.UserProfile{
+					"firstName": 12345,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{logger: zap.NewNop()}
+			got, err := c.FirstNameFromUserProfile(tt.user)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClient_LastNameFromUserProfile(t *testing.T) {
+	tests := []struct {
+		name    string
+		user    *okta.User
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "example lastName",
+			user: &okta.User{
+				Profile: &okta.UserProfile{
+					"lastName": "One",
+				},
+			},
+			want: "One",
+		},
+		{
+			name: "not found",
+			user: &okta.User{
+				Profile: &okta.UserProfile{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad values",
+			user: &okta.User{
+				Profile: &okta.UserProfile{
+					"lastName": 12345,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{logger: zap.NewNop()}
+			got, err := c.LastNameFromUserProfile(tt.user)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

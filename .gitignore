@@ -16,3 +16,4 @@ gov-okta-addon
 config.*
 nats.nkey
 audit.log
+.env

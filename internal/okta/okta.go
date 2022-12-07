@@ -10,10 +10,11 @@ import (
 
 // Client is a client that can talk to Okta
 type Client struct {
-	appIface   ApplicationInterface
-	groupIface GroupInterface
-	userIface  UserInterface
-	logger     *zap.Logger
+	appIface      ApplicationInterface
+	groupIface    GroupInterface
+	logEventIface LogEventInterface
+	userIface     UserInterface
+	logger        *zap.Logger
 
 	url          string
 	token        string
@@ -47,6 +48,11 @@ type UserInterface interface {
 	DeactivateOrDeleteUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error)
 	GetUser(ctx context.Context, userID string) (*okta.User, *okta.Response, error)
 	ListUsers(ctx context.Context, qp *query.Params) ([]*okta.User, *okta.Response, error)
+}
+
+// LogEventInterface is the interface for getting log events from okta
+type LogEventInterface interface {
+	GetLogs(ctx context.Context, qp *query.Params) ([]*okta.LogEvent, *okta.Response, error)
 }
 
 // Option is a functional configuration option
@@ -103,6 +109,7 @@ func NewClient(opts ...Option) (*Client, error) {
 	client.appIface = c.Application
 	client.groupIface = c.Group
 	client.userIface = c.User
+	client.logEventIface = c.LogEvent
 
 	return &client, nil
 }

@@ -103,6 +103,8 @@ func New(opts ...Option) *Reconciler {
 //   - assigns github applications to those groups in okta for
 //     each organization associated with the group
 func (r *Reconciler) Run(ctx context.Context) {
+	r.startEventLogPollerSubscriptions(ctx)
+
 	ticker := time.NewTicker(r.interval)
 	defer ticker.Stop()
 

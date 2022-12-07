@@ -24,7 +24,7 @@ type oktaIface interface {
 	GetLogsBounded(context.Context, time.Time, time.Time, *query.Params) ([]*okta.LogEvent, error)
 }
 
-// LogPoller is the control structure for long polling okta event logs.
+// LogPoller is the control structure for long polling okta event logs
 type LogPoller struct {
 	interval    time.Duration
 	last        time.Time

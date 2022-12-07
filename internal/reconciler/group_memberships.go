@@ -111,7 +111,6 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			if err := r.oktaClient.RemoveGroupUser(ctx, oktaGID, oktaUID); err != nil {
 				logger.Error("failed to remove user from okta group",
 					zap.String("okta.user.id", oktaUID),
-					zap.String("okta.group.id", oktaGID),
 					zap.Error(err),
 				)
 
@@ -131,7 +130,6 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 		} else {
 			logger.Info("SKIP removing user from okta group",
 				zap.String("okta.user.id", oktaUID),
-				zap.String("okta.group.id", oktaGID),
 			)
 		}
 	}

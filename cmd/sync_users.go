@@ -285,7 +285,7 @@ func uniqueEmails(users []*okt.User) map[string]string {
 		}
 
 		if _, ok := emails[email]; ok {
-			l.Warn("email already exists in list of external ids",
+			l.Info("email already exists in list of emails",
 				zap.String("okta.user.id", u.Id),
 				zap.String("okta.user.email", email),
 			)

@@ -47,18 +47,19 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			)
 
 			continue
-		}
+		} else if user.ExternalID.String == "" {
+			logger.Debug("skipping user with missing external id",
+				zap.String("governor.user.email", user.Email),
+				zap.String("governor.user.id", user.ID),
+			)
 
-		// NOTE: because we want to use the email address instead of the external id
-		// as the users's identity and all okta API calls are done by the ID, we have
-		// to translate emails to okta IDs by calling okta for each member.  This may
-		// exceed rate limits.
-		oktaUID, err := r.oktaClient.GetUserIDByEmail(ctx, user.Email)
-		if err != nil {
-			logger.Error("error getting okta user by email", zap.Error(err))
 			continue
 		}
 
+		// NOTE: we are skipping group members if the external id is empty and then
+		// assuming the external id is an okta ID.  This works for now, but may need
+		// to be updated if external_id could be am ID in a different system.
+		oktaUID := user.ExternalID.String
 		oktaUserMap[oktaUID] = uid
 
 		// if the okta group already contains the uid, continue

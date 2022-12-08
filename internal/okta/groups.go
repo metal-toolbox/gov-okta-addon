@@ -126,10 +126,8 @@ func (c *Client) RemoveGroupUser(ctx context.Context, groupID, userID string) er
 }
 
 // ListGroupMembership returns the full list of members of an okta group
-func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]string, error) {
+func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]*okta.User, error) {
 	c.logger.Debug("listing okta group members", zap.String("okta.group.id", gid))
-
-	members := []string{}
 
 	users, resp, err := c.groupIface.ListGroupUsers(ctx, gid, &query.Params{Limit: defaultPageLimit})
 	if err != nil {
@@ -138,9 +136,7 @@ func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]string,
 
 	c.logger.Debug("output from listing group users", zap.Any("okta.group.users", users))
 
-	for _, a := range users {
-		members = append(members, a.Id)
-	}
+	usersResp := users
 
 	for {
 		if !resp.HasNextPage() {
@@ -152,12 +148,10 @@ func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]string,
 			return nil, err
 		}
 
-		for _, a := range users {
-			members = append(members, a.Id)
-		}
+		usersResp = append(usersResp, users...)
 	}
 
-	return members, nil
+	return usersResp, nil
 }
 
 // ListGroupsWithModifier lists okta groups and modifies the group response with the given

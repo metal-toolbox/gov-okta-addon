@@ -397,7 +397,7 @@ func TestClient_ListGroupMembership(t *testing.T) {
 		users   []*okta.User
 		err     error
 		gid     string
-		want    []string
+		want    []*okta.User
 		wantErr bool
 	}{
 		{
@@ -407,8 +407,12 @@ func TestClient_ListGroupMembership(t *testing.T) {
 				{Id: "user-02"},
 				{Id: "user-03"},
 			},
-			gid:  "group-01",
-			want: []string{"user-01", "user-02", "user-03"},
+			gid: "group-01",
+			want: []*okta.User{
+				{Id: "user-01"},
+				{Id: "user-02"},
+				{Id: "user-03"},
+			},
 		},
 		{
 			name:    "error",

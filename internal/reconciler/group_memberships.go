@@ -15,11 +15,19 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 		return err
 	}
 
-	logger := r.logger.With(zap.String("governor.group.id", gid), zap.String("okta.group.id", oktaGID))
+	logger := r.logger.With(
+		zap.String("governor.group.id", gid),
+		zap.String("okta.group.id", oktaGID),
+	)
 
 	oktaGroupMembers, err := r.oktaClient.ListGroupMembership(ctx, oktaGID)
 	if err != nil {
 		logger.Error("error getting group membership for okta group")
+	}
+
+	oktaGroupMemberIDs := make([]string, len(oktaGroupMembers))
+	for i, g := range oktaGroupMembers {
+		oktaGroupMemberIDs[i] = g.Id
 	}
 
 	// keep a map of okta uids to governor uids for quick lookup and less calls
@@ -32,11 +40,30 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			continue
 		}
 
-		oktaUID := user.ExternalID
+		if user.Status.String == "pending" {
+			logger.Debug("skipping user with pending status",
+				zap.String("governor.user.email", user.Email),
+				zap.String("governor.user.id", user.ID),
+			)
+
+			continue
+		} else if user.ExternalID.String == "" {
+			logger.Debug("skipping user with missing external id",
+				zap.String("governor.user.email", user.Email),
+				zap.String("governor.user.id", user.ID),
+			)
+
+			continue
+		}
+
+		// NOTE: we are skipping group members if the external id is empty and then
+		// assuming the external id is an okta ID.  This works for now, but may need
+		// to be updated if external_id could be am ID in a different system.
+		oktaUID := user.ExternalID.String
 		oktaUserMap[oktaUID] = uid
 
 		// if the okta group already contains the uid, continue
-		if contains(oktaGroupMembers, oktaUID) {
+		if contains(oktaGroupMemberIDs, oktaUID) {
 			logger.Debug("okta group already contains member, not adding")
 			continue
 		}
@@ -73,7 +100,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 		}
 	}
 
-	for _, oktaUID := range oktaGroupMembers {
+	for _, oktaUID := range oktaGroupMemberIDs {
 		// if the governor group contains the uid, continue
 		if contains(group.Members, oktaUserMap[oktaUID]) {
 			logger.Debug("governor group contains member, not removing")
@@ -85,7 +112,6 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			if err := r.oktaClient.RemoveGroupUser(ctx, oktaGID, oktaUID); err != nil {
 				logger.Error("failed to remove user from okta group",
 					zap.String("okta.user.id", oktaUID),
-					zap.String("okta.group.id", oktaGID),
 					zap.Error(err),
 				)
 
@@ -105,7 +131,6 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 		} else {
 			logger.Info("SKIP removing user from okta group",
 				zap.String("okta.user.id", oktaUID),
-				zap.String("okta.group.id", oktaGID),
 			)
 		}
 	}
@@ -129,8 +154,6 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 		return "", "", err
 	}
 
-	oktaUID := user.ExternalID
-
 	logger := r.logger.With(
 		zap.String("governor.group.id", group.ID),
 		zap.String("governor.group.slug", group.Slug),
@@ -138,9 +161,20 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 		zap.String("governor.user.email", user.Email),
 	)
 
+	if user.Status.String == "pending" {
+		logger.Info("skipping pending user")
+		return "", "", ErrGovernorUserPendingStatus
+	}
+
 	if !contains(group.Members, user.ID) {
 		logger.Error("governor group does not contain requested membership")
 		return "", "", ErrGroupMembershipNotFound
+	}
+
+	oktaUID, err := r.oktaClient.GetUserIDByEmail(ctx, user.Email)
+	if err != nil {
+		logger.Error("error getting okta user by email", zap.Error(err))
+		return "", "", err
 	}
 
 	oktaGID, err := r.oktaClient.GetGroupByGovernorID(ctx, gid)
@@ -202,8 +236,6 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 		return "", "", err
 	}
 
-	oktaUID := user.ExternalID
-
 	logger := r.logger.With(
 		zap.String("governor.group.id", group.ID),
 		zap.String("governor.group.slug", group.Slug),
@@ -211,9 +243,20 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 		zap.String("governor.user.email", user.Email),
 	)
 
+	if user.Status.String == "pending" {
+		logger.Info("skipping pending user")
+		return "", "", ErrGovernorUserPendingStatus
+	}
+
 	if contains(group.Members, user.ID) {
 		logger.Error("governor group contains requested membership delete")
 		return "", "", ErrGroupMembershipFound
+	}
+
+	oktaUID, err := r.oktaClient.GetUserIDByEmail(ctx, user.Email)
+	if err != nil {
+		logger.Error("error getting okta user by email", zap.Error(err))
+		return "", "", err
 	}
 
 	oktaGID, err := r.oktaClient.GetGroupByGovernorID(ctx, gid)

@@ -12,6 +12,20 @@ import (
 // UserModifierFunc modifies a an okta user response
 type UserModifierFunc func(context.Context, *okta.User) (*okta.User, error)
 
+// GetUser gets an okta user by id
+func (c *Client) GetUser(ctx context.Context, id string) (*okta.User, error) {
+	c.logger.Debug("getting okta user", zap.String("okta.user.ud", id))
+
+	user, _, err := c.userIface.GetUser(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	c.logger.Debug("returning okta user", zap.Any("okta.user", user))
+
+	return user, nil
+}
+
 // DeactivateUser deactivates a user in Okta
 func (c *Client) DeactivateUser(ctx context.Context, id string) error {
 	c.logger.Info("deactivating okta user", zap.String("okta.user.id", id))
@@ -165,4 +179,52 @@ func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, 
 	c.logger.Debug("returning list of users", zap.Int("num.okta.users", len(userResp)))
 
 	return userResp, nil
+}
+
+// EmailFromUserProfile parses the email from the okta user profile
+func EmailFromUserProfile(u *okta.User) (string, error) {
+	// get the email from the user profile
+	for k, v := range *u.Profile {
+		if k == "email" {
+			if fv, ok := v.(string); ok {
+				return fv, nil
+			}
+
+			return "", ErrOktaUserEmailNotString
+		}
+	}
+
+	return "", fmt.Errorf("email not found for user %s", u.Id) //nolint:goerr113
+}
+
+// FirstNameFromUserProfile parses the firstName from the okta user profile
+func FirstNameFromUserProfile(u *okta.User) (string, error) {
+	// get the firstName from the user profile
+	for k, v := range *u.Profile {
+		if k == "firstName" {
+			if fv, ok := v.(string); ok {
+				return fv, nil
+			}
+
+			return "", ErrOktaUserFirstNameNotString
+		}
+	}
+
+	return "", fmt.Errorf("firstName not found for user %s", u.Id) //nolint:goerr113
+}
+
+// LastNameFromUserProfile parses the lastName from the okta user profile
+func LastNameFromUserProfile(u *okta.User) (string, error) {
+	// get the lastName from the user profile
+	for k, v := range *u.Profile {
+		if k == "lastName" {
+			if fv, ok := v.(string); ok {
+				return fv, nil
+			}
+
+			return "", ErrOktaUserLastNameNotString
+		}
+	}
+
+	return "", fmt.Errorf("lastName not found for user %s", u.Id) //nolint:goerr113
 }

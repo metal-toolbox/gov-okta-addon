@@ -14,11 +14,12 @@ import (
 	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.equinixmetal.net/gov-okta-addon/internal/governor"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.equinixmetal.net/gov-okta-addon/internal/reconciler"
 	"go.equinixmetal.net/gov-okta-addon/internal/srv"
 	"golang.org/x/oauth2/clientcredentials"
+
+	governor "go.equinixmetal.net/governor/pkg/client"
 )
 
 const (

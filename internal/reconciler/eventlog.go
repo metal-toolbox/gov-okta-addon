@@ -60,7 +60,7 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 
 			first, err := okt.FirstNameFromUserProfile(oktUser)
 			if err != nil {
-				logger.Warn("error getting users first name from oktaprofile")
+				logger.Warn("error getting users first name from okta profile")
 				continue
 			}
 

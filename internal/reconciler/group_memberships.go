@@ -58,7 +58,8 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 
 		// NOTE: we are skipping group members if the external id is empty and then
 		// assuming the external id is an okta ID.  This works for now, but may need
-		// to be updated if external_id could be am ID in a different system.
+		// to be updated if external_id could be am ID in a different system or missing
+		// for valid okta users.
 		oktaUID := user.ExternalID.String
 		oktaUserMap[oktaUID] = uid
 

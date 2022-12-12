@@ -164,7 +164,8 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 			EndpointParams: url.Values{"audience": {viper.GetString("governor.audience")}},
 			Scopes: []string{
 				"read:governor:users",
-				"write:governor:users",
+				"create:governor:users",
+				"update:governor:users",
 				"read:governor:groups",
 				"read:governor:organizations",
 			},

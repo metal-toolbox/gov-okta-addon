@@ -122,7 +122,10 @@ func syncUsersToGovernor(ctx context.Context) error {
 				return u, nil
 			}
 
-			logger.Debug("user exists in governor and is marked pending, marking active")
+			logger.Info("user exists in governor and is marked pending, marking active",
+				zap.String("okta.user.id", u.Id),
+				zap.String("okta.user.email", email),
+			)
 
 			if !dryRun {
 				gUser, err := gc.UpdateUser(ctx, gUser.ID,

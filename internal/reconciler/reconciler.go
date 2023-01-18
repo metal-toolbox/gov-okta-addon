@@ -19,12 +19,15 @@ const (
 )
 
 type govClientIface interface {
-	Group(ctx context.Context, id string) (*v1alpha1.Group, error)
-	Groups(ctx context.Context) ([]*v1alpha1.Group, error)
-	User(ctx context.Context, id string, deleted bool) (*v1alpha1.User, error)
-	Users(ctx context.Context, deleted bool) ([]*v1alpha1.User, error)
-	Organizations(ctx context.Context) ([]*v1alpha1.Organization, error)
+	CreateUser(context.Context, *v1alpha1.UserReq) (*v1alpha1.User, error)
+	Group(context.Context, string) (*v1alpha1.Group, error)
+	Groups(context.Context) ([]*v1alpha1.Group, error)
+	Organizations(context.Context) ([]*v1alpha1.Organization, error)
+	UpdateUser(context.Context, string, *v1alpha1.UserReq) (*v1alpha1.User, error)
 	URL() string
+	User(context.Context, string, bool) (*v1alpha1.User, error)
+	Users(context.Context, bool) ([]*v1alpha1.User, error)
+	UsersQuery(context.Context, map[string][]string) ([]*v1alpha1.User, error)
 }
 
 // Reconciler reconciles Governor groups/users with Okta

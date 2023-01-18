@@ -18,12 +18,20 @@ type mockUserClient struct {
 	users []*okta.User
 
 	resp *okta.Response
+
+	deactivatedUser bool
 }
 
-var executedDeactivateUser bool
+func (m *mockUserClient) ClearUserSessions(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+
+	return m.resp, nil
+}
 
 func (m *mockUserClient) DeactivateUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
-	executedDeactivateUser = true
+	m.deactivatedUser = true
 
 	if m.err != nil {
 		return nil, m.err
@@ -54,6 +62,44 @@ func (m *mockUserClient) ListUsers(ctx context.Context, qp *query.Params) ([]*ok
 	}
 
 	return m.users, m.resp, nil
+}
+
+func TestClient_ClearUserSessions(t *testing.T) {
+	tests := []struct {
+		name    string
+		id      string
+		err     error
+		wantErr bool
+	}{
+		{
+			name: "example clear user sessions",
+			id:   "user101",
+		},
+		{
+			name:    "okta error",
+			id:      "user101",
+			err:     errors.New("boomsauce"), //nolint:goerr113
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				logger: zap.NewNop(),
+				userIface: &mockUserClient{
+					t:   t,
+					err: tt.err,
+				},
+			}
+			err := c.ClearUserSessions(context.TODO(), tt.id)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
 }
 
 func TestClient_DeactivateUser(t *testing.T) {
@@ -131,16 +177,19 @@ func TestClient_DeleteUser(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				userIface: &mockUserClient{
-					t:     t,
-					err:   tt.err,
-					users: tt.users,
-					resp:  &okta.Response{},
-				},
+			m := &mockUserClient{
+				t:               t,
+				err:             tt.err,
+				users:           tt.users,
+				resp:            &okta.Response{},
+				deactivatedUser: false,
 			}
-			executedDeactivateUser = false
+
+			c := &Client{
+				logger:    zap.NewNop(),
+				userIface: m,
+			}
+
 			err := c.DeleteUser(context.TODO(), tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -148,7 +197,7 @@ func TestClient_DeleteUser(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.wantDA, executedDeactivateUser)
+			assert.Equal(t, tt.wantDA, m.deactivatedUser)
 		})
 	}
 }

@@ -13,7 +13,7 @@ import (
 var cutoffUserDeleted = time.Now().Add(-24 * time.Hour)
 
 // UserDelete deletes an okta user that has already been deleted in governor
-// an error will be returned if the user still exists in governor
+// an error will be returned if the user still exists in governor.
 func (r *Reconciler) UserDelete(ctx context.Context, govID string) (string, error) {
 	// get details about this user and verify it was actually deleted in governor
 	user, err := r.governorClient.User(ctx, govID, true)
@@ -48,6 +48,14 @@ func (r *Reconciler) UserDelete(ctx context.Context, govID string) (string, erro
 	if r.dryrun {
 		logger.Info("SKIP deleting okta user")
 		return extID, nil
+	}
+
+	if err := r.oktaClient.DeactivateUser(ctx, oktaID); err != nil {
+		logger.Error("error deactivating user", zap.String("okta.user.id", oktaID), zap.Error(err))
+	}
+
+	if err := r.oktaClient.ClearUserSessions(ctx, oktaID); err != nil {
+		logger.Error("error clearing user sessions", zap.String("okta.user.id", oktaID), zap.Error(err))
 	}
 
 	if err := r.oktaClient.DeleteUser(ctx, oktaID); err != nil {

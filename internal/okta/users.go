@@ -72,6 +72,19 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 	return nil
 }
 
+// ClearUserSessions removes all active idp sessiosn and forces the user to reauthenticate.
+func (c *Client) ClearUserSessions(ctx context.Context, id string) error {
+	c.logger.Info("clearning user sessions", zap.String("okta.user.id", id))
+
+	if _, err := c.userIface.ClearUserSessions(ctx, id, &query.Params{}); err != nil {
+		return err
+	}
+
+	c.logger.Debug("cleared user sessions", zap.String("okta.user.id", id))
+
+	return nil
+}
+
 // GetUserIDByEmail gets an okta user id from the user's email address
 func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
 	c.logger.Debug("getting okta user by email", zap.String("user.email", email))

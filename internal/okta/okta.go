@@ -24,30 +24,31 @@ type Client struct {
 // ApplicationInterface abstracts the interactions with okta applications
 type ApplicationInterface interface {
 	ListApplications(context.Context, *query.Params) ([]okta.App, *okta.Response, error)
-	CreateApplicationGroupAssignment(ctx context.Context, appID, groupID string, body okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error)
-	DeleteApplicationGroupAssignment(ctx context.Context, appID, groupID string) (*okta.Response, error)
-	GetApplicationGroupAssignment(ctx context.Context, appID, groupID string, qp *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error)
-	ListApplicationGroupAssignments(ctx context.Context, appID string, qp *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error)
+	CreateApplicationGroupAssignment(context.Context, string, string, okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error)
+	DeleteApplicationGroupAssignment(context.Context, string, string) (*okta.Response, error)
+	GetApplicationGroupAssignment(context.Context, string, string, *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error)
+	ListApplicationGroupAssignments(context.Context, string, *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error)
 }
 
 // GroupInterface is the interface for managing groups in Okta
 type GroupInterface interface {
-	CreateGroup(ctx context.Context, body okta.Group) (*okta.Group, *okta.Response, error)
-	UpdateGroup(ctx context.Context, groupID string, body okta.Group) (*okta.Group, *okta.Response, error)
-	DeleteGroup(ctx context.Context, groupID string) (*okta.Response, error)
-	ListGroups(ctx context.Context, qp *query.Params) ([]*okta.Group, *okta.Response, error)
-	AddUserToGroup(ctx context.Context, groupID, userID string) (*okta.Response, error)
-	RemoveUserFromGroup(ctx context.Context, groupID, userID string) (*okta.Response, error)
-	ListGroupUsers(ctx context.Context, groupID string, qp *query.Params) ([]*okta.User, *okta.Response, error)
-	ListAssignedApplicationsForGroup(ctx context.Context, groupID string, qp *query.Params) ([]okta.App, *okta.Response, error)
+	CreateGroup(context.Context, okta.Group) (*okta.Group, *okta.Response, error)
+	UpdateGroup(context.Context, string, okta.Group) (*okta.Group, *okta.Response, error)
+	DeleteGroup(context.Context, string) (*okta.Response, error)
+	ListGroups(context.Context, *query.Params) ([]*okta.Group, *okta.Response, error)
+	AddUserToGroup(context.Context, string, string) (*okta.Response, error)
+	RemoveUserFromGroup(context.Context, string, string) (*okta.Response, error)
+	ListGroupUsers(context.Context, string, *query.Params) ([]*okta.User, *okta.Response, error)
+	ListAssignedApplicationsForGroup(context.Context, string, *query.Params) ([]okta.App, *okta.Response, error)
 }
 
 // UserInterface is the interface for managing users in Okta
 type UserInterface interface {
-	DeactivateUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error)
-	DeactivateOrDeleteUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error)
-	GetUser(ctx context.Context, userID string) (*okta.User, *okta.Response, error)
-	ListUsers(ctx context.Context, qp *query.Params) ([]*okta.User, *okta.Response, error)
+	ClearUserSessions(context.Context, string, *query.Params) (*okta.Response, error)
+	DeactivateUser(context.Context, string, *query.Params) (*okta.Response, error)
+	DeactivateOrDeleteUser(context.Context, string, *query.Params) (*okta.Response, error)
+	GetUser(context.Context, string) (*okta.User, *okta.Response, error)
+	ListUsers(context.Context, *query.Params) ([]*okta.User, *okta.Response, error)
 }
 
 // LogEventInterface is the interface for getting log events from okta

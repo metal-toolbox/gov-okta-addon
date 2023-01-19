@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 
-	"go.equinixmetal.net/governor/pkg/events/v1alpha1"
+	"go.equinixmetal.net/governor-api/pkg/events/v1alpha1"
 )
 
 func TestServer_unmarshalPayload(t *testing.T) {

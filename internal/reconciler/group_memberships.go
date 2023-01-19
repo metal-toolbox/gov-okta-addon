@@ -9,7 +9,7 @@ import (
 
 // GroupMembership performs a full reconciliation on the membership of a group in okta
 func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) error {
-	group, err := r.governorClient.Group(ctx, gid)
+	group, err := r.governorClient.Group(ctx, gid, false)
 	if err != nil {
 		r.logger.Error("error getting governor group", zap.Error(err))
 		return err
@@ -141,7 +141,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 
 // GroupMembershipCreate reconciles the existence of a user in an okta group based on the given governor user and group ids
 func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string) (string, string, error) {
-	group, err := r.governorClient.Group(ctx, gid)
+	group, err := r.governorClient.Group(ctx, gid, false)
 	if err != nil {
 		r.logger.Error("error getting governor group", zap.Error(err))
 		return "", "", err
@@ -223,7 +223,7 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 
 // GroupMembershipDelete reconciles the removal a user from an okta group based on the given governor group and user ids
 func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string) (string, string, error) {
-	group, err := r.governorClient.Group(ctx, gid)
+	group, err := r.governorClient.Group(ctx, gid, false)
 	if err != nil {
 		r.logger.Error("error getting governor group", zap.Error(err))
 		return "", "", err

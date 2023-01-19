@@ -18,11 +18,23 @@ const (
 	defaultReconcileInterval = 1 * time.Hour
 )
 
+type govClientIface interface {
+	CreateUser(context.Context, *v1alpha1.UserReq) (*v1alpha1.User, error)
+	Group(context.Context, string) (*v1alpha1.Group, error)
+	Groups(context.Context) ([]*v1alpha1.Group, error)
+	Organizations(context.Context) ([]*v1alpha1.Organization, error)
+	UpdateUser(context.Context, string, *v1alpha1.UserReq) (*v1alpha1.User, error)
+	URL() string
+	User(context.Context, string, bool) (*v1alpha1.User, error)
+	Users(context.Context, bool) ([]*v1alpha1.User, error)
+	UsersQuery(context.Context, map[string][]string) ([]*v1alpha1.User, error)
+}
+
 // Reconciler reconciles Governor groups/users with Okta
 type Reconciler struct {
 	auditEventWriter *auditevent.EventWriter
 	interval         time.Duration
-	governorClient   *governor.Client
+	governorClient   govClientIface
 	logger           *zap.Logger
 	oktaClient       *okta.Client
 	dryrun           bool
@@ -374,7 +386,18 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 				logger.Info("SKIP deleting okta user")
 				continue
 			}
+
 			// TODO: re-enable when we feel confident, or when we dry-run
+			// if err := r.oktaClient.DeactivateUser(ctx, oktaID); err != nil {
+			// 	logger.Error("error deactivating user", zap.String("okta.user.id", oktaID), zap.Error(err))
+			// 	continue
+			// }
+
+			// if err := r.oktaClient.ClearUserSessions(ctx, oktaID); err != nil {
+			// 	logger.Error("error clearing user sessions", zap.String("okta.user.id", oktaID), zap.Error(err))
+			// 	continue
+			// }
+
 			// if err := r.oktaClient.DeleteUser(ctx, oktaID); err != nil {
 			// 	logger.Error("error deleting user", zap.Error(err))
 			// 	continue

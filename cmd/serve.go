@@ -123,7 +123,7 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 
 	// WARNING: This will block until the file is available;
 	// make sure an initContainer creates the file
-	auf, auerr := audithelpers.OpenAuditLogFileUntilSuccess(auditpath)
+	auf, auerr := audithelpers.OpenAuditLogFileUntilSuccessWithContext(ctx, auditpath)
 	if auerr != nil {
 		logger.Fatalw("couldn't open audit file.", "error", auerr)
 	}

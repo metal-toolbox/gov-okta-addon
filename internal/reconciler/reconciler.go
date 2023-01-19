@@ -8,8 +8,8 @@ import (
 	"github.com/metal-toolbox/auditevent"
 	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
-	governor "go.equinixmetal.net/governor/pkg/client"
+	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
+	governor "go.equinixmetal.net/governor-api/pkg/client"
 
 	"go.uber.org/zap"
 )
@@ -20,7 +20,7 @@ const (
 
 type govClientIface interface {
 	CreateUser(context.Context, *v1alpha1.UserReq) (*v1alpha1.User, error)
-	Group(context.Context, string) (*v1alpha1.Group, error)
+	Group(context.Context, string, bool) (*v1alpha1.Group, error)
 	Groups(context.Context) ([]*v1alpha1.Group, error)
 	Organizations(context.Context) ([]*v1alpha1.Organization, error)
 	UpdateUser(context.Context, string, *v1alpha1.UserReq) (*v1alpha1.User, error)
@@ -165,7 +165,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 			for _, g := range groups {
 				logger := r.logger.With(zap.String("governor.group.id", g.ID), zap.String("governor.group.slug", g.Slug))
 
-				groupDetails, err := r.governorClient.Group(ctx, g.ID)
+				groupDetails, err := r.governorClient.Group(ctx, g.ID, false)
 				if err != nil {
 					logger.Error("error getting governor group details", zap.Error(err))
 					continue

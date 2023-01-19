@@ -19,7 +19,7 @@ import (
 	"go.equinixmetal.net/gov-okta-addon/internal/srv"
 	"golang.org/x/oauth2/clientcredentials"
 
-	governor "go.equinixmetal.net/governor/pkg/client"
+	governor "go.equinixmetal.net/governor-api/pkg/client"
 )
 
 const (

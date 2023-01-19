@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
-	governor "go.equinixmetal.net/governor/pkg/client"
+	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
+	governor "go.equinixmetal.net/governor-api/pkg/client"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/clientcredentials"
 )

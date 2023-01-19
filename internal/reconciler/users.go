@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
-	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
+	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 )
 

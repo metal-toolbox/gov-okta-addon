@@ -12,8 +12,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
-	governor "go.equinixmetal.net/governor/pkg/client"
+	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
+	governor "go.equinixmetal.net/governor-api/pkg/client"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/clientcredentials"
 )
@@ -331,7 +331,7 @@ func groupFromGroupID(ctx context.Context, gc *governor.Client, groupID string, 
 	l.Debug("getting group from governor")
 
 	// if we have a governor ID from okta, try to get the group in governor
-	govGroup, err := gc.Group(ctx, groupID)
+	govGroup, err := gc.Group(ctx, groupID, false)
 	if err != nil {
 		// bail on governor errors other than group not found
 		if !errors.Is(err, governor.ErrGroupNotFound) {
@@ -365,7 +365,7 @@ func groupFromGroupSlug(ctx context.Context, gc *governor.Client, slug string, l
 	l.Debug("getting group from governor")
 
 	// if we have a governor slug, try to get the group in governor
-	govGroup, err := gc.Group(ctx, slug)
+	govGroup, err := gc.Group(ctx, slug, false)
 	if err != nil {
 		// bail on governor errors other than group not found
 		if !errors.Is(err, governor.ErrGroupNotFound) {

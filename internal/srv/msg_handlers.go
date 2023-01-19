@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 
 	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
-	"go.equinixmetal.net/governor/pkg/events/v1alpha1"
+	"go.equinixmetal.net/governor-api/pkg/events/v1alpha1"
 )
 
 // groupsMessageHandler handles messages for governor group events

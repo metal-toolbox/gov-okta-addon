@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
-	"go.equinixmetal.net/governor/pkg/api/v1alpha1"
+	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 )
 
@@ -16,7 +16,7 @@ func (r *Reconciler) GroupsApplicationAssignments(ctx context.Context, ids ...st
 		logger := r.logger.With(zap.String("group.id", id))
 
 		// get the details about a governor group
-		group, err := r.governorClient.Group(ctx, id)
+		group, err := r.governorClient.Group(ctx, id, false)
 		if err != nil {
 			logger.Error("error getting governor group details", zap.Error(err))
 			continue
@@ -43,7 +43,7 @@ func (r *Reconciler) GroupsApplicationAssignments(ctx context.Context, ids ...st
 
 // GroupCreate creates a governor group in okta
 func (r *Reconciler) GroupCreate(ctx context.Context, id string) (string, error) {
-	group, err := r.governorClient.Group(ctx, id)
+	group, err := r.governorClient.Group(ctx, id, false)
 	if err != nil {
 		r.logger.Error("error getting governor group", zap.Error(err))
 		return "", err
@@ -79,7 +79,7 @@ func (r *Reconciler) GroupCreate(ctx context.Context, id string) (string, error)
 
 // GroupUpdate updates an existing governor group in okta
 func (r *Reconciler) GroupUpdate(ctx context.Context, id string) (string, error) {
-	group, err := r.governorClient.Group(ctx, id)
+	group, err := r.governorClient.Group(ctx, id, false)
 	if err != nil {
 		r.logger.Error("failed to get group from governor", zap.Error(err))
 		return "", err

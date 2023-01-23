@@ -7,7 +7,7 @@ require (
 	github.com/gin-contrib/zap v0.1.0
 	github.com/gin-gonic/gin v1.8.2
 	github.com/gosimple/slug v1.13.1
-	github.com/metal-toolbox/auditevent v0.5.1
+	github.com/metal-toolbox/auditevent v0.5.2
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nats-io/nats.go v1.23.0
 	github.com/okta/okta-sdk-golang/v2 v2.16.0

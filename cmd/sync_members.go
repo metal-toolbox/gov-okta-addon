@@ -214,10 +214,6 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 
 	for _, m := range govGroup.Members {
 		if !contains(expectedMembers, m) {
-			l.Info("pruning user from governor group",
-				zap.String("goveror.user.id", m),
-			)
-
 			user, err := gc.User(ctx, m, false)
 			if err != nil {
 				l.Warn("error getting user from governor", zap.String("governor.user.id", m), zap.Error(err))
@@ -227,6 +223,10 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 			if user.Status.String == "pending" {
 				continue
 			}
+
+			l.Info("pruning user from governor group",
+				zap.String("goveror.user.id", m),
+			)
 
 			if !dryRun {
 				if err := gc.RemoveGroupMember(ctx, govGroup.ID, m); err != nil {

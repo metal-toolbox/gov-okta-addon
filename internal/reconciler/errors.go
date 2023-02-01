@@ -13,6 +13,8 @@ var (
 	ErrGovernorUserPendingStatus = errors.New("governor user has pending status")
 	// ErrUserStillExists is returned when a user delete request finds the user still exists in governor
 	ErrUserStillExists = errors.New("delete request user still exists")
+	// ErrUserStatusPending is returned when a user request finds the user status is pending in governor
+	ErrUserStatusPending = errors.New("user status is pending")
 	// ErrUserExternalIDMissing is returned when an action is requested that requires the external id, but its missing
 	ErrUserExternalIDMissing = errors.New("user external id is missing")
 	// ErrUserListEmpty is returned when a user reconcile gets an empty user list from governor or okta

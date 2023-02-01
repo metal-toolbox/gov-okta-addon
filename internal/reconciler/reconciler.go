@@ -353,7 +353,7 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 }
 
 // reconcileUsers gets a list of governor users and a map of user details from okta, and
-// updates the okta users to match the governor users. It also deletes any okta users that
+// updates the okta users to match the governor users. It also deletes any okta user that
 // has been deleted in governor. We are specifically targeting users who have existed in
 // governor and have been deleted, and not just users who do not exist in governor.
 func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.User, oktaUserMap map[string]*okta.UserDetails) error {
@@ -420,34 +420,36 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 			continue
 		}
 
-		// check if suspended user
-		if u.Status.String == "suspended" && oktaUserMap[u.Email].Status == "ACTIVE" {
-			if r.dryrun {
-				logger.Info("SKIP suspending okta user")
+		if userDetails, found := oktaUserMap[u.Email]; found {
+			// check if suspended user
+			if u.Status.String == "suspended" && userDetails.Status == "ACTIVE" {
+				if r.dryrun {
+					logger.Info("SKIP suspending okta user")
+					continue
+				}
+
+				if err := r.oktaClient.SuspendUser(ctx, userDetails.ID); err != nil {
+					logger.Error("error suspending okta user", zap.Error(err))
+					continue
+				}
+
 				continue
 			}
 
-			if err := r.oktaClient.SuspendUser(ctx, oktaUserMap[u.Email].ID); err != nil {
-				logger.Error("error suspending okta user", zap.Error(err))
+			// check if un-suspended user
+			if u.Status.String == "active" && userDetails.Status == "SUSPENDED" {
+				if r.dryrun {
+					logger.Info("SKIP un-suspending okta user")
+					continue
+				}
+
+				if err := r.oktaClient.UnsuspendUser(ctx, userDetails.ID); err != nil {
+					logger.Error("error un-suspending okta user", zap.Error(err))
+					continue
+				}
+
 				continue
 			}
-
-			continue
-		}
-
-		// check if un-suspended user
-		if u.Status.String == "active" && oktaUserMap[u.Email].Status == "SUSPENDED" {
-			if r.dryrun {
-				logger.Info("SKIP un-suspending okta user")
-				continue
-			}
-
-			if err := r.oktaClient.UnsuspendUser(ctx, oktaUserMap[u.Email].ID); err != nil {
-				logger.Error("error un-suspending okta user", zap.Error(err))
-				continue
-			}
-
-			continue
 		}
 	}
 

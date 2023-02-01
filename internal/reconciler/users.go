@@ -98,6 +98,11 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 		zap.String("governor.user.status", user.Status.String),
 	)
 
+	if user.Status.String == "pending" {
+		logger.Info("user status is pending in governor, skipping")
+		return "", ErrUserStatusPending
+	}
+
 	oktaUser, err := r.oktaClient.GetUser(ctx, extID)
 	if err != nil {
 		logger.Error("error getting okta user", zap.Error(err))

@@ -50,6 +50,8 @@ func (r *Reconciler) UserDelete(ctx context.Context, govID string) (string, erro
 		return extID, nil
 	}
 
+	logger.Info("deleting okta user")
+
 	if err := r.oktaClient.DeactivateUser(ctx, oktaID); err != nil {
 		logger.Error("error deactivating user", zap.String("okta.user.id", oktaID), zap.Error(err))
 	}
@@ -93,6 +95,7 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 		zap.String("governor.user.id", user.ID),
 		zap.String("governor.external_id", extID),
 		zap.String("governor.user.email", user.Email),
+		zap.String("governor.user.status", user.Status.String),
 	)
 
 	oktaUser, err := r.oktaClient.GetUser(ctx, extID)
@@ -101,12 +104,12 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 		return "", err
 	}
 
-	logger = logger.With(zap.Any("okta.user", oktaUser))
-
 	if r.dryrun {
 		logger.Info("SKIP updating okta user")
 		return extID, nil
 	}
+
+	logger.Info("updating okta user")
 
 	// user suspended
 	if user.Status.String == "suspended" && oktaUser.Status == "ACTIVE" {

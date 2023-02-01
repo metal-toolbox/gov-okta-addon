@@ -166,6 +166,19 @@ func (s *Server) usersMessageHandler(m *nats.Msg) {
 
 		logger.Info("successfully deleted user", zap.String("okta.user.id", uid))
 
+	case v1alpha1.GovernorEventUpdate:
+		logger.Info("updating user")
+
+		ctx = auctx.WithAuditEvent(ctx, s.auditEventNATS(m.Subject, payload))
+
+		uid, err := s.Reconciler.UserUpdate(ctx, payload.UserID)
+		if err != nil {
+			logger.Error("error updating user", zap.Error(err))
+			return
+		}
+
+		logger.Info("successfully updated user", zap.String("okta.user.id", uid))
+
 	default:
 		logger.Warn("unexpected action in governor event", zap.String("governor.action", payload.Action))
 		return

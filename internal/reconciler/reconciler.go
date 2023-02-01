@@ -372,6 +372,7 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 			zap.String("governor.user.id", u.ID),
 			zap.String("governor.external_id", u.ExternalID.String),
 			zap.String("governor.user.email", u.Email),
+			zap.String("governor.user.status", u.Status.String),
 		)
 
 		if userDeleted(u) {
@@ -421,6 +422,11 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 
 		// check if suspended user
 		if u.Status.String == "suspended" && oktaUserMap[u.Email].Status == "ACTIVE" {
+			if r.dryrun {
+				logger.Info("SKIP suspending okta user")
+				continue
+			}
+
 			if err := r.oktaClient.SuspendUser(ctx, oktaUserMap[u.Email].ID); err != nil {
 				logger.Error("error suspending okta user", zap.Error(err))
 				continue
@@ -431,6 +437,11 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 
 		// check if un-suspended user
 		if u.Status.String == "active" && oktaUserMap[u.Email].Status == "SUSPENDED" {
+			if r.dryrun {
+				logger.Info("SKIP un-suspending okta user")
+				continue
+			}
+
 			if err := r.oktaClient.UnsuspendUser(ctx, oktaUserMap[u.Email].ID); err != nil {
 				logger.Error("error un-suspending okta user", zap.Error(err))
 				continue

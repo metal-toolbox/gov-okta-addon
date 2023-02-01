@@ -71,4 +71,12 @@ var (
 			Help:      "Total count of users deleted.",
 		},
 	)
+
+	usersUpdatedCounter = promauto.NewCounter(
+		prometheus.CounterOpts{
+			Subsystem: subsystem,
+			Name:      "users_updated_total",
+			Help:      "Total count of users updated.",
+		},
+	)
 )

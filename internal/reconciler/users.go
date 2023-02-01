@@ -76,6 +76,67 @@ func (r *Reconciler) UserDelete(ctx context.Context, govID string) (string, erro
 	return oktaID, nil
 }
 
+// UserUpdate updates an existing governor user in okta.
+// Currently this is only used to suspend or un-suspend a user.
+func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, error) {
+	user, err := r.governorClient.User(ctx, govID, false)
+	if err != nil {
+		r.logger.Error("failed to get user from governor", zap.Error(err))
+		return "", err
+	}
+
+	r.logger.Debug("got governor user response", zap.Any("user details", user))
+
+	extID := user.ExternalID.String
+
+	logger := r.logger.With(
+		zap.String("governor.user.id", user.ID),
+		zap.String("governor.external_id", extID),
+		zap.String("governor.user.email", user.Email),
+	)
+
+	oktaUser, err := r.oktaClient.GetUser(ctx, extID)
+	if err != nil {
+		logger.Error("error getting okta user", zap.Error(err))
+		return "", err
+	}
+
+	logger = logger.With(zap.Any("okta.user", oktaUser))
+
+	if r.dryrun {
+		logger.Info("SKIP updating okta user")
+		return extID, nil
+	}
+
+	// user suspended
+	if user.Status.String == "suspended" && oktaUser.Status == "ACTIVE" {
+		if err := r.oktaClient.SuspendUser(ctx, oktaUser.Id); err != nil {
+			logger.Error("error suspending okta user", zap.Error(err))
+			return "", err
+		}
+	}
+
+	// user un-suspended
+	if user.Status.String == "active" && oktaUser.Status == "SUSPENDED" {
+		if err := r.oktaClient.UnsuspendUser(ctx, oktaUser.Id); err != nil {
+			logger.Error("error un-suspending okta user", zap.Error(err))
+			return "", err
+		}
+	}
+
+	usersUpdatedCounter.Inc()
+
+	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "UserUpdate", map[string]string{
+		"governor.user.email": user.Email,
+		"governor.user.id":    user.ID,
+		"okta.user.id":        oktaUser.Id,
+	}); err != nil {
+		r.logger.Error("error writing audit event", zap.Error(err))
+	}
+
+	return oktaUser.Id, nil
+}
+
 // userDeleted returns true if the given user has been deleted in governor within the specified cutoff time period.
 // The function also performs some basic user validation and will return false if anything with the user doesn't look right
 func userDeleted(user *v1alpha1.User) bool {

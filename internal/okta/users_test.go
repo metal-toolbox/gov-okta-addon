@@ -64,6 +64,22 @@ func (m *mockUserClient) ListUsers(ctx context.Context, qp *query.Params) ([]*ok
 	return m.users, m.resp, nil
 }
 
+func (m *mockUserClient) SuspendUser(ctx context.Context, userID string) (*okta.Response, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+
+	return m.resp, nil
+}
+
+func (m *mockUserClient) UnsuspendUser(ctx context.Context, userID string) (*okta.Response, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+
+	return m.resp, nil
+}
+
 func TestClient_ClearUserSessions(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -198,6 +214,82 @@ func TestClient_DeleteUser(t *testing.T) {
 
 			assert.NoError(t, err)
 			assert.Equal(t, tt.wantDA, m.deactivatedUser)
+		})
+	}
+}
+
+func TestClient_SuspendUser(t *testing.T) {
+	tests := []struct {
+		name    string
+		id      string
+		err     error
+		wantErr bool
+	}{
+		{
+			name: "example suspend user",
+			id:   "user101",
+		},
+		{
+			name:    "okta error",
+			id:      "user101",
+			err:     errors.New("boom"), //nolint:goerr113
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				logger: zap.NewNop(),
+				userIface: &mockUserClient{
+					t:   t,
+					err: tt.err,
+				},
+			}
+			err := c.SuspendUser(context.TODO(), tt.id)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestClient_UnsuspendUser(t *testing.T) {
+	tests := []struct {
+		name    string
+		id      string
+		err     error
+		wantErr bool
+	}{
+		{
+			name: "example un-suspend user",
+			id:   "user101",
+		},
+		{
+			name:    "okta error",
+			id:      "user101",
+			err:     errors.New("boom"), //nolint:goerr113
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &Client{
+				logger: zap.NewNop(),
+				userIface: &mockUserClient{
+					t:   t,
+					err: tt.err,
+				},
+			}
+			err := c.UnsuspendUser(context.TODO(), tt.id)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
 		})
 	}
 }
@@ -539,6 +631,73 @@ func TestClient_LastNameFromUserProfile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := LastNameFromUserProfile(tt.user)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClient_UserDetailsFromOktaUser(t *testing.T) {
+	tests := []struct {
+		name    string
+		user    *okta.User
+		want    *UserDetails
+		wantErr bool
+	}{
+		{
+			name: "successful example",
+			user: &okta.User{
+				Id:     "00u123456789abcde697",
+				Status: "ACTIVE",
+				Profile: &okta.UserProfile{
+					"firstName": "Burrow",
+					"lastName":  "Blaster",
+					"email":     "bblaster@gopher.com",
+				},
+			},
+			want: &UserDetails{
+				ID:     "00u123456789abcde697",
+				Name:   "Burrow Blaster",
+				Email:  "bblaster@gopher.com",
+				Status: "ACTIVE",
+			},
+		},
+		{
+			name: "empty profile",
+			user: &okta.User{
+				Profile: &okta.UserProfile{},
+			},
+			wantErr: true,
+		},
+		{
+			name: "missing email",
+			user: &okta.User{
+				Profile: &okta.UserProfile{
+					"firstName": "Burrow",
+					"lastName":  "Blaster",
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "bad values",
+			user: &okta.User{
+				Profile: &okta.UserProfile{
+					"firstName": "Burrow",
+					"lastName":  12345,
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := UserDetailsFromOktaUser(tt.user)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return

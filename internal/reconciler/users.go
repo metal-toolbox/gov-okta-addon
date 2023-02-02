@@ -109,6 +109,10 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 		return "", err
 	}
 
+	if oktaUser.Status != "ACTIVE" && oktaUser.Status != "SUSPENDED" {
+		return extID, nil
+	}
+
 	if r.dryrun {
 		logger.Info("SKIP updating okta user")
 		return extID, nil

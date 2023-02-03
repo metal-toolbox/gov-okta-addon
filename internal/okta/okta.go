@@ -49,6 +49,8 @@ type UserInterface interface {
 	DeactivateOrDeleteUser(context.Context, string, *query.Params) (*okta.Response, error)
 	GetUser(context.Context, string) (*okta.User, *okta.Response, error)
 	ListUsers(context.Context, *query.Params) ([]*okta.User, *okta.Response, error)
+	SuspendUser(context.Context, string) (*okta.Response, error)
+	UnsuspendUser(context.Context, string) (*okta.Response, error)
 }
 
 // LogEventInterface is the interface for getting log events from okta

@@ -207,20 +207,21 @@ func (r *Reconciler) Run(ctx context.Context) {
 				continue
 			}
 
-			oktaEmailIDs := map[string]string{}
+			// collect a map of okta user emails to okta user details which will be used to reconcile users
+			oktaUserMap := map[string]*okta.UserDetails{}
 
 			for _, oktaUser := range oktaUsers {
-				email, err := okta.EmailFromUserProfile(oktaUser)
+				details, err := okta.UserDetailsFromOktaUser(oktaUser)
 				if err != nil {
-					r.logger.Error("error getting okta user email from profile", zap.Error(err))
+					r.logger.Error("error getting okta user details from profile", zap.Error(err))
 				}
 
-				oktaEmailIDs[email] = oktaUser.Id
+				oktaUserMap[details.Email] = details
 			}
 
-			r.logger.Debug("got okta users", zap.Any("okta.email.ids", oktaEmailIDs))
+			r.logger.Debug("got okta users", zap.Any("okta.users", oktaUserMap))
 
-			if err := r.reconcileUsers(ctx, govUsers, oktaEmailIDs); err != nil {
+			if err := r.reconcileUsers(ctx, govUsers, oktaUserMap); err != nil {
 				r.logger.Error("error reconciling users", zap.Error(err))
 				continue
 			}
@@ -351,23 +352,18 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 	return nil
 }
 
-// reconcileUsers gets a list of governor users and a map of all user ids from okta, and
-// deletes any okta users that have been deleted in governor. Note that we are specifically
-// targeting users who have existed in governor and have been deleted, and not just users who
-// do not exist in governor
-func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.User, oktaEmailIDs map[string]string) error {
-	if govUsers == nil || oktaEmailIDs == nil {
+// reconcileUsers gets a list of governor users and a map of user details from okta, and
+// updates the okta users to match the governor users. It also deletes any okta user that
+// has been deleted in governor. We are specifically targeting users who have existed in
+// governor and have been deleted, and not just users who do not exist in governor.
+func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.User, oktaUserMap map[string]*okta.UserDetails) error {
+	if govUsers == nil || oktaUserMap == nil {
 		return ErrUserListEmpty
 	}
 
 	r.logger.Debug("reconciling users")
 
 	for _, u := range govUsers {
-		if !userDeleted(u) {
-			// active user in governor, skip
-			continue
-		}
-
 		if u.Status.String == "pending" {
 			continue
 		}
@@ -376,47 +372,84 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 			zap.String("governor.user.id", u.ID),
 			zap.String("governor.external_id", u.ExternalID.String),
 			zap.String("governor.user.email", u.Email),
+			zap.String("governor.user.status", u.Status.String),
 		)
 
-		logger.Debug("got deleted governor user")
+		if userDeleted(u) {
+			logger.Debug("got deleted governor user")
 
-		// user has been deleted in governor, so delete it in okta if still there
-		if _, found := oktaEmailIDs[u.Email]; found {
-			if r.dryrun || r.skipDelete {
-				logger.Info("SKIP deleting okta user")
+			// user has been deleted in governor, so delete it in okta if still there
+			if userDetails, found := oktaUserMap[u.Email]; found {
+				if r.dryrun || r.skipDelete {
+					logger.Info("SKIP deleting okta user", zap.String("okta.user.id", userDetails.ID))
+					continue
+				}
+
+				// TODO: re-enable when we feel confident, or when we dry-run
+				// if err := r.oktaClient.DeactivateUser(ctx, oktaID); err != nil {
+				// 	logger.Error("error deactivating user", zap.String("okta.user.id", oktaID), zap.Error(err))
+				// 	continue
+				// }
+
+				// if err := r.oktaClient.ClearUserSessions(ctx, oktaID); err != nil {
+				// 	logger.Error("error clearing user sessions", zap.String("okta.user.id", oktaID), zap.Error(err))
+				// 	continue
+				// }
+
+				// if err := r.oktaClient.DeleteUser(ctx, oktaID); err != nil {
+				// 	logger.Error("error deleting user", zap.Error(err))
+				// 	continue
+				// }
+				//
+				// logger.Info("successfully deleted okta user")
+
+				// if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "UserDelete", map[string]string{
+				// 	"governor.user.email": u.Email,
+				// 	"governor.user.id":    u.ID,
+				//  "governor.external_id":    u.ID,
+				// 	"okta.user.id":        oktaID,
+				// }); err != nil {
+				// 	logger.Error("error writing audit event", zap.Error(err))
+				// }
+
+				logger.Debug("skipping user deletion in okta")
+			} else {
+				logger.Debug("user not found in okta")
+			}
+
+			continue
+		}
+
+		if userDetails, found := oktaUserMap[u.Email]; found {
+			// check if suspended user
+			if u.Status.String == "suspended" && userDetails.Status == "ACTIVE" {
+				if r.dryrun {
+					logger.Info("SKIP suspending okta user")
+					continue
+				}
+
+				if err := r.oktaClient.SuspendUser(ctx, userDetails.ID); err != nil {
+					logger.Error("error suspending okta user", zap.Error(err))
+					continue
+				}
+
 				continue
 			}
 
-			// TODO: re-enable when we feel confident, or when we dry-run
-			// if err := r.oktaClient.DeactivateUser(ctx, oktaID); err != nil {
-			// 	logger.Error("error deactivating user", zap.String("okta.user.id", oktaID), zap.Error(err))
-			// 	continue
-			// }
+			// check if un-suspended user
+			if u.Status.String == "active" && userDetails.Status == "SUSPENDED" {
+				if r.dryrun {
+					logger.Info("SKIP un-suspending okta user")
+					continue
+				}
 
-			// if err := r.oktaClient.ClearUserSessions(ctx, oktaID); err != nil {
-			// 	logger.Error("error clearing user sessions", zap.String("okta.user.id", oktaID), zap.Error(err))
-			// 	continue
-			// }
+				if err := r.oktaClient.UnsuspendUser(ctx, userDetails.ID); err != nil {
+					logger.Error("error un-suspending okta user", zap.Error(err))
+					continue
+				}
 
-			// if err := r.oktaClient.DeleteUser(ctx, oktaID); err != nil {
-			// 	logger.Error("error deleting user", zap.Error(err))
-			// 	continue
-			// }
-			//
-			// logger.Info("successfully deleted okta user")
-
-			// if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "UserDelete", map[string]string{
-			// 	"governor.user.email": u.Email,
-			// 	"governor.user.id":    u.ID,
-			//  "governor.external_id":    u.ID,
-			// 	"okta.user.id":        oktaID,
-			// }); err != nil {
-			// 	logger.Error("error writing audit event", zap.Error(err))
-			// }
-
-			logger.Debug("skipping user deletion in okta")
-		} else {
-			logger.Debug("user not found in okta")
+				continue
+			}
 		}
 	}
 

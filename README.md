@@ -7,10 +7,12 @@
 Updates to Okta are triggered both by a reconciliation loop as well as change events from Governor.  During time based
 reconciliation, `gov-okta-addon` requests all of the groups from Governor and ensures those groups exist in Okta and are
 configured with the same Github organizations.  Group membership is also reconciled, ensuring that all group members of
-managed groups in Governor are also members of the group in Okta.
+managed groups in Governor are also members of the group in Okta.  Users are reconciled by making sure deleted users in
+Governor and deleted in Okta (currently this is only logging), and the status of suspended/unsuspended users is updated
+accordingly in Okta.
 
 `gov-okta-addon` subscribes to the Governor event stream where change events are published.  The events published
-by Governor contain the group and/or user id that changed and the type of action.  Events are publish on NATS subjects
+by Governor contain the group and/or user id that changed and the type of action.  Events are published on NATS subjects
 dedicated to the resource type ie. `equinixmetal.governor.events.groups` for group events.  When `gov-okta-addon` receives
 an event, it reacts by requesting information from Governor about the included resource IDs and making the required
 changes in Okta.
@@ -77,7 +79,7 @@ docker-compose exec hydra hydra clients create \
     --grant-types client_credentials \
     --response-types token,code \
     --token-endpoint-auth-method client_secret_post \
-    --scope  write,read:governor:users,read:governor:groups,read:governor:organizations
+    --scope write,create:governor:users,update:governor:users,read:governor:users,read:governor:groups,read:governor:organizations
 ```
 
 Export the required env variables to point to our local Governor, NATS and Hydra, and the Sandbox Okta instance:
@@ -101,6 +103,9 @@ export GOA_GOVERNOR_CLIENT_SECRET="REPLACE"
 ```
 
 ### Testing addon serve locally
+
+__WARNING:__ Be careful when running this addon locally - don't point it to the production Okta URL and and
+don't run it without `--dry-run` as it could potentially update or wipe out existing groups/users in Okta!
 
 Create a local audit log for testing in the `gov-okta-addon` directory:
 

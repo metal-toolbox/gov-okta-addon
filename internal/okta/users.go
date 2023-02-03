@@ -12,6 +12,14 @@ import (
 // UserModifierFunc modifies a an okta user response
 type UserModifierFunc func(context.Context, *okta.User) (*okta.User, error)
 
+// UserDetails contains the details of an Okta user
+type UserDetails struct {
+	ID     string
+	Name   string
+	Email  string
+	Status string
+}
+
 // GetUser gets an okta user by id
 func (c *Client) GetUser(ctx context.Context, id string) (*okta.User, error) {
 	c.logger.Debug("getting okta user", zap.String("okta.user.ud", id))
@@ -194,6 +202,32 @@ func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, 
 	return userResp, nil
 }
 
+// SuspendUser suspends an active user in Okta
+func (c *Client) SuspendUser(ctx context.Context, id string) error {
+	c.logger.Info("suspending okta user", zap.String("okta.user.id", id))
+
+	if _, err := c.userIface.SuspendUser(ctx, id); err != nil {
+		return err
+	}
+
+	c.logger.Debug("suspended okta user", zap.String("okta.user.id", id))
+
+	return nil
+}
+
+// UnsuspendUser un-suspends a user in Okta and returns them to active state
+func (c *Client) UnsuspendUser(ctx context.Context, id string) error {
+	c.logger.Info("un-suspending okta user", zap.String("okta.user.id", id))
+
+	if _, err := c.userIface.UnsuspendUser(ctx, id); err != nil {
+		return err
+	}
+
+	c.logger.Debug("un-suspended okta user", zap.String("okta.user.id", id))
+
+	return nil
+}
+
 // EmailFromUserProfile parses the email from the okta user profile
 func EmailFromUserProfile(u *okta.User) (string, error) {
 	// get the email from the user profile
@@ -240,4 +274,59 @@ func LastNameFromUserProfile(u *okta.User) (string, error) {
 	}
 
 	return "", fmt.Errorf("lastName not found for user %s", u.Id) //nolint:goerr113
+}
+
+// UserDetailsFromOktaUser parses the relevant user details from the okta user object
+func UserDetailsFromOktaUser(u *okta.User) (*UserDetails, error) {
+	d := &UserDetails{
+		ID:     u.Id,
+		Status: u.Status,
+	}
+
+	var firstName, lastName string
+
+	for k, v := range *u.Profile {
+		if k == "firstName" {
+			fn, ok := v.(string)
+			if !ok {
+				return nil, ErrOktaUserLastNameNotString
+			}
+
+			firstName = fn
+		}
+
+		if k == "lastName" {
+			ln, ok := v.(string)
+			if !ok {
+				return nil, ErrOktaUserFirstNameNotString
+			}
+
+			lastName = ln
+		}
+
+		if k == "email" {
+			e, ok := v.(string)
+			if !ok {
+				return nil, ErrOktaUserEmailNotString
+			}
+
+			d.Email = e
+		}
+	}
+
+	if firstName == "" {
+		return nil, fmt.Errorf("firstName not found for user %s", u.Id) //nolint:goerr113
+	}
+
+	if lastName == "" {
+		return nil, fmt.Errorf("lastName not found for user %s", u.Id) //nolint:goerr113
+	}
+
+	if d.Email == "" {
+		return nil, fmt.Errorf("email not found for user %s", u.Id) //nolint:goerr113
+	}
+
+	d.Name = fmt.Sprintf("%s %s", firstName, lastName)
+
+	return d, nil
 }

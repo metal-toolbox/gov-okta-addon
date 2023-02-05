@@ -22,7 +22,7 @@ type UserDetails struct {
 
 // GetUser gets an okta user by id
 func (c *Client) GetUser(ctx context.Context, id string) (*okta.User, error) {
-	c.logger.Debug("getting okta user", zap.String("okta.user.ud", id))
+	c.logger.Debug("getting okta user", zap.String("okta.user.id", id))
 
 	user, _, err := c.userIface.GetUser(ctx, id)
 	if err != nil {

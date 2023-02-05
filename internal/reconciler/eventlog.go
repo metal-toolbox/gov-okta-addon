@@ -22,17 +22,20 @@ var (
 )
 
 func (r *Reconciler) startEventLogPollerSubscriptions(ctx context.Context) {
-	r.logger.Debug("starting event log polling")
+	r.logger.Debug("starting okta event log polling")
 	r.oktaClient.PollLogs(
 		ctx,
 		defaultPollerInterval,
 		time.Now().UTC().Add(-defaultColdStartLookback),
 		&query.Params{
-			Filter: "eventType eq \"user.lifecycle.create\"",
+			// maybe we can just do `eventType sw "user.lifecycle."` and throw away extra events?
+			// https://developer.okta.com/docs/reference/core-okta-api/#filter
+			Filter: `(eventType eq "user.lifecycle.create" or eventType eq "user.lifecycle.suspend" or eventType eq "user.lifecycle.unsuspend")`,
 		},
 		r.oktaLogEventHandler)
 }
 
+//gocyclo:ignore
 func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent) {
 	r.logger.Debug("handling event from okta log", zap.String("okta.event.type", evt.EventType), zap.Any("okta.event", evt))
 
@@ -56,7 +59,11 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 				continue
 			}
 
-			logger := r.logger.With(zap.String("okta.user.id", oktUser.Id), zap.String("okta.user.email", email))
+			logger := r.logger.With(
+				zap.String("okta.event.type", evt.EventType),
+				zap.String("okta.user.id", oktUser.Id),
+				zap.String("okta.user.email", email),
+			)
 
 			first, err := okt.FirstNameFromUserProfile(oktUser)
 			if err != nil {
@@ -76,7 +83,7 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 				continue
 			}
 
-			logger.Debug("got users from governor by email", zap.Any("governor.users", govUsers))
+			logger.Debug("got user(s) from governor by email", zap.Any("governor.users", govUsers))
 
 			switch len(govUsers) {
 			case 0:
@@ -142,6 +149,112 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 				continue
 			}
 		}
+
+	// suspend or un-suspend a governor user - this does not rely on the actual lifecycle event name but
+	// will look up the current user status in okta and update the governor user accordingly
+	case "user.lifecycle.suspend", "user.lifecycle.unsuspend":
+		for _, target := range evt.Target {
+			if target.Type != "User" {
+				r.logger.Warn("unexpected target type for user.lifecycle.create", zap.String("okta.event.target.type", target.Type))
+				continue
+			}
+
+			oktUser, err := r.oktaClient.GetUser(ctx, target.Id)
+			if err != nil {
+				r.logger.Warn("error getting user from okta", zap.String("okta.user.id", target.Id), zap.Error(err))
+				continue
+			}
+
+			details, err := okt.UserDetailsFromOktaUser(oktUser)
+			if err != nil {
+				r.logger.Warn("error getting user details from okta profile", zap.String("okta.user.id", target.Id), zap.Error(err))
+				continue
+			}
+
+			logger := r.logger.With(
+				zap.String("okta.event.type", evt.EventType),
+				zap.String("okta.user.id", oktUser.Id),
+				zap.String("okta.user.email", details.Email),
+				zap.String("okta.user.status", details.Status),
+			)
+
+			govUsers, err := r.governorClient.UsersQuery(ctx, map[string][]string{"email": {details.Email}})
+			if err != nil {
+				logger.Warn("error getting user by email from governor")
+				continue
+			}
+
+			logger.Debug("got user(s) from governor by email", zap.Any("governor.users", govUsers))
+
+			switch len(govUsers) {
+			case 0:
+				logger.Info("okta user not found in governor, skipping")
+				continue
+			case 1:
+				govUser := govUsers[0]
+
+				if govUser.Status.String == "pending" {
+					logger.Info("skipping pending governor user")
+					continue
+				}
+
+				if details.Status != "SUSPENDED" && details.Status != "ACTIVE" {
+					logger.Info("skipping suspend/unsuspend for okta user with unexpected status", zap.String("okta.user.status", details.Status))
+					continue
+				}
+
+				if govUser.Status.String == "active" && details.Status == "SUSPENDED" {
+					if !r.dryrun {
+						payload := &v1alpha1.UserReq{
+							Status: "suspended",
+						}
+
+						govUser, err := r.governorClient.UpdateUser(ctx, govUser.ID, payload)
+						if err != nil {
+							logger.Warn("error suspending governor user", zap.Error(err))
+							continue
+						}
+
+						logger.Info("suspended governor user", zap.String("governor.user.id", govUser.ID))
+
+						continue
+					}
+
+					logger.Info("SKIP suspending governor user", zap.String("governor.user.id", govUser.ID))
+
+					continue
+				}
+
+				if govUser.Status.String == "suspended" && details.Status == "ACTIVE" {
+					if !r.dryrun {
+						payload := &v1alpha1.UserReq{
+							Status: "active",
+						}
+
+						govUser, err := r.governorClient.UpdateUser(ctx, govUser.ID, payload)
+						if err != nil {
+							logger.Warn("error un-suspending governor user", zap.Error(err))
+							continue
+						}
+
+						logger.Info("un-suspended governor user", zap.String("governor.user.id", govUser.ID))
+
+						continue
+					}
+
+					logger.Info("SKIP un-suspending governor user", zap.String("governor.user.id", govUser.ID))
+
+					continue
+				}
+
+				logger.Info("no action needed for user", zap.String("governor.user.status", govUser.Status.String))
+
+			default:
+				logger.Warn("unexpected number of governor users with email, skipping")
+				continue
+			}
+		}
+
 	default:
 		r.logger.Warn("unhandled okta event type", zap.String("okta.event.type", evt.EventType))
 	}

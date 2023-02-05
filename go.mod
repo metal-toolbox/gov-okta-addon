@@ -44,8 +44,8 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
-	github.com/go-playground/universal-translator v0.18.0 // indirect
-	github.com/go-playground/validator/v10 v10.11.1 // indirect
+	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/go-playground/validator/v10 v10.11.2 // indirect
 	github.com/goccy/go-json v0.10.0 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -88,10 +88,10 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.4.2 // indirect
-	github.com/ugorji/go/codec v1.2.8 // indirect
+	github.com/ugorji/go/codec v1.2.9 // indirect
 	github.com/volatiletech/inflect v0.0.1 // indirect
 	github.com/volatiletech/randomize v0.0.1 // indirect
-	github.com/volatiletech/sqlboiler/v4 v4.14.0 // indirect
+	github.com/volatiletech/sqlboiler/v4 v4.14.1 // indirect
 	github.com/volatiletech/strmangle v0.0.4 // indirect
 	go.hollow.sh/toolbox v0.4.1 // indirect
 	go.opentelemetry.io/otel/trace v1.12.0 // indirect

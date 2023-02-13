@@ -117,7 +117,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 				zap.String("okta.user.id", u.Id),
 				zap.String("governor.user.id", gUser.ID))
 
-			if gUser.Status.String != "pending" {
+			if gUser.Status.String != v1alpha1.UserStatusPending {
 				l.Debug("user exists in governor and is not pending")
 				return u, nil
 			}
@@ -133,7 +133,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 						Email:      email,
 						ExternalID: extID,
 						Name:       fmt.Sprintf("%s %s", first, last),
-						Status:     "active",
+						Status:     v1alpha1.UserStatusActive,
 					})
 				if err != nil {
 					return nil, err
@@ -161,7 +161,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 				Email:      email,
 				ExternalID: extID,
 				Name:       fmt.Sprintf("%s %s", first, last),
-				Status:     "active",
+				Status:     v1alpha1.UserStatusActive,
 			})
 			if err != nil {
 				return nil, err
@@ -221,7 +221,7 @@ func deleteOrphanGovernorUsers(ctx context.Context, gc *governor.Client, emailID
 	)
 
 	for _, gu := range govUsers {
-		if gu.Status.String == "pending" {
+		if gu.Status.String == v1alpha1.UserStatusPending {
 			l.Debug("skipping pending governor user",
 				zap.String("governor.user.id", gu.ID),
 				zap.String("governor.user.email", gu.Email))

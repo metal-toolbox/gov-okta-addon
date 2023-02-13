@@ -98,7 +98,7 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 		zap.String("governor.user.status", user.Status.String),
 	)
 
-	if user.Status.String == "pending" {
+	if user.Status.String == v1alpha1.UserStatusPending {
 		logger.Info("user status is pending in governor, skipping")
 		return "", ErrUserStatusPending
 	}
@@ -121,7 +121,7 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 	logger.Info("updating okta user")
 
 	// user suspended
-	if user.Status.String == "suspended" && oktaUser.Status == "ACTIVE" {
+	if user.Status.String == v1alpha1.UserStatusSuspended && oktaUser.Status == "ACTIVE" {
 		if err := r.oktaClient.SuspendUser(ctx, oktaUser.Id); err != nil {
 			logger.Error("error suspending okta user", zap.Error(err))
 			return "", err
@@ -129,7 +129,7 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 	}
 
 	// user un-suspended
-	if user.Status.String == "active" && oktaUser.Status == "SUSPENDED" {
+	if user.Status.String == v1alpha1.UserStatusActive && oktaUser.Status == "SUSPENDED" {
 		if err := r.oktaClient.UnsuspendUser(ctx, oktaUser.Id); err != nil {
 			logger.Error("error un-suspending okta user", zap.Error(err))
 			return "", err

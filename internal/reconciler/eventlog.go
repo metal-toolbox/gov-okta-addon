@@ -94,7 +94,7 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 						Email:      email,
 						ExternalID: oktUser.Id,
 						Name:       fmt.Sprintf("%s %s", first, last),
-						Status:     "active",
+						Status:     v1alpha1.UserStatusActive,
 					})
 					if err != nil {
 						logger.Warn("error creating governor user", zap.Error(err))
@@ -112,7 +112,7 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 
 				logger.Debug("okta user exists in governor, updating profile", zap.String("governor.user.id", govUser.ID))
 
-				if govUser.Status.String != "pending" && govUser.ExternalID.String != "" {
+				if govUser.Status.String != v1alpha1.UserStatusPending && govUser.ExternalID.String != "" {
 					logger.Info("skipping update for user with non-pending status and non-empty external id",
 						zap.String("governor.user.status", govUser.Status.String),
 						zap.String("governor.user.external_id", govUser.ExternalID.String),
@@ -126,7 +126,7 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 						Email:      email,
 						ExternalID: oktUser.Id,
 						Name:       fmt.Sprintf("%s %s", first, last),
-						Status:     "active",
+						Status:     v1alpha1.UserStatusActive,
 					}
 
 					logger.Debug("updating governor user with payload", zap.Any("payload", payload))
@@ -193,7 +193,7 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 			case 1:
 				govUser := govUsers[0]
 
-				if govUser.Status.String == "pending" {
+				if govUser.Status.String == v1alpha1.UserStatusPending {
 					logger.Info("skipping pending governor user")
 					continue
 				}
@@ -203,10 +203,10 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 					continue
 				}
 
-				if govUser.Status.String == "active" && details.Status == "SUSPENDED" {
+				if govUser.Status.String == v1alpha1.UserStatusActive && details.Status == "SUSPENDED" {
 					if !r.dryrun {
 						payload := &v1alpha1.UserReq{
-							Status: "suspended",
+							Status: v1alpha1.UserStatusSuspended,
 						}
 
 						govUser, err := r.governorClient.UpdateUser(ctx, govUser.ID, payload)
@@ -225,10 +225,10 @@ func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent
 					continue
 				}
 
-				if govUser.Status.String == "suspended" && details.Status == "ACTIVE" {
+				if govUser.Status.String == v1alpha1.UserStatusSuspended && details.Status == "ACTIVE" {
 					if !r.dryrun {
 						payload := &v1alpha1.UserReq{
-							Status: "active",
+							Status: v1alpha1.UserStatusActive,
 						}
 
 						govUser, err := r.governorClient.UpdateUser(ctx, govUser.ID, payload)

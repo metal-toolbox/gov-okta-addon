@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
+	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 )
 
@@ -40,7 +41,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 			continue
 		}
 
-		if user.Status.String == "pending" {
+		if user.Status.String == v1alpha1.UserStatusPending {
 			logger.Debug("skipping user with pending status",
 				zap.String("governor.user.email", user.Email),
 				zap.String("governor.user.id", user.ID),
@@ -162,7 +163,7 @@ func (r *Reconciler) GroupMembershipCreate(ctx context.Context, gid, uid string)
 		zap.String("governor.user.email", user.Email),
 	)
 
-	if user.Status.String == "pending" {
+	if user.Status.String == v1alpha1.UserStatusPending {
 		logger.Info("skipping pending user")
 		return "", "", ErrGovernorUserPendingStatus
 	}
@@ -244,7 +245,7 @@ func (r *Reconciler) GroupMembershipDelete(ctx context.Context, gid, uid string)
 		zap.String("governor.user.email", user.Email),
 	)
 
-	if user.Status.String == "pending" {
+	if user.Status.String == v1alpha1.UserStatusPending {
 		logger.Info("skipping pending user")
 		return "", "", ErrGovernorUserPendingStatus
 	}

@@ -220,7 +220,7 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 				continue
 			}
 
-			if user.Status.String == "pending" {
+			if user.Status.String == v1alpha1.UserStatusPending {
 				continue
 			}
 

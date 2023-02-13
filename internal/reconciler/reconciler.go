@@ -364,7 +364,7 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 	r.logger.Debug("reconciling users")
 
 	for _, u := range govUsers {
-		if u.Status.String == "pending" {
+		if u.Status.String == v1alpha1.UserStatusPending {
 			continue
 		}
 
@@ -422,7 +422,7 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 
 		if userDetails, found := oktaUserMap[u.Email]; found {
 			// check if suspended user
-			if u.Status.String == "suspended" && userDetails.Status == "ACTIVE" {
+			if u.Status.String == v1alpha1.UserStatusSuspended && userDetails.Status == "ACTIVE" {
 				if r.dryrun {
 					logger.Info("SKIP suspending okta user")
 					continue
@@ -437,7 +437,7 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 			}
 
 			// check if un-suspended user
-			if u.Status.String == "active" && userDetails.Status == "SUSPENDED" {
+			if u.Status.String == v1alpha1.UserStatusActive && userDetails.Status == "SUSPENDED" {
 				if r.dryrun {
 					logger.Info("SKIP un-suspending okta user")
 					continue

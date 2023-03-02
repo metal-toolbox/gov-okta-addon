@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const appName = "gov-okta-addon"
+
 var (
 	cfgFile string
 	logger  *zap.SugaredLogger
@@ -18,7 +20,7 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "gov-okta-addon",
+	Use:   appName,
 	Short: "Integrates Governor and Okta",
 	Long:  `gov-okta-addon is a microservice that integrates group/user management in governor with Okta.`,
 }
@@ -39,6 +41,9 @@ func init() {
 
 	rootCmd.PersistentFlags().Bool("pretty", false, "enable pretty (human readable) logging output")
 	viperBindFlag("logging.pretty", rootCmd.PersistentFlags().Lookup("pretty"))
+
+	rootCmd.PersistentFlags().String("nats-creds-file", "", "Path to the file containing the NATS credentials file")
+	viperBindFlag("nats.creds-file", rootCmd.PersistentFlags().Lookup("nats-creds-file"))
 
 	rootCmd.PersistentFlags().Bool("development", false, "enable development settings")
 	viperBindFlag("development", rootCmd.PersistentFlags().Lookup("development"))

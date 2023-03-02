@@ -129,10 +129,12 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 	}
 	defer auf.Close()
 
-	nc, err := newNATSConnection()
+	nc, natsClose, err := newNATSConnection(viper.GetViper())
 	if err != nil {
 		logger.Fatalw("failed to create NATS client connection", "error", err)
 	}
+
+	defer natsClose()
 
 	natsClient, err := srv.NewNATSClient(
 		srv.WithNATSLogger(logger.Desugar()),
@@ -211,26 +213,23 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 }
 
 // newNATSConnection creates a new NATS connection
-func newNATSConnection() (*nats.Conn, error) {
-	opts := []nats.Option{}
-
-	if viper.GetBool("development") {
-		logger.Debug("enabling development settings")
-
-		opts = append(opts, nats.Token(viper.GetString("nats.token")))
-	} else {
-		opt, err := nats.NkeyOptionFromSeed(viper.GetString("nats-nkey"))
-		if err != nil {
-			return nil, err
-		}
-
-		opts = append(opts, opt)
+func newNATSConnection(v *viper.Viper) (*nats.Conn, func(), error) {
+	opts := []nats.Option{
+		nats.Name(appName),
 	}
 
-	return nats.Connect(
-		viper.GetString("nats-url"),
-		opts...,
-	)
+	if credsFile := v.GetString("nats.creds-file"); credsFile != "" {
+		opts = append(opts, nats.UserCredentials(credsFile))
+	} else {
+		return nil, nil, ErrMissingNATSCreds
+	}
+
+	nc, err := nats.Connect(viper.GetString("nats.url"), opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return nc, nc.Close, nil
 }
 
 // validateMandatoryFlags collects the mandatory flag validation
@@ -239,10 +238,6 @@ func validateMandatoryFlags() error {
 
 	if viper.GetString("nats.url") == "" {
 		errs = append(errs, ErrNATSURLRequired.Error())
-	}
-
-	if viper.GetString("nats.token") == "" && viper.GetString("nats.nkey") == "" {
-		errs = append(errs, ErrNATSAuthRequired.Error())
 	}
 
 	if viper.GetString("okta.url") == "" {

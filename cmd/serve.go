@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"strings"
-	"time"
 
 	"github.com/metal-toolbox/auditevent"
 	audithelpers "github.com/metal-toolbox/auditevent/helpers"
@@ -94,8 +93,12 @@ func init() {
 	viperBindFlag("governor.audience", serveCmd.Flags().Lookup("governor-audience"))
 
 	// Reconciler flags
-	serveCmd.Flags().Duration("reconciler-interval", 1*time.Hour, "interval for the reconciler loop")
+	serveCmd.Flags().Duration("reconciler-interval", reconciler.DefaultReconcileInterval, "interval for the reconciler loop")
 	viperBindFlag("reconciler.interval", serveCmd.Flags().Lookup("reconciler-interval"))
+	serveCmd.Flags().Duration("eventlog-interval", reconciler.DefaultEventlogPollerInterval, "run interval for the okta eventlog poller")
+	viperBindFlag("eventlog.interval", serveCmd.Flags().Lookup("eventlog-interval"))
+	serveCmd.Flags().Duration("eventlog-lookback", reconciler.DefaultEventlogColdStartLookback, "coldstart lookback time period for the okta eventlog poller")
+	viperBindFlag("eventlog.lookback", serveCmd.Flags().Lookup("eventlog-lookback"))
 }
 
 func serve(cmdCtx context.Context, v *viper.Viper) error {
@@ -178,7 +181,7 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 	rec := reconciler.New(
 		reconciler.WithAuditEventWriter(auditevent.NewDefaultAuditEventWriter(auf)),
 		reconciler.WithLogger(logger.Desugar()),
-		reconciler.WithInterval(viper.GetDuration("reconciler.interval")),
+		reconciler.WithIntervals(viper.GetDuration("reconciler.interval"), viper.GetDuration("eventlog.interval"), viper.GetDuration("eventlog.lookback")),
 		reconciler.WithGovernorClient(gc),
 		reconciler.WithOktaClient(oc),
 		reconciler.WithDryRun(viper.GetBool("dryrun")),

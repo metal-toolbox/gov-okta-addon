@@ -15,18 +15,18 @@ import (
 )
 
 var (
-	// defaultPollerInterval is the default for how often to poll for new events
-	defaultPollerInterval = 30 * time.Second
-	// defaultColdStartLookback is the default for how far back to go for events on a cold start
-	defaultColdStartLookback = 6 * time.Hour
+	// DefaultEventlogPollerInterval is the default for how often to poll for new events
+	DefaultEventlogPollerInterval = 30 * time.Second
+	// DefaultEventlogColdStartLookback is the default for how far back to go for events on a cold start
+	DefaultEventlogColdStartLookback = 8 * time.Hour
 )
 
 func (r *Reconciler) startEventLogPollerSubscriptions(ctx context.Context) {
 	r.logger.Debug("starting okta event log polling")
 	r.oktaClient.PollLogs(
 		ctx,
-		defaultPollerInterval,
-		time.Now().UTC().Add(-defaultColdStartLookback),
+		r.eventlogInterval,
+		time.Now().UTC().Add(-r.eventlogLookback),
 		&query.Params{
 			// https://developer.okta.com/docs/reference/core-okta-api/#filter
 			Filter: `(eventType eq "user.lifecycle.create" or eventType eq "user.lifecycle.suspend" or eventType eq "user.lifecycle.unsuspend")`,

@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	defaultReconcileInterval = 1 * time.Hour
+	// DefaultReconcileInterval is the default for how often the reconciler runs
+	DefaultReconcileInterval = 1 * time.Hour
 )
 
 type govClientIface interface {
@@ -32,22 +33,26 @@ type govClientIface interface {
 
 // Reconciler reconciles Governor groups/users with Okta
 type Reconciler struct {
-	auditEventWriter *auditevent.EventWriter
-	interval         time.Duration
-	governorClient   govClientIface
-	logger           *zap.Logger
-	oktaClient       *okta.Client
-	dryrun           bool
-	skipDelete       bool
+	auditEventWriter   *auditevent.EventWriter
+	reconcilerInterval time.Duration
+	eventlogInterval   time.Duration
+	eventlogLookback   time.Duration
+	governorClient     govClientIface
+	logger             *zap.Logger
+	oktaClient         *okta.Client
+	dryrun             bool
+	skipDelete         bool
 }
 
 // Option is a functional configuration option
 type Option func(r *Reconciler)
 
-// WithInterval sets the reconciler interval
-func WithInterval(i time.Duration) Option {
+// WithIntervals sets the reconciler intervals
+func WithIntervals(ri, ei, el time.Duration) Option {
 	return func(r *Reconciler) {
-		r.interval = i
+		r.reconcilerInterval = ri
+		r.eventlogInterval = ei
+		r.eventlogLookback = el
 	}
 }
 
@@ -96,8 +101,10 @@ func WithGovernorClient(c *governor.Client) Option {
 // New returns a new reconciler
 func New(opts ...Option) *Reconciler {
 	rec := Reconciler{
-		logger:   zap.NewNop(),
-		interval: defaultReconcileInterval,
+		logger:             zap.NewNop(),
+		eventlogInterval:   DefaultEventlogPollerInterval,
+		eventlogLookback:   DefaultEventlogColdStartLookback,
+		reconcilerInterval: DefaultReconcileInterval,
 	}
 
 	for _, opt := range opts {
@@ -117,11 +124,13 @@ func New(opts ...Option) *Reconciler {
 func (r *Reconciler) Run(ctx context.Context) {
 	r.startEventLogPollerSubscriptions(ctx)
 
-	ticker := time.NewTicker(r.interval)
+	ticker := time.NewTicker(r.reconcilerInterval)
 	defer ticker.Stop()
 
 	r.logger.Info("starting reconciler loop",
-		zap.Duration("interval", r.interval),
+		zap.Duration("reconciler.interval", r.reconcilerInterval),
+		zap.Duration("eventlog.interval", r.eventlogInterval),
+		zap.Duration("eventlog.lookback", r.eventlogLookback),
 		zap.String("governor.url", r.governorClient.URL()),
 		zap.Bool("dryrun", r.dryrun),
 		zap.Bool("skip-delete", r.skipDelete),
@@ -225,6 +234,11 @@ func (r *Reconciler) Run(ctx context.Context) {
 				r.logger.Error("error reconciling users", zap.Error(err))
 				continue
 			}
+
+			r.logger.Info("finished reconciler loop",
+				zap.String("time", time.Now().UTC().Format(time.RFC3339)),
+			)
+
 		case <-ctx.Done():
 			r.logger.Info("shutting down reconciler",
 				zap.String("time", time.Now().UTC().Format(time.RFC3339)),

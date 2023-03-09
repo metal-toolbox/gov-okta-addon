@@ -60,50 +60,7 @@ be removed from the group. The groups and users must already exist in governor o
 
 `make docker-up` will start a basic NATS server and `gov-okta-addon`.
 
-### Pre-requisites for running locally
-
-You can run `gov-okta-addon` against your local Governor instance (if you don't already have one, follow the directions [here](https://github.com/equinixmetal/governor/blob/main/README.md#running-governor-locally) and also set up a [local Hydra](https://github.com/equinixmetal/governor/blob/main/README.md#governor-api)).
-
-The first time you'll need to create a local hydra client for `gov-okta-addon-governor`, after that you can just export the secret:
-
-```sh
-export GOA_GOVERNOR_CLIENT_SECRET="$(echo $$RANDOM|md5)"
-```
-
-```sh
-docker-compose exec hydra hydra clients create \
-    --endpoint http://hydra:4445/ \
-    --audience http://api:3001/ \
-    --id gov-okta-addon-governor \
-    --secret ${GOA_GOVERNOR_CLIENT_SECRET} \
-    --grant-types client_credentials \
-    --response-types token,code \
-    --token-endpoint-auth-method client_secret_post \
-    --scope write,create:governor:users,update:governor:users,read:governor:users,read:governor:groups,read:governor:organizations
-```
-
-Export the required env variables to point to our local Governor, NATS and Hydra, and the Sandbox Okta instance:
-
-```sh
-export GOA_NATS_URL="nats://127.0.0.1:4222"
-export GOA_NATS_TOKEN="notused"
-export GOA_OKTA_NOCACHE=true
-export GOA_OKTA_URL="https://equinixmetal.oktapreview.com"
-export GOA_GOVERNOR_URL="http://127.0.0.1:3001"
-export GOA_GOVERNOR_AUDIENCE="http://api:3001/"
-export GOA_GOVERNOR_TOKEN_URL="http://127.0.0.1:4444/oauth2/token"
-export GOA_GOVERNOR_CLIENT_ID="gov-okta-addon-governor"
-export GOA_NATS_CREDS_FILE="${PWD}/user.local.creds"
-```
-
-Also ensure you have the following secrets exported:
-
-```sh
-export GOA_OKTA_TOKEN="REPLACE"
-export GOA_GOVERNOR_CLIENT_SECRET="REPLACE"
-```
-
-### Prereq to running with governor-api devcontainer
+### Prereq to running locally with governor-api devcontainer
 
 Follow the directions [here](https://github.com/equinixmetal/governor/blob/main/README.md#running-governor-locally) for starting the governor-api devcontainer.
 

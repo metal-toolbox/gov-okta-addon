@@ -82,6 +82,7 @@ Then create and copy into `gov-okta-addon/user.local.creds`
 GOA_GOVERNOR_CLIENT_SECRET="$(openssl rand -hex 16)"
 
 hydra clients create \
+    --endpoint http://hydra:4445/ \
     --audience http://api:3001/ \
     --id gov-okta-addon-governor \
     --secret ${GOA_GOVERNOR_CLIENT_SECRET} \

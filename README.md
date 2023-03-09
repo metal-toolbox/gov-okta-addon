@@ -100,7 +100,6 @@ Export the following in the terminal where you will run gov-okta-addon:
 
 ```sh
 export GOA_NATS_URL="nats://127.0.0.1:4222"
-export GOA_NATS_TOKEN="notused"
 export GOA_OKTA_NOCACHE=true
 export GOA_OKTA_URL="https://equinixmetal.oktapreview.com"
 export GOA_GOVERNOR_URL="http://127.0.0.1:3001"

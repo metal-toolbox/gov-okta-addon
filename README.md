@@ -107,7 +107,7 @@ export GOA_GOVERNOR_URL="http://127.0.0.1:3001"
 export GOA_GOVERNOR_AUDIENCE="http://api:3001/"
 export GOA_GOVERNOR_TOKEN_URL="http://127.0.0.1:4444/oauth2/token"
 export GOA_GOVERNOR_CLIENT_ID="gov-okta-addon-governor"
-export GOA_NATS_CREDS_FILE="${PWD}/user.dev.creds"
+export GOA_NATS_CREDS_FILE="${PWD}/user.local.creds"
 ```
 
 Similarly, ensure you have the following secrets exported:
@@ -118,6 +118,17 @@ export GOA_OKTA_TOKEN="REPLACE"
 # Secret copied from earlier
 export GOA_GOVERNOR_CLIENT_SECRET="REPLACE"
 ```
+
+#### Troubleshooting
+
+**"error": "Unable to insert or update resource because a resource with that value exists already"**
+
+Run `hydra clients delete gov-okta-addon-governor` in the governor-api devcontainer. Then rerun the steps for hydra.
+
+**"error": "error",**
+**"error_description": "The error is unrecognizable"**
+
+Same as above.
 
 ### Testing addon serve locally
 

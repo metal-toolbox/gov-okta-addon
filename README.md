@@ -66,11 +66,11 @@ You can run `gov-okta-addon` against your local Governor instance (if you don't 
 
 The first time you'll need to create a local hydra client for `gov-okta-addon-governor`, after that you can just export the secret:
 
-```
+```sh
 export GOA_GOVERNOR_CLIENT_SECRET="$(echo $$RANDOM|md5)"
 ```
 
-```
+```sh
 docker-compose exec hydra hydra clients create \
     --endpoint http://hydra:4445/ \
     --audience http://api:3001/ \
@@ -84,7 +84,7 @@ docker-compose exec hydra hydra clients create \
 
 Export the required env variables to point to our local Governor, NATS and Hydra, and the Sandbox Okta instance:
 
-```
+```sh
 export GOA_NATS_URL="nats://127.0.0.1:4222"
 export GOA_NATS_TOKEN="notused"
 export GOA_OKTA_NOCACHE=true
@@ -93,12 +93,72 @@ export GOA_GOVERNOR_URL="http://127.0.0.1:3001"
 export GOA_GOVERNOR_AUDIENCE="http://api:3001/"
 export GOA_GOVERNOR_TOKEN_URL="http://127.0.0.1:4444/oauth2/token"
 export GOA_GOVERNOR_CLIENT_ID="gov-okta-addon-governor"
+export GOA_NATS_CREDS_FILE="${PWD}/user.local.creds"
 ```
 
 Also ensure you have the following secrets exported:
 
-```
+```sh
 export GOA_OKTA_TOKEN="REPLACE"
+export GOA_GOVERNOR_CLIENT_SECRET="REPLACE"
+```
+
+### Prereq to running with governor-api devcontainer
+
+Follow the directions [here](https://github.com/equinixmetal/governor/blob/main/README.md#running-governor-locally) for starting the governor-api devcontainer.
+
+The **first time** you'll need to create a local hydra client for `gov-okta-addon-governor` and copy the nats creds file. After that you can just export the env variables.
+
+#### NATS Creds
+
+Run in the governor-api devcontainer:
+
+```sh
+cat /tmp/user.creds
+```
+
+Then create and copy into `gov-okta-addon/user.local.creds`
+
+#### Hydra
+
+```sh
+GOA_GOVERNOR_CLIENT_SECRET="$(openssl rand -hex 16)"
+
+hydra clients create \
+    --audience http://api:3001/ \
+    --id gov-okta-addon-governor \
+    --secret ${GOA_GOVERNOR_CLIENT_SECRET} \
+    --grant-types client_credentials \
+    --response-types token,code \
+    --token-endpoint-auth-method client_secret_post \
+    --scope write,create:governor:users,update:governor:users,read:governor:users,read:governor:groups,read:governor:organizations
+
+# Copy this secret for later
+echo $GOA_GOVERNOR_CLIENT_SECRET
+```
+
+#### Env
+
+Export the following in the terminal where you will run gov-okta-addon:
+
+```sh
+export GOA_NATS_URL="nats://127.0.0.1:4222"
+export GOA_NATS_TOKEN="notused"
+export GOA_OKTA_NOCACHE=true
+export GOA_OKTA_URL="https://equinixmetal.oktapreview.com"
+export GOA_GOVERNOR_URL="http://127.0.0.1:3001"
+export GOA_GOVERNOR_AUDIENCE="http://api:3001/"
+export GOA_GOVERNOR_TOKEN_URL="http://127.0.0.1:4444/oauth2/token"
+export GOA_GOVERNOR_CLIENT_ID="gov-okta-addon-governor"
+export GOA_NATS_CREDS_FILE="${PWD}/user.dev.creds"
+```
+
+Similarly, ensure you have the following secrets exported:
+
+```sh
+# Get from Okta preview app
+export GOA_OKTA_TOKEN="REPLACE"
+# Secret copied from earlier
 export GOA_GOVERNOR_CLIENT_SECRET="REPLACE"
 ```
 
@@ -109,13 +169,13 @@ don't run it without `--dry-run` as it could potentially update or wipe out exis
 
 Create a local audit log for testing in the `gov-okta-addon` directory:
 
-```
+```sh
 touch audit.log
 ```
 
 Start the addon (adjust the flags as needed):
 
-```
+```sh
 go run . serve --audit-log-path=audit.log --pretty --development --debug --dry-run
 ```
 
@@ -123,7 +183,7 @@ go run . serve --audit-log-path=audit.log --pretty --development --debug --dry-r
 
 Run the user sync (adjust the flags as needed):
 
-```
+```sh
 go run . sync users --pretty --development --debug --dry-run
 ```
 

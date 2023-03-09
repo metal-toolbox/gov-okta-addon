@@ -42,9 +42,6 @@ func init() {
 	rootCmd.PersistentFlags().Bool("pretty", false, "enable pretty (human readable) logging output")
 	viperBindFlag("logging.pretty", rootCmd.PersistentFlags().Lookup("pretty"))
 
-	rootCmd.PersistentFlags().String("nats-creds-file", "", "Path to the file containing the NATS credentials file")
-	viperBindFlag("nats.creds-file", rootCmd.PersistentFlags().Lookup("nats-creds-file"))
-
 	rootCmd.PersistentFlags().Bool("development", false, "enable development settings")
 	viperBindFlag("development", rootCmd.PersistentFlags().Lookup("development"))
 }

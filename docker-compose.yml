@@ -1,5 +1,6 @@
 version: "3.9"
 
+# TODO(sthwang): Fix docker-compose for new NATS
 services:
   gov-okta-addon:
     build:

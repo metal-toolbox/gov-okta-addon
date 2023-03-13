@@ -144,7 +144,7 @@ touch audit.log
 Start the addon (adjust the flags as needed):
 
 ```sh
-go run . serve --audit-log-path=audit.log --pretty --development --debug --dry-run
+go run . serve --audit-log-path=audit.log --pretty --debug --dry-run
 ```
 
 ### Testing addon sync locally
@@ -152,7 +152,7 @@ go run . serve --audit-log-path=audit.log --pretty --development --debug --dry-r
 Run the user sync (adjust the flags as needed):
 
 ```sh
-go run . sync users --pretty --development --debug --dry-run
+go run . sync users --pretty --debug --dry-run
 ```
 
 You can run the groups and members sync in the same way.

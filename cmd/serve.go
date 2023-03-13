@@ -48,8 +48,8 @@ func init() {
 
 	serveCmd.Flags().String("nats-url", "nats://127.0.0.1:4222", "NATS server connection url")
 	viperBindFlag("nats.url", serveCmd.Flags().Lookup("nats-url"))
-	rootCmd.PersistentFlags().String("nats-creds-file", "", "Path to the file containing the NATS credentials file")
-	viperBindFlag("nats.creds-file", rootCmd.PersistentFlags().Lookup("nats-creds-file"))
+	serveCmd.PersistentFlags().String("nats-creds-file", "", "Path to the file containing the NATS credentials file")
+	viperBindFlag("nats.creds-file", serveCmd.PersistentFlags().Lookup("nats-creds-file"))
 	serveCmd.Flags().String("nats-subject-prefix", "equinixmetal.governor.events", "prefix for NATS subjects")
 	viperBindFlag("nats.subject-prefix", serveCmd.Flags().Lookup("nats-subject-prefix"))
 	serveCmd.Flags().String("nats-queue-group", "equinixmetal.governor.addons.gov-okta-addon", "queue group for load balancing messages across NATS consumers")

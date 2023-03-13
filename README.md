@@ -113,7 +113,7 @@ export GOA_NATS_CREDS_FILE="${PWD}/user.local.creds"
 Similarly, ensure you have the following secrets exported:
 
 ```sh
-# Get from Okta preview app
+# Get from delivery-engineering vault, check governor tag
 export GOA_OKTA_TOKEN="REPLACE"
 # Secret copied from earlier
 export GOA_GOVERNOR_CLIENT_SECRET="REPLACE"

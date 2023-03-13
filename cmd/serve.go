@@ -11,7 +11,6 @@ import (
 
 	"github.com/metal-toolbox/auditevent"
 	audithelpers "github.com/metal-toolbox/auditevent/helpers"
-	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
@@ -127,7 +126,10 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 	}
 	defer auf.Close()
 
-	nc, natsClose, err := newNATSConnection(viper.GetViper())
+	nc, natsClose, err := NewNATSConnection(
+		appName,
+		viper.GetString("nats.creds-file"),
+		viper.GetString("nats.url"))
 	if err != nil {
 		logger.Fatalw("failed to create NATS client connection", "error", err)
 	}
@@ -208,26 +210,6 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 	}
 
 	return nil
-}
-
-// newNATSConnection creates a new NATS connection
-func newNATSConnection(v *viper.Viper) (*nats.Conn, func(), error) {
-	opts := []nats.Option{
-		nats.Name(appName),
-	}
-
-	if credsFile := v.GetString("nats.creds-file"); credsFile != "" {
-		opts = append(opts, nats.UserCredentials(credsFile))
-	} else {
-		return nil, nil, ErrMissingNATSCreds
-	}
-
-	nc, err := nats.Connect(viper.GetString("nats.url"), opts...)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return nc, nc.Close, nil
 }
 
 // validateMandatoryFlags collects the mandatory flag validation

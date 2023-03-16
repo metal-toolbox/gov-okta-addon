@@ -17,3 +17,4 @@ config.*
 nats.nkey
 audit.log
 .env
+user.local.creds

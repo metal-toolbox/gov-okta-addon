@@ -1,5 +1,6 @@
 version: "3.9"
 
+# TODO(sthwang): Fix docker-compose for new NATS
 services:
   gov-okta-addon:
     build:
@@ -11,7 +12,6 @@ services:
     - --pretty
     - --audit-log-path=/app-audit/audit.log
     environment:
-      GOA_DEVELOPMENT: ${GOA_DEVELOPMENT:-true}
       GOA_DRYRUN: ${GOA_DRYRUN:-true}
       GOA_NATS_URL: ${GOA_NATS_URL:-nats://nats-server:4222}
       GOA_NATS_NKEY: ${GOA_NATS_NKEY:-./nats.nkey}

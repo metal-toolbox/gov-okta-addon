@@ -5,8 +5,6 @@ import "errors"
 var (
 	// ErrNATSURLRequired is returned when a NATS url is missing
 	ErrNATSURLRequired = errors.New("nats url is required and cannot be empty")
-	// ErrNATSAuthRequired is returned when a NATS auth method is missing
-	ErrNATSAuthRequired = errors.New("nats token or nkey auth is required and cannot be empty")
 	// ErrOktaURLRequired is returned when an Okta URL is missing
 	ErrOktaURLRequired = errors.New("okta url is required and cannot be empty")
 	// ErrOktaTokenRequired is returned when an Okta token is missing
@@ -35,4 +33,6 @@ var (
 	ErrOktaUserTypeNotString = errors.New("okta user type in profile is not a string")
 	// ErrUserNotFound is returned when a user isn't found in the system
 	ErrUserNotFound = errors.New("user not found")
+	// ErrMissingNATSCreds is returned when nats creds are not provided
+	ErrMissingNATSCreds = errors.New("nats creds are required")
 )

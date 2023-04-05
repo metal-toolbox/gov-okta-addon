@@ -702,6 +702,8 @@ go.equinixmetal.net/governor-api v0.18.0 h1:0TEfR4RMhLDgfQ3mVwXyyA6nLhnOR9m2wtrO
 go.equinixmetal.net/governor-api v0.18.0/go.mod h1:KwThhCmkLFopttyvmSLWG0N6Om6e9VKAFZBZ1tMR3AY=
 go.equinixmetal.net/governor-api v0.19.0 h1:vJ5ybs62uEWeBegWQacv1ldYsMV8ATiwb6H8gP5HmW8=
 go.equinixmetal.net/governor-api v0.19.0/go.mod h1:+gs315mQXcCuncSNk9PBR5oQ3FFddllWtfpGwpEL2Vc=
+go.equinixmetal.net/governor-api v0.20.0 h1:uxekByKju7EjAtqEaEv73fmzEXFxwFUCdEXLEJY+tlg=
+go.equinixmetal.net/governor-api v0.20.0/go.mod h1:+gs315mQXcCuncSNk9PBR5oQ3FFddllWtfpGwpEL2Vc=
 go.etcd.io/etcd/api/v3 v3.5.4/go.mod h1:5GB2vv4A4AOn3yk7MftYGHkUfGtDHnEraIjym4dYz5A=
 go.etcd.io/etcd/client/pkg/v3 v3.5.4/go.mod h1:IJHfcCEKxYu1Os13ZdwCwIUTUVGYTSAM3YSwc9/Ac1g=
 go.etcd.io/etcd/client/v2 v2.305.4/go.mod h1:Ud+VUwIi9/uQHOMA+4ekToJ12lTxlv0zB/+DHwTGEbU=

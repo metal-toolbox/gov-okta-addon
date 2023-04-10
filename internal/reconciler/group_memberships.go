@@ -24,6 +24,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 	oktaGroupMembers, err := r.oktaClient.ListGroupMembership(ctx, oktaGID)
 	if err != nil {
 		logger.Error("error getting group membership for okta group")
+		return err
 	}
 
 	oktaGroupMemberIDs := make([]string, len(oktaGroupMembers))
@@ -38,7 +39,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 		user, err := r.governorClient.User(ctx, uid, false)
 		if err != nil {
 			logger.Error("error getting governor user", zap.Error(err))
-			continue
+			return err
 		}
 
 		if user.Status.String == v1alpha1.UserStatusPending {

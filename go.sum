@@ -187,6 +187,8 @@ github.com/go-logfmt/logfmt v0.5.0/go.mod h1:wCYkCAKZfumFQihp8CzCvQ3paCTfi41vtzG
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-logr/logr v1.2.3 h1:2DntVwHkVopvECVRSlL5PSo9eG+cAkDCuckLubN+rq0=
 github.com/go-logr/logr v1.2.3/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
+github.com/go-logr/logr v1.2.4 h1:g01GSCwiDw2xSZfjJ2/T9M+S6pFdcNtFYsp+Y43HYDQ=
+github.com/go-logr/logr v1.2.4/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 github.com/go-logr/stdr v1.2.2 h1:hSWxHoqTgW2S2qGc0LTAI563KZ5YKYRhT3MFKZMbjag=
 github.com/go-logr/stdr v1.2.2/go.mod h1:mMo/vtBO5dYbehREoey6XUKy/eSumjCCveDpRre4VKE=
 github.com/go-logr/zapr v1.2.3 h1:a9vnzlIBPQBBkeaR9IuMUfmVOrQlkoC4YfPoFkX3T7A=
@@ -499,6 +501,8 @@ github.com/metal-toolbox/auditevent v0.6.1 h1:E+Z2xk4moiqm0r85UCQP7imquUXCToePLy
 github.com/metal-toolbox/auditevent v0.6.1/go.mod h1:EyW3Sncc68qfizhtviR5ZvDC09H001PC+a7gfyhe+/Q=
 github.com/metal-toolbox/auditevent v0.7.0 h1:jLLnM1uBgNmxGpe06yqTqeKfgEyXCMA7O2OFZ5vtYik=
 github.com/metal-toolbox/auditevent v0.7.0/go.mod h1:JeaoaxONjY0amUWfTnv0Z9werBvlI9kWG5sIrJIuVKc=
+github.com/metal-toolbox/auditevent v0.8.0 h1:uKEwwYnxAEgvFNpleZzIblLymCDK44WwpsKi36mznVQ=
+github.com/metal-toolbox/auditevent v0.8.0/go.mod h1:yladFT4ayNx+4wrNczvUjYFsg7Qvq+G8YBIDvjeeiLw=
 github.com/microsoft/go-mssqldb v0.17.0/go.mod h1:OkoNGhGEs8EZqchVTtochlXruEhEOaO4S0d2sB5aeGQ=
 github.com/miekg/dns v1.1.26/go.mod h1:bPDLeHnStXmXAq1m/Ch/hvfNHr14JKNPMBo3VZKjuso=
 github.com/miekg/dns v1.1.41/go.mod h1:p6aan82bvRIyn+zDIv9xYNUpwa73JcSh9BKwknJysuI=

@@ -6,6 +6,7 @@ import (
 
 	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
+	"go.equinixmetal.net/governor-api/pkg/api/v1beta1"
 	"go.uber.org/zap"
 )
 
@@ -152,6 +153,29 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 // userDeleted returns true if the given user has been deleted in governor within the specified cutoff time period.
 // The function also performs some basic user validation and will return false if anything with the user doesn't look right
 func userDeleted(user *v1alpha1.User) bool {
+	if user == nil {
+		return false
+	}
+
+	// these fields should always be defined for a user
+	if user.ID == "" || user.Name == "" || user.Email == "" {
+		return false
+	}
+
+	if user.DeletedAt.IsZero() {
+		return false
+	}
+
+	if user.DeletedAt.Time.After(cutoffUserDeleted) {
+		return true
+	}
+
+	return false
+}
+
+// userDeletedV2 returns true if the given user has been deleted in governor within the specified cutoff time period.
+// The function also performs some basic user validation and will return false if anything with the user doesn't look right
+func userDeletedV2(user *v1beta1.User) bool {
 	if user == nil {
 		return false
 	}

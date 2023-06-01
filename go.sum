@@ -573,6 +573,8 @@ github.com/okta/okta-sdk-golang/v2 v2.17.0 h1:awY6FyunU4bA90KsQ4ygCJm2qunZTkjZKA
 github.com/okta/okta-sdk-golang/v2 v2.17.0/go.mod h1:dz30v3ctAiMb7jpsCngGfQUAEGm1/NsWT92uTbNDQIs=
 github.com/okta/okta-sdk-golang/v2 v2.18.0 h1:cfDasMb7CShbZvOrF6n+DnLevWwiHgedWMGJ8M8xKDc=
 github.com/okta/okta-sdk-golang/v2 v2.18.0/go.mod h1:dz30v3ctAiMb7jpsCngGfQUAEGm1/NsWT92uTbNDQIs=
+github.com/okta/okta-sdk-golang/v2 v2.19.0 h1:o3PQmItxfG82zwJFJhE1bkXHvtw8ExQO+IcVb+n6VRw=
+github.com/okta/okta-sdk-golang/v2 v2.19.0/go.mod h1:h72I0ysswzPXKYN6MzWSX9QHRGDNILYZTz2Q8zFg7cI=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/pascaldekloe/goe v0.1.0/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
 github.com/patrickmn/go-cache v0.0.0-20180815053127-5633e0862627 h1:pSCLCl6joCFRnjpeojzOpEYs4q7Vditq8fySFG5ap3Y=

@@ -9,6 +9,7 @@ import (
 	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
+	"go.equinixmetal.net/governor-api/pkg/api/v1beta1"
 	governor "go.equinixmetal.net/governor-api/pkg/client"
 
 	"go.uber.org/zap"
@@ -27,7 +28,7 @@ type govClientIface interface {
 	UpdateUser(context.Context, string, *v1alpha1.UserReq) (*v1alpha1.User, error)
 	URL() string
 	User(context.Context, string, bool) (*v1alpha1.User, error)
-	Users(context.Context, bool) ([]*v1alpha1.User, error)
+	UsersV2(context.Context, map[string][]string) ([]*v1beta1.User, error)
 	UsersQuery(context.Context, map[string][]string) ([]*v1alpha1.User, error)
 }
 
@@ -201,8 +202,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 			}
 
 			// reconcile users
-
-			govUsers, err := r.governorClient.Users(ctx, true)
+			govUsers, err := r.governorClient.UsersV2(ctx, map[string][]string{"deleted": {"true"}})
 			if err != nil {
 				r.logger.Error("error listing governor users", zap.Error(err))
 				continue
@@ -370,7 +370,7 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 // updates the okta users to match the governor users. It also deletes any okta user that
 // has been deleted in governor. We are specifically targeting users who have existed in
 // governor and have been deleted, and not just users who do not exist in governor.
-func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.User, oktaUserMap map[string]*okta.UserDetails) error {
+func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1beta1.User, oktaUserMap map[string]*okta.UserDetails) error {
 	if govUsers == nil || oktaUserMap == nil {
 		return ErrUserListEmpty
 	}
@@ -389,7 +389,7 @@ func (r *Reconciler) reconcileUsers(ctx context.Context, govUsers []*v1alpha1.Us
 			zap.String("governor.user.status", u.Status.String),
 		)
 
-		if userDeleted(u) {
+		if userDeletedV2(u) {
 			logger.Debug("got deleted governor user")
 
 			// user has been deleted in governor, so delete it in okta if still there

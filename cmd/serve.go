@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/equinixmetal/addonx/natslock"
 	"github.com/metal-toolbox/auditevent"
 	audithelpers "github.com/metal-toolbox/auditevent/helpers"
 	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.equinixmetal.net/gov-okta-addon/internal/natslock"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
 	"go.equinixmetal.net/gov-okta-addon/internal/reconciler"
 	"go.equinixmetal.net/gov-okta-addon/internal/srv"

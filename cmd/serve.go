@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"time"
 
+	"github.com/equinixmetal/addonx/natslock"
 	"github.com/metal-toolbox/auditevent"
 	audithelpers "github.com/metal-toolbox/auditevent/helpers"
 	"github.com/nats-io/nats.go"
@@ -97,6 +99,8 @@ func init() {
 	viperBindFlag("eventlog.interval", serveCmd.Flags().Lookup("eventlog-interval"))
 	serveCmd.Flags().Duration("eventlog-lookback", reconciler.DefaultEventlogColdStartLookback, "coldstart lookback time period for the okta eventlog poller")
 	viperBindFlag("eventlog.lookback", serveCmd.Flags().Lookup("eventlog-lookback"))
+	serveCmd.Flags().Bool("reconciler-locking", false, "enable reconciler locking and leader election")
+	viperBindFlag("reconciler.locking", serveCmd.Flags().Lookup("reconciler-locking"))
 }
 
 func serve(cmdCtx context.Context, v *viper.Viper) error {
@@ -180,12 +184,26 @@ func serve(cmdCtx context.Context, v *viper.Viper) error {
 		return err
 	}
 
+	var locker *natslock.Locker
+
+	if viper.GetBool("reconciler.locking") {
+		l, err := newNATSLocker(nc)
+		if err != nil {
+			logger.Warnw("failed to initialize NATS locker", "error", err)
+		}
+
+		if l != nil {
+			locker = l
+		}
+	}
+
 	rec := reconciler.New(
 		reconciler.WithAuditEventWriter(auditevent.NewDefaultAuditEventWriter(auf)),
 		reconciler.WithLogger(logger.Desugar()),
 		reconciler.WithIntervals(viper.GetDuration("reconciler.interval"), viper.GetDuration("eventlog.interval"), viper.GetDuration("eventlog.lookback")),
 		reconciler.WithGovernorClient(gc),
 		reconciler.WithOktaClient(oc),
+		reconciler.WithLocker(locker),
 		reconciler.WithDryRun(viper.GetBool("dryrun")),
 		reconciler.WithSkipDelete(viper.GetBool("skip-delete")),
 	)
@@ -233,6 +251,29 @@ func newNATSConnection(credsFile, url string) (*nats.Conn, func(), error) {
 	}
 
 	return nc, nc.Close, nil
+}
+
+// newNATSLocker creates a new NATS jetstream locker from a NATS connection
+func newNATSLocker(nc *nats.Conn) (*natslock.Locker, error) {
+	jets, err := nc.JetStream()
+	if err != nil {
+		return nil, err
+	}
+
+	const timePastInterval = 10 * time.Second
+
+	bucketName := appName + "-lock"
+	ttl := viper.GetDuration("reconciler.interval") + timePastInterval
+
+	kvStore, err := natslock.NewKeyValue(jets, bucketName, ttl)
+	if err != nil {
+		return nil, err
+	}
+
+	return natslock.New(
+		natslock.WithKeyValueStore(kvStore),
+		natslock.WithLogger(logger.Desugar()),
+	), nil
 }
 
 // validateMandatoryFlags collects the mandatory flag validation

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/equinixmetal/addonx/natslock"
+	"github.com/gofrs/uuid"
 	"github.com/metal-toolbox/auditevent"
 	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
 	"go.equinixmetal.net/gov-okta-addon/internal/okta"
@@ -39,6 +41,8 @@ type Reconciler struct {
 	eventlogInterval   time.Duration
 	eventlogLookback   time.Duration
 	governorClient     govClientIface
+	id                 uuid.UUID
+	locker             *natslock.Locker
 	logger             *zap.Logger
 	oktaClient         *okta.Client
 	dryrun             bool
@@ -99,6 +103,13 @@ func WithGovernorClient(c *governor.Client) Option {
 	}
 }
 
+// WithLocker sets the lead election locker
+func WithLocker(l *natslock.Locker) Option {
+	return func(r *Reconciler) {
+		r.locker = l
+	}
+}
+
 // New returns a new reconciler
 func New(opts ...Option) *Reconciler {
 	rec := Reconciler{
@@ -112,7 +123,14 @@ func New(opts ...Option) *Reconciler {
 		opt(&rec)
 	}
 
-	rec.logger.Debug("creating new reconciler")
+	var err error
+
+	rec.id, err = uuid.DefaultGenerator.NewV4()
+	if err != nil {
+		panic(err)
+	}
+
+	rec.logger.Debug("creating new reconciler", zap.String("id", rec.id.String()))
 
 	return &rec
 }
@@ -123,6 +141,8 @@ func New(opts ...Option) *Reconciler {
 //   - assigns github applications to those groups in okta for
 //     each organization associated with the group
 func (r *Reconciler) Run(ctx context.Context) {
+	r.logger = r.logger.With(zap.String("reconciler.id", r.id.String()))
+
 	r.startEventLogPollerSubscriptions(ctx)
 
 	ticker := time.NewTicker(r.reconcilerInterval)
@@ -137,12 +157,32 @@ func (r *Reconciler) Run(ctx context.Context) {
 		zap.Bool("skip-delete", r.skipDelete),
 	)
 
+	if r.locker != nil {
+		r.logger.Info("using jetstream kv store for locking and leader election",
+			zap.String("bucket", r.locker.Name()),
+			zap.String("ttl", r.locker.TTL().String()),
+		)
+	}
+
 	for {
 		select {
 		case <-ticker.C:
 			r.logger.Info("executing reconciler loop",
 				zap.String("time", time.Now().UTC().Format(time.RFC3339)),
 			)
+
+			if r.locker != nil {
+				isLead, err := r.locker.AcquireLead(r.id)
+				if err != nil {
+					r.logger.Error("error checking for leader lock", zap.Error(err))
+					continue
+				}
+
+				if !isLead {
+					r.logger.Debug("not leader, skipping loop")
+					continue
+				}
+			}
 
 			ctx = auctx.WithAuditEvent(ctx, auditevent.NewAuditEvent(
 				"", // eventType to be populated later
@@ -492,6 +532,15 @@ func (r *Reconciler) groupExists(ctx context.Context, id string) (string, error)
 	logger.Debug("got okta group", zap.Any("okta.group", oktaGroup))
 
 	return oktaGroup, nil
+}
+
+// Stop stops the reconciler loop and does any necessary cleanup
+func (r *Reconciler) Stop() {
+	if r.locker != nil {
+		if err := r.locker.ReleaseLead(r.id); err != nil {
+			r.logger.Error("error releasing leader lock", zap.Error(err))
+		}
+	}
 }
 
 func contains(list []string, item string) bool {

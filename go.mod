@@ -11,7 +11,7 @@ require (
 	github.com/gosimple/slug v1.13.1
 	github.com/metal-toolbox/auditevent v0.8.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/nats-io/nats.go v1.27.0
+	github.com/nats-io/nats.go v1.27.1
 	github.com/okta/okta-sdk-golang/v2 v2.19.0
 	github.com/prometheus/client_golang v1.16.0
 	github.com/spf13/cobra v1.7.0

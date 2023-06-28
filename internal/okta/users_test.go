@@ -22,7 +22,7 @@ type mockUserClient struct {
 	deactivatedUser bool
 }
 
-func (m *mockUserClient) ClearUserSessions(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
+func (m *mockUserClient) ClearUserSessions(_ context.Context, _ string, _ *query.Params) (*okta.Response, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -30,7 +30,7 @@ func (m *mockUserClient) ClearUserSessions(ctx context.Context, userID string, q
 	return m.resp, nil
 }
 
-func (m *mockUserClient) DeactivateUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
+func (m *mockUserClient) DeactivateUser(_ context.Context, _ string, _ *query.Params) (*okta.Response, error) {
 	m.deactivatedUser = true
 
 	if m.err != nil {
@@ -40,7 +40,7 @@ func (m *mockUserClient) DeactivateUser(ctx context.Context, userID string, qp *
 	return m.resp, nil
 }
 
-func (m *mockUserClient) DeactivateOrDeleteUser(ctx context.Context, userID string, qp *query.Params) (*okta.Response, error) {
+func (m *mockUserClient) DeactivateOrDeleteUser(_ context.Context, _ string, _ *query.Params) (*okta.Response, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -48,7 +48,7 @@ func (m *mockUserClient) DeactivateOrDeleteUser(ctx context.Context, userID stri
 	return m.resp, nil
 }
 
-func (m *mockUserClient) GetUser(ctx context.Context, userID string) (*okta.User, *okta.Response, error) {
+func (m *mockUserClient) GetUser(_ context.Context, _ string) (*okta.User, *okta.Response, error) {
 	if m.err != nil {
 		return nil, nil, m.err
 	}
@@ -56,7 +56,7 @@ func (m *mockUserClient) GetUser(ctx context.Context, userID string) (*okta.User
 	return m.users[0], m.resp, nil
 }
 
-func (m *mockUserClient) ListUsers(ctx context.Context, qp *query.Params) ([]*okta.User, *okta.Response, error) {
+func (m *mockUserClient) ListUsers(_ context.Context, _ *query.Params) ([]*okta.User, *okta.Response, error) {
 	if m.err != nil {
 		return nil, nil, m.err
 	}
@@ -64,7 +64,7 @@ func (m *mockUserClient) ListUsers(ctx context.Context, qp *query.Params) ([]*ok
 	return m.users, m.resp, nil
 }
 
-func (m *mockUserClient) SuspendUser(ctx context.Context, userID string) (*okta.Response, error) {
+func (m *mockUserClient) SuspendUser(_ context.Context, _ string) (*okta.Response, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -72,7 +72,7 @@ func (m *mockUserClient) SuspendUser(ctx context.Context, userID string) (*okta.
 	return m.resp, nil
 }
 
-func (m *mockUserClient) UnsuspendUser(ctx context.Context, userID string) (*okta.Response, error) {
+func (m *mockUserClient) UnsuspendUser(_ context.Context, _ string) (*okta.Response, error) {
 	if m.err != nil {
 		return nil, m.err
 	}

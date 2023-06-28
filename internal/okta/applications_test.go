@@ -27,7 +27,7 @@ func (m *mockApplicationClient) ListApplications(context.Context, *query.Params)
 	return m.apps, m.resp, nil
 }
 
-func (m *mockApplicationClient) CreateApplicationGroupAssignment(ctx context.Context, appID, groupID string, body okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error) {
+func (m *mockApplicationClient) CreateApplicationGroupAssignment(_ context.Context, _, _ string, _ okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error) {
 	if m.err != nil {
 		return nil, nil, m.err
 	}
@@ -35,7 +35,7 @@ func (m *mockApplicationClient) CreateApplicationGroupAssignment(ctx context.Con
 	return nil, m.resp, nil
 }
 
-func (m *mockApplicationClient) DeleteApplicationGroupAssignment(ctx context.Context, appID, groupID string) (*okta.Response, error) {
+func (m *mockApplicationClient) DeleteApplicationGroupAssignment(_ context.Context, _, _ string) (*okta.Response, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -43,7 +43,7 @@ func (m *mockApplicationClient) DeleteApplicationGroupAssignment(ctx context.Con
 	return m.resp, nil
 }
 
-func (m *mockApplicationClient) GetApplicationGroupAssignment(ctx context.Context, appID, groupID string, qp *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error) {
+func (m *mockApplicationClient) GetApplicationGroupAssignment(_ context.Context, _, _ string, _ *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error) {
 	if m.err != nil {
 		return nil, nil, m.err
 	}
@@ -51,7 +51,7 @@ func (m *mockApplicationClient) GetApplicationGroupAssignment(ctx context.Contex
 	return nil, m.resp, nil
 }
 
-func (m *mockApplicationClient) ListApplicationGroupAssignments(ctx context.Context, appID string, qp *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error) {
+func (m *mockApplicationClient) ListApplicationGroupAssignments(_ context.Context, _ string, _ *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error) {
 	if m.err != nil {
 		return nil, nil, m.err
 	}

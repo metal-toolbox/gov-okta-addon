@@ -249,7 +249,7 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 	}, nil
 }
 
-func governorUserFromOktaUser(ctx context.Context, gc *governor.Client, oktaUser *okt.User, l *zap.Logger) (*v1alpha1.User, error) {
+func governorUserFromOktaUser(ctx context.Context, gc *governor.Client, oktaUser *okt.User, _ *zap.Logger) (*v1alpha1.User, error) {
 	email, err := okta.EmailFromUserProfile(oktaUser)
 	if err != nil {
 		return nil, err

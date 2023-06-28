@@ -34,11 +34,7 @@ func (r *Reconciler) GroupsApplicationAssignments(ctx context.Context, ids ...st
 		groupMap[oktaGID] = group
 	}
 
-	if err := r.reconcileGroupApplicationAssignments(ctx, groupMap); err != nil {
-		return err
-	}
-
-	return nil
+	return r.reconcileGroupApplicationAssignments(ctx, groupMap)
 }
 
 // GroupCreate creates a governor group in okta

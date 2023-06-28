@@ -48,7 +48,7 @@ type mockLogEventsClient struct {
 	resp *okta.Response
 }
 
-func (m *mockLogEventsClient) GetLogs(ctx context.Context, qp *query.Params) ([]*okta.LogEvent, *okta.Response, error) {
+func (m *mockLogEventsClient) GetLogs(_ context.Context, qp *query.Params) ([]*okta.LogEvent, *okta.Response, error) {
 	if m.err != nil {
 		return nil, nil, m.err
 	}

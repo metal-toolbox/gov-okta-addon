@@ -315,6 +315,11 @@ func (r *Reconciler) reconcileGroupApplicationAssignments(ctx context.Context, g
 	for org, appID := range oktaAppOrgs {
 		logger := r.logger.With(zap.String("okta.app.org", org), zap.String("okta.app.id", appID))
 
+		if !containsOrg(org, govOrgs) {
+			logger.Info("skipping okta github org not managed by governor")
+			continue
+		}
+
 		assignments, err := r.oktaClient.ListGroupApplicationAssignment(ctx, appID)
 		if err != nil {
 			logger.Error("error listing okta group assigned to okta application")
@@ -546,6 +551,17 @@ func (r *Reconciler) Stop() {
 func contains(list []string, item string) bool {
 	for _, i := range list {
 		if i == item {
+			return true
+		}
+	}
+
+	return false
+}
+
+// containsOrg returns true if the org slug is in the list of organizations
+func containsOrg(org string, orgs []*v1alpha1.Organization) bool {
+	for _, o := range orgs {
+		if o.Slug == org {
 			return true
 		}
 	}

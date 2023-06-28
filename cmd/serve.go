@@ -103,7 +103,7 @@ func init() {
 	viperBindFlag("reconciler.locking", serveCmd.Flags().Lookup("reconciler-locking"))
 }
 
-func serve(cmdCtx context.Context, v *viper.Viper) error {
+func serve(cmdCtx context.Context, _ *viper.Viper) error {
 	initTracing()
 
 	if err := validateMandatoryFlags(); err != nil {

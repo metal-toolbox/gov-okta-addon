@@ -18,7 +18,7 @@ steps:
   - label: ":test_tube: test"
     key: "test"
     plugins:
-      - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.3:
+      - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.4:
           parameters:
             GITHUB_TOKEN: /buildkite/github/personal-access-token/v1
       - docker#v5.7.0:
@@ -33,7 +33,7 @@ steps:
     key: "gobuild"
     artifact_paths: "${ARTIFACT_NAME}-bin"
     plugins:
-      - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.3:
+      - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.4:
           parameters:
             GITHUB_TOKEN: /buildkite/github/personal-access-token/v1
       - docker#v5.7.0:
@@ -74,7 +74,7 @@ steps:
     plugins:
       - first-aml/git-clone:
           repository: git@github.com:equinixmetal/$DEPLOYMENT_REPO.git
-      - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.3:
+      - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.4:
           parameters:
             GITHUB_TOKEN: /buildkite/github/personal-access-token/v1
       - ssh://git@github.com/packethost/yaml-update-buildkite-plugin#v1.0.1:

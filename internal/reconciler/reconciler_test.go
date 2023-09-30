@@ -3,8 +3,8 @@ package reconciler
 import (
 	"testing"
 
+	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
 )
 
 func Test_contains(t *testing.T) {

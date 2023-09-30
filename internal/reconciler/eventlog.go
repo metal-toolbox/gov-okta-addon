@@ -7,8 +7,8 @@ import (
 
 	"go.uber.org/zap"
 
-	okt "go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
+	okt "github.com/equinixmetal/gov-okta-addon/internal/okta"
+	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 
 	"github.com/okta/okta-sdk-golang/v2/okta"
 	"github.com/okta/okta-sdk-golang/v2/okta/query"

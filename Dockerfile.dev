@@ -6,8 +6,6 @@ WORKDIR /app
 # Setup dependencies to auth inside docker
 ARG ACTIONS_BOT_GITHUB_PAT
 ENV ACTIONS_BOT_GITHUB_PAT=${ACTIONS_BOT_GITHUB_PAT}
-RUN git config --global url."https://${ACTIONS_BOT_GITHUB_PAT}:x-oauth-basic@github.com/equinixmetal".insteadOf "https://github.com/equinixmetal"
-ENV GOPRIVATE=github.com/equinixmetal/*,go.equinixmetal.net
 
 # Retrieve application dependencies using go modules.
 # Allows container builds to reuse downloaded dependencies.

@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	"github.com/stretchr/testify/assert"
-	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
 )
 
 var testOrganizationsList = []byte(`

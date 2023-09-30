@@ -10,17 +10,17 @@ import (
 	"time"
 
 	"github.com/equinixmetal/addonx/natslock"
+	"github.com/equinixmetal/gov-okta-addon/internal/okta"
+	"github.com/equinixmetal/gov-okta-addon/internal/reconciler"
+	"github.com/equinixmetal/gov-okta-addon/internal/srv"
 	"github.com/metal-toolbox/auditevent"
 	audithelpers "github.com/metal-toolbox/auditevent/helpers"
 	"github.com/nats-io/nats.go"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.equinixmetal.net/gov-okta-addon/internal/reconciler"
-	"go.equinixmetal.net/gov-okta-addon/internal/srv"
 	"golang.org/x/oauth2/clientcredentials"
 
-	governor "go.equinixmetal.net/governor-api/pkg/client"
+	governor "github.com/metal-toolbox/governor-api/pkg/client"
 )
 
 const (
@@ -52,9 +52,9 @@ func init() {
 	viperBindFlag("nats.url", serveCmd.Flags().Lookup("nats-url"))
 	serveCmd.PersistentFlags().String("nats-creds-file", "", "Path to the file containing the NATS credentials file")
 	viperBindFlag("nats.creds-file", serveCmd.PersistentFlags().Lookup("nats-creds-file"))
-	serveCmd.Flags().String("nats-subject-prefix", "equinixmetal.governor.events", "prefix for NATS subjects")
+	serveCmd.Flags().String("nats-subject-prefix", "governor.events", "prefix for NATS subjects")
 	viperBindFlag("nats.subject-prefix", serveCmd.Flags().Lookup("nats-subject-prefix"))
-	serveCmd.Flags().String("nats-queue-group", "equinixmetal.governor.addons.gov-okta-addon", "queue group for load balancing messages across NATS consumers")
+	serveCmd.Flags().String("nats-queue-group", "governor.addons.gov-okta-addon", "queue group for load balancing messages across NATS consumers")
 	viperBindFlag("nats.queue-group", serveCmd.Flags().Lookup("nats-queue-group"))
 	serveCmd.Flags().Int("nats-queue-size", defaultNATSQueueSize, "queue size for load balancing messages across NATS consumers")
 	viperBindFlag("nats.queue-size", serveCmd.Flags().Lookup("nats-queue-size"))
@@ -73,7 +73,7 @@ func init() {
 	viperBindFlag("audit.log-path", serveCmd.Flags().Lookup("audit-log-path"))
 
 	// Okta related flags
-	serveCmd.Flags().String("okta-url", "https://equinixmetal.okta.com", "url for Okta client calls")
+	serveCmd.Flags().String("okta-url", "https://example.okta.com", "url for Okta client calls")
 	viperBindFlag("okta.url", serveCmd.Flags().Lookup("okta-url"))
 	serveCmd.Flags().String("okta-token", "", "token for access to the Okta API")
 	viperBindFlag("okta.token", serveCmd.Flags().Lookup("okta-token"))

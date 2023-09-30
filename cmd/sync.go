@@ -17,7 +17,7 @@ func init() {
 	viperBindFlag("sync.dryrun", syncCmd.PersistentFlags().Lookup("dry-run"))
 
 	// Okta related flags
-	syncCmd.PersistentFlags().String("okta-url", "https://equinixmetal.okta.com", "url for Okta client calls")
+	syncCmd.PersistentFlags().String("okta-url", "https://example.okta.com", "url for Okta client calls")
 	viperBindFlag("okta.url", syncCmd.PersistentFlags().Lookup("okta-url"))
 	syncCmd.PersistentFlags().String("okta-token", "", "token for access to the Okta API")
 	viperBindFlag("okta.token", syncCmd.PersistentFlags().Lookup("okta-token"))

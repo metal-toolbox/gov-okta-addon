@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	"github.com/volatiletech/null/v8"
-	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
 )
 
 func Test_userDeleted(t *testing.T) {

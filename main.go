@@ -1,7 +1,7 @@
 // main
 package main
 
-import "go.equinixmetal.net/gov-okta-addon/cmd"
+import "github.com/equinixmetal/gov-okta-addon/cmd"
 
 func main() {
 	cmd.Execute()

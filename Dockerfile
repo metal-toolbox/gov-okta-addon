@@ -1,6 +1,6 @@
 FROM gcr.io/distroless/static
 
-COPY ./gov-okta-addon /addon
+COPY ./bin/gov-okta-addon /addon
 
 # Run the web service on container startup.
 ENTRYPOINT ["/addon"]

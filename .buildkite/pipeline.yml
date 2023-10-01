@@ -1,5 +1,5 @@
 env:
-  ARTIFACT_NAME: gov-okta-addon
+  APP_NAME: gov-okta-addon
   GOPRIVATE: github.com/equinixmetal/*,go.equinixmetal.net
   IMAGE_REPO: quay.io/equinixmetal/gov-okta-addon
   IMAGE_TAG: ${BUILDKITE_BUILD_NUMBER}-${BUILDKITE_COMMIT:0:8}

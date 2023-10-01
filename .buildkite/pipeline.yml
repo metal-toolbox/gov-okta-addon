@@ -31,7 +31,7 @@ steps:
 
   - label: ":golang: build"
     key: "gobuild"
-    artifact_paths: "${ARTIFACT_NAME}-bin"
+    artifact_paths: "${APP_NAME}-bin"
     plugins:
       - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.4:
           parameters:

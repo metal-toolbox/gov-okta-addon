@@ -13,7 +13,7 @@ accordingly in Okta.
 
 `gov-okta-addon` subscribes to the Governor event stream where change events are published.  The events published
 by Governor contain the group and/or user id that changed and the type of action.  Events are published on NATS subjects
-dedicated to the resource type ie. `equinixmetal.governor.events.groups` for group events.  When `gov-okta-addon` receives
+dedicated to the resource type ie. `governor.events.groups` for group events.  When `gov-okta-addon` receives
 an event, it reacts by requesting information from Governor about the included resource IDs and making the required
 changes in Okta.
 
@@ -62,7 +62,7 @@ be removed from the group. The groups and users must already exist in governor o
 
 ### Prereq to running locally with governor-api devcontainer
 
-Follow the directions [here](https://github.com/equinixmetal/governor/blob/main/README.md#running-governor-locally) for starting the governor-api devcontainer.
+Follow the directions [here](https://github.com/metal-toolbox/governor-api#running-governor-api-locally) for starting the governor-api devcontainer.
 
 The **first time** you'll need to create a local hydra client for `gov-okta-addon-governor` and copy the nats creds file. After that you can just export the env variables.
 
@@ -102,7 +102,7 @@ Export the following in the terminal where you will run gov-okta-addon:
 ```sh
 export GOA_NATS_URL="nats://127.0.0.1:4222"
 export GOA_OKTA_NOCACHE=true
-export GOA_OKTA_URL="https://equinixmetal.oktapreview.com"
+export GOA_OKTA_URL="https://example.oktapreview.com"
 export GOA_GOVERNOR_URL="http://127.0.0.1:3001"
 export GOA_GOVERNOR_AUDIENCE="http://api:3001/"
 export GOA_GOVERNOR_TOKEN_URL="http://127.0.0.1:4444/oauth2/token"

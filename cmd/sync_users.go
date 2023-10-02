@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"net/url"
 
+	"github.com/equinixmetal/gov-okta-addon/internal/okta"
+	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
+	governor "github.com/metal-toolbox/governor-api/pkg/client"
 	okt "github.com/okta/okta-sdk-golang/v2/okta"
 	"github.com/okta/okta-sdk-golang/v2/okta/query"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
-	governor "go.equinixmetal.net/governor-api/pkg/client"
 	"go.uber.org/zap"
 	"golang.org/x/oauth2/clientcredentials"
 )

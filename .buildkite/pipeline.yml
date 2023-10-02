@@ -1,7 +1,7 @@
 env:
-  ARTIFACT_NAME: gov-okta-addon
+  APP_NAME: gov-okta-addon
   GOPRIVATE: github.com/equinixmetal/*,go.equinixmetal.net
-  QUAY_REPO: quay.io/equinixmetal/gov-okta-addon
+  IMAGE_REPO: quay.io/equinixmetal/gov-okta-addon
   IMAGE_TAG: ${BUILDKITE_BUILD_NUMBER}-${BUILDKITE_COMMIT:0:8}
   DEPLOYMENT_REPO: k8s-gov-okta-addon
 
@@ -31,7 +31,7 @@ steps:
 
   - label: ":golang: build"
     key: "gobuild"
-    artifact_paths: "${ARTIFACT_NAME}-bin"
+    artifact_paths: "bin/${APP_NAME}"
     plugins:
       - ssh://git@github.com/packethost/ssm-buildkite-plugin#v1.0.4:
           parameters:
@@ -44,28 +44,38 @@ steps:
             - CGO_ENABLED=0
             - GOOS=linux
           entrypoint: ./scripts/ci_entrypoint.sh
-          command: ["go", "build", "-buildvcs=false", "-mod=mod", "-a", "-o", "gov-okta-addon-bin"]
+          command: ["go", "build", "-buildvcs=false", "-mod=mod", "-a", "-o", "bin/$APP_NAME"]
 
   - label: ":docker: docker build and publish"
     key: "build"
     depends_on: ["lint", "test", "gobuild"]
+    env:
+      BUILDKITE_PLUGINS_ALWAYS_CLONE_FRESH: "true"
     commands: |
       #!/bin/bash
       echo --- Retrieve Artifacts
-      buildkite-agent artifact download "${ARTIFACT_NAME}-bin" .
-
-      # work around buildkite stripping the path if the artifact is the same name as the build
-      echo -- Rename artifact
-      mv ${ARTIFACT_NAME}-bin ${ARTIFACT_NAME}
+      buildkite-agent artifact download "bin/${APP_NAME}" .
 
       # make sure it is executable
-      chmod +x ${ARTIFACT_NAME}
-
-      echo --- Build Docker Image
-      docker build . -t "$QUAY_REPO:$IMAGE_TAG"
-
-      echo --- Push Docker Image
-      docker push "$QUAY_REPO:$IMAGE_TAG"
+      chmod +x bin/${APP_NAME}
+    plugins:
+      # - docker-login#v2.1.0:
+      #     username: metal-buildkite
+      #     password-env: SECRET_GHCR_PUBLISH_TOKEN
+      #     server: ghcr.io
+      - equinixmetal-buildkite/docker-metadata#v1.0.0:
+          images:
+          - "${IMAGE_REPO}"
+          extra_tags:
+          - "${IMAGE_TAG}"
+      - equinixmetal-buildkite/docker-build#v1.1.0:
+          push: true
+          build-args:
+            - NAME=${APP_NAME}
+      - equinixmetal-buildkite/trivy#v1.18.3:
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          security-checks: config,secret,vuln
 
   # For main commits, pull-requests will be created to bump the image in the deployment manifest
   - label: "Bump image tag for main branch builds"

@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/equinixmetal/addonx/natslock"
+	"github.com/equinixmetal/gov-okta-addon/internal/auctx"
+	"github.com/equinixmetal/gov-okta-addon/internal/okta"
 	"github.com/gofrs/uuid"
 	"github.com/metal-toolbox/auditevent"
-	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
-	"go.equinixmetal.net/gov-okta-addon/internal/okta"
-	"go.equinixmetal.net/governor-api/pkg/api/v1alpha1"
-	"go.equinixmetal.net/governor-api/pkg/api/v1beta1"
-	governor "go.equinixmetal.net/governor-api/pkg/client"
+	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
+	"github.com/metal-toolbox/governor-api/pkg/api/v1beta1"
+	governor "github.com/metal-toolbox/governor-api/pkg/client"
 
 	"go.uber.org/zap"
 )

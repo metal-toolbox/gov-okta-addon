@@ -8,8 +8,8 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
-	"go.equinixmetal.net/gov-okta-addon/internal/auctx"
-	"go.equinixmetal.net/governor-api/pkg/events/v1alpha1"
+	"github.com/equinixmetal/gov-okta-addon/internal/auctx"
+	"github.com/metal-toolbox/governor-api/pkg/events/v1alpha1"
 )
 
 // groupsMessageHandler handles messages for governor group events

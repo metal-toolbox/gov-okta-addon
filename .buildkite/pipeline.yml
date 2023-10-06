@@ -15,7 +15,7 @@ steps:
     key: "test"
     plugins:
       - docker#v5.9.0:
-          image: "golang:1.19"
+          image: "golang:1.20"
           command: ["go", "test", "-cover" ,"-race", "./..."]
 
   - label: ":golang: build"
@@ -23,7 +23,7 @@ steps:
     artifact_paths: "bin/${APP_NAME}"
     plugins:
       - docker#v5.9.0:
-          image: "golang:1.19"
+          image: "golang:1.20"
           environment:
             - CGO_ENABLED=0
             - GOOS=linux

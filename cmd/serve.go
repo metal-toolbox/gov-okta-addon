@@ -273,7 +273,7 @@ func newNATSLocker(nc *nats.Conn) (*natslock.Locker, error) {
 	return natslock.New(
 		natslock.WithKeyValueStore(kvStore),
 		natslock.WithLogger(logger.Desugar()),
-	), nil
+	)
 }
 
 // validateMandatoryFlags collects the mandatory flag validation

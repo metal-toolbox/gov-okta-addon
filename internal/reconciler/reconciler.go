@@ -172,7 +172,7 @@ func (r *Reconciler) Run(ctx context.Context) {
 			)
 
 			if r.locker != nil {
-				isLead, err := r.locker.AcquireLead(r.id)
+				isLead, err := r.locker.AcquireLead()
 				if err != nil {
 					r.logger.Error("error checking for leader lock", zap.Error(err))
 					continue
@@ -542,7 +542,7 @@ func (r *Reconciler) groupExists(ctx context.Context, id string) (string, error)
 // Stop stops the reconciler loop and does any necessary cleanup
 func (r *Reconciler) Stop() {
 	if r.locker != nil {
-		if err := r.locker.ReleaseLead(r.id); err != nil {
+		if err := r.locker.ReleaseLead(); err != nil {
 			r.logger.Error("error releasing leader lock", zap.Error(err))
 		}
 	}

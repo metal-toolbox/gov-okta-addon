@@ -5,10 +5,10 @@ import (
 	"errors"
 	"time"
 
-	"github.com/equinixmetal/addonx/natslock"
 	"github.com/equinixmetal/gov-okta-addon/internal/auctx"
 	"github.com/equinixmetal/gov-okta-addon/internal/okta"
 	"github.com/gofrs/uuid"
+	"github.com/metal-toolbox/addonx/natslock"
 	"github.com/metal-toolbox/auditevent"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1beta1"

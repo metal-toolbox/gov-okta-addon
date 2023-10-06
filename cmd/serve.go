@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/equinixmetal/addonx/natslock"
 	"github.com/equinixmetal/gov-okta-addon/internal/okta"
 	"github.com/equinixmetal/gov-okta-addon/internal/reconciler"
 	"github.com/equinixmetal/gov-okta-addon/internal/srv"
+	"github.com/metal-toolbox/addonx/natslock"
 	"github.com/metal-toolbox/auditevent"
 	audithelpers "github.com/metal-toolbox/auditevent/helpers"
 	"github.com/nats-io/nats.go"

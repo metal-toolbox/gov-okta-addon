@@ -3,12 +3,12 @@ module github.com/equinixmetal/gov-okta-addon
 go 1.19
 
 require (
-	github.com/equinixmetal/addonx v0.0.0-20230523132059-270030f9805c
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-contrib/zap v0.1.0
 	github.com/gin-gonic/gin v1.9.1
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/gosimple/slug v1.13.1
+	github.com/metal-toolbox/addonx v0.1.1
 	github.com/metal-toolbox/auditevent v0.8.0
 	github.com/metal-toolbox/governor-api v0.1.7
 	github.com/mitchellh/go-homedir v1.1.0

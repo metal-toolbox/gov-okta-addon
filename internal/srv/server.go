@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.uber.org/zap"
 
-	"github.com/equinixmetal/gov-okta-addon/internal/reconciler"
+	"github.com/metal-toolbox/gov-okta-addon/internal/reconciler"
 )
 
 // Server implements the HTTP Server

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/equinixmetal/gov-okta-addon/internal/auctx"
+	"github.com/metal-toolbox/gov-okta-addon/internal/auctx"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1beta1"
 	"go.uber.org/zap"

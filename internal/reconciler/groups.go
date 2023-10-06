@@ -3,7 +3,7 @@ package reconciler
 import (
 	"context"
 
-	"github.com/equinixmetal/gov-okta-addon/internal/auctx"
+	"github.com/metal-toolbox/gov-okta-addon/internal/auctx"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	"go.uber.org/zap"
 )

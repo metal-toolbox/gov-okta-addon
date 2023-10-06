@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/equinixmetal/gov-okta-addon/internal/okta"
 	"github.com/gosimple/slug"
+	"github.com/metal-toolbox/gov-okta-addon/internal/okta"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	governor "github.com/metal-toolbox/governor-api/pkg/client"
 	okt "github.com/okta/okta-sdk-golang/v2/okta"

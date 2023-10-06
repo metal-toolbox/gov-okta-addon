@@ -8,7 +8,7 @@ import (
 	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 
-	"github.com/equinixmetal/gov-okta-addon/internal/auctx"
+	"github.com/metal-toolbox/gov-okta-addon/internal/auctx"
 	"github.com/metal-toolbox/governor-api/pkg/events/v1alpha1"
 )
 

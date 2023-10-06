@@ -3,7 +3,7 @@ module github.com/metal-toolbox/gov-okta-addon
 go 1.20
 
 require (
-	github.com/equinixmetal/gov-okta-addon v0.0.0-20231006204935-e7e5978bc8dd
+	github.com/metal-toolbox/gov-okta-addon v0.0.0-20231006204935-e7e5978bc8dd
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-contrib/zap v0.2.0
 	github.com/gin-gonic/gin v1.9.1

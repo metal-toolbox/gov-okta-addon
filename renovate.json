@@ -6,6 +6,19 @@
     {
       "matchUpdateTypes": ["minor", "patch", "pin", "digest"],
       "automerge": true
+    },
+    {
+      "groupName": "go opentelemetry packages and libraries",
+      "groupSlug": "opentelemetry-go and libraries",
+      "matchDatasources": [
+        "go"
+      ],
+      "matchPackagePrefixes": [
+        "go.opentelemetry.io/"
+      ],
+      "matchPackageNames": [
+        "github.com/XSAM/otelsql"
+      ]
     }
   ]
 }

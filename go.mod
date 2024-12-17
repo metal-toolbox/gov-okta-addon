@@ -1,6 +1,8 @@
 module github.com/metal-toolbox/gov-okta-addon
 
-go 1.20
+go 1.23
+
+toolchain go1.23.4
 
 require (
 	github.com/gin-contrib/cors v1.4.0

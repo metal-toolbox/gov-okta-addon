@@ -32,7 +32,7 @@ const (
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "starts the gov-okta-addon service",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		return serve(cmd.Context(), viper.GetViper())
 	},
 }

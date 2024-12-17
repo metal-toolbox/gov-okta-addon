@@ -107,6 +107,7 @@ func TestClient_ClearUserSessions(t *testing.T) {
 					err: tt.err,
 				},
 			}
+
 			err := c.ClearUserSessions(context.TODO(), tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -145,6 +146,7 @@ func TestClient_DeactivateUser(t *testing.T) {
 					err: tt.err,
 				},
 			}
+
 			err := c.DeactivateUser(context.TODO(), tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -245,6 +247,7 @@ func TestClient_SuspendUser(t *testing.T) {
 					err: tt.err,
 				},
 			}
+
 			err := c.SuspendUser(context.TODO(), tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -283,6 +286,7 @@ func TestClient_UnsuspendUser(t *testing.T) {
 					err: tt.err,
 				},
 			}
+
 			err := c.UnsuspendUser(context.TODO(), tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -346,6 +350,7 @@ func TestClient_GetUserIDByEmail(t *testing.T) {
 					users: tt.users,
 				},
 			}
+
 			got, err := c.GetUserIDByEmail(context.TODO(), tt.email)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -401,6 +406,7 @@ func TestClient_ListUsers(t *testing.T) {
 					resp:  &okta.Response{},
 				},
 			}
+
 			got, err := c.ListUsers(context.TODO())
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -414,7 +420,7 @@ func TestClient_ListUsers(t *testing.T) {
 }
 
 func TestClient_ListUsersWithModifier(t *testing.T) {
-	skipUser := func(ctx context.Context, u *okta.User) (*okta.User, error) {
+	skipUser := func(_ context.Context, u *okta.User) (*okta.User, error) {
 		if u.Id == "skipMe" {
 			return nil, nil
 		}
@@ -422,7 +428,7 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 		return u, nil
 	}
 
-	errMe := func(ctx context.Context, u *okta.User) (*okta.User, error) {
+	errMe := func(_ context.Context, _ *okta.User) (*okta.User, error) {
 		return nil, errors.New("boomsauce") //nolint:goerr113
 	}
 
@@ -489,6 +495,7 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 					resp:  &okta.Response{},
 				},
 			}
+
 			got, err := c.ListUsersWithModifier(context.TODO(), tt.args.f, tt.args.q)
 			if tt.wantErr {
 				assert.Error(t, err)

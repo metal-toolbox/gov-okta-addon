@@ -35,7 +35,7 @@ group members that do not exist in the Okta group will be removed from the group
 must exist in Governor. It is strongly recommended that you use the dry-run flag first to see what
 group memberships would be created/deleted in Governor.
 `,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		return syncGroupMembersToGovernor(cmd.Context())
 	},
 }

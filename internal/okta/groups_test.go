@@ -137,6 +137,7 @@ func TestClient_CreateGroup(t *testing.T) {
 				},
 				logger: zap.NewNop(),
 			}
+
 			got, err := c.CreateGroup(context.TODO(), tt.args.name, tt.args.desc, tt.args.profile)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -193,6 +194,7 @@ func TestClient_UpdateGroup(t *testing.T) {
 				},
 				logger: zap.NewNop(),
 			}
+
 			_, err := c.UpdateGroup(context.TODO(), tt.args.id, tt.args.name, tt.args.desc, tt.args.profile)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -231,6 +233,7 @@ func TestClient_DeleteGroup(t *testing.T) {
 				},
 				logger: zap.NewNop(),
 			}
+
 			err := c.DeleteGroup(context.TODO(), tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -294,6 +297,7 @@ func TestClient_GetGroupByGovernorID(t *testing.T) {
 				},
 				logger: zap.NewNop(),
 			}
+
 			got, err := c.GetGroupByGovernorID(context.TODO(), tt.id)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -432,6 +436,7 @@ func TestClient_ListGroupMembership(t *testing.T) {
 				},
 				logger: zap.NewNop(),
 			}
+
 			got, err := c.ListGroupMembership(context.TODO(), tt.gid)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -445,7 +450,7 @@ func TestClient_ListGroupMembership(t *testing.T) {
 }
 
 func TestClient_ListGroupsWithModifier(t *testing.T) {
-	skipGroup := func(ctx context.Context, g *okta.Group) (*okta.Group, error) {
+	skipGroup := func(_ context.Context, g *okta.Group) (*okta.Group, error) {
 		if g.Id == "skipMe" {
 			return nil, nil
 		}
@@ -453,7 +458,7 @@ func TestClient_ListGroupsWithModifier(t *testing.T) {
 		return g, nil
 	}
 
-	errMe := func(ctx context.Context, g *okta.Group) (*okta.Group, error) {
+	errMe := func(_ context.Context, _ *okta.Group) (*okta.Group, error) {
 		return nil, errors.New("boomsauce") //nolint:goerr113
 	}
 
@@ -520,6 +525,7 @@ func TestClient_ListGroupsWithModifier(t *testing.T) {
 					resp:   &okta.Response{},
 				},
 			}
+
 			got, err := c.ListGroupsWithModifier(context.TODO(), tt.args.f, tt.args.q)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -649,6 +655,7 @@ func TestClient_listAssignedApplicationsForGroup(t *testing.T) {
 				},
 				logger: zap.NewNop(),
 			}
+
 			got, err := c.listAssignedApplicationsForGroup(context.TODO(), tt.groupID, tt.qp)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -748,6 +755,7 @@ func TestClient_GroupGithubCloudApplications(t *testing.T) {
 				},
 				logger: zap.NewNop(),
 			}
+
 			got, err := c.GroupGithubCloudApplications(context.TODO(), tt.groupID)
 			if tt.wantErr {
 				assert.Error(t, err)

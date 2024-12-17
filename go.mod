@@ -5,8 +5,8 @@ go 1.23
 toolchain go1.23.4
 
 require (
-	github.com/gin-contrib/cors v1.4.0
-	github.com/gin-contrib/zap v0.2.0
+	github.com/gin-contrib/cors v1.7.2
+	github.com/gin-contrib/zap v1.1.4
 	github.com/gin-gonic/gin v1.10.0
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/gosimple/slug v1.13.1
@@ -27,7 +27,7 @@ require (
 	go.opentelemetry.io/otel v1.33.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.33.0
 	go.opentelemetry.io/otel/sdk v1.33.0
-	go.uber.org/zap v1.25.0
+	go.uber.org/zap v1.27.0
 	golang.org/x/oauth2 v0.24.0
 )
 

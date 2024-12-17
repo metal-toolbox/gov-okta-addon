@@ -125,11 +125,13 @@ func TestClient_GetLogsBounded(t *testing.T) {
 					maxIter:   10,
 				},
 			}
+
 			got, err := c.GetLogsBounded(context.TODO(), tt.since, time.Now().UTC(), tt.qp)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
+
 			assert.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})

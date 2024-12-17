@@ -2,11 +2,10 @@ package cmd
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"net/url"
 	"os"
 	"os/signal"
-	"strings"
 	"time"
 
 	"github.com/metal-toolbox/addonx/natslock"
@@ -32,7 +31,7 @@ const (
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "starts the gov-okta-addon service",
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		return serve(cmd.Context(), viper.GetViper())
 	},
 }
@@ -278,43 +277,39 @@ func newNATSLocker(nc *nats.Conn) (*natslock.Locker, error) {
 
 // validateMandatoryFlags collects the mandatory flag validation
 func validateMandatoryFlags() error {
-	errs := []string{}
+	errs := []error{}
 
 	if viper.GetString("nats.url") == "" {
-		errs = append(errs, ErrNATSURLRequired.Error())
+		errs = append(errs, ErrNATSURLRequired)
 	}
 
 	if viper.GetString("okta.url") == "" {
-		errs = append(errs, ErrOktaURLRequired.Error())
+		errs = append(errs, ErrOktaURLRequired)
 	}
 
 	if viper.GetString("okta.token") == "" {
-		errs = append(errs, ErrOktaTokenRequired.Error())
+		errs = append(errs, ErrOktaTokenRequired)
 	}
 
 	if viper.GetString("governor.url") == "" {
-		errs = append(errs, ErrGovernorURLRequired.Error())
+		errs = append(errs, ErrGovernorURLRequired)
 	}
 
 	if viper.GetString("governor.client-id") == "" {
-		errs = append(errs, ErrGovernorClientIDRequired.Error())
+		errs = append(errs, ErrGovernorClientIDRequired)
 	}
 
 	if viper.GetString("governor.client-secret") == "" {
-		errs = append(errs, ErrGovernorClientSecretRequired.Error())
+		errs = append(errs, ErrGovernorClientSecretRequired)
 	}
 
 	if viper.GetString("governor.token-url") == "" {
-		errs = append(errs, ErrGovernorClientTokenURLRequired.Error())
+		errs = append(errs, ErrGovernorClientTokenURLRequired)
 	}
 
 	if viper.GetString("governor.audience") == "" {
-		errs = append(errs, ErrGovernorClientAudienceRequired.Error())
+		errs = append(errs, ErrGovernorClientAudienceRequired)
 	}
 
-	if len(errs) == 0 {
-		return nil
-	}
-
-	return fmt.Errorf(strings.Join(errs, "\n")) //nolint:goerr113
+	return errors.Join(errs...)
 }

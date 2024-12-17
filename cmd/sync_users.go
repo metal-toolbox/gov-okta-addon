@@ -24,7 +24,7 @@ var syncUsersCmd = &cobra.Command{
 Users that exist in Okta but not in Governor, will be created. Users that exist in Governor but not in Okta, will be deleted.
 This command is intended for doing an initial load of users. It is strongly recommended that you use the dry-run flag first 
 to see what users would be created/deleted in Governor.`,
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, _ []string) error {
 		return syncUsersToGovernor(cmd.Context())
 	},
 }

@@ -105,6 +105,7 @@ func TestClient_AssignGroupToApplication(t *testing.T) {
 					err: tt.err,
 				},
 			}
+
 			err := c.AssignGroupToApplication(context.TODO(), tt.appID, tt.groupID)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -156,6 +157,7 @@ func TestClient_RemoveApplicationGroupAssignment(t *testing.T) {
 					err: tt.err,
 				},
 			}
+
 			err := c.RemoveApplicationGroupAssignment(context.TODO(), tt.appID, tt.groupID)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -214,6 +216,7 @@ func TestClient_ListGroupApplicationAssignment(t *testing.T) {
 					resp:                tt.resp,
 				},
 			}
+
 			got, err := c.ListGroupApplicationAssignment(context.TODO(), tt.appID)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -273,6 +276,7 @@ func TestClient_listApplications(t *testing.T) {
 					apps: tt.apps,
 				},
 			}
+
 			got, err := c.listApplications(context.TODO(), tt.qp)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -382,6 +386,7 @@ func TestClient_GithubCloudApplications(t *testing.T) {
 					apps: tt.apps,
 				},
 			}
+
 			got, err := c.GithubCloudApplications(context.TODO())
 			if tt.wantErr {
 				assert.Error(t, err)

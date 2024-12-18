@@ -58,7 +58,7 @@ steps:
       - equinixmetal-buildkite/cosign#main:
           image: "${IMAGE_REPO}:${IMAGE_TAG}"
           keyless: true
-      - equinixmetal-buildkite/trivy#v1.18.3:
+      - equinixmetal-buildkite/trivy#v1.20.0:
           severity: CRITICAL,HIGH
           ignore-unfixed: true
           security-checks: config,secret,vuln

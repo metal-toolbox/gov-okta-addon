@@ -15,7 +15,8 @@ require (
 	github.com/metal-toolbox/governor-api v0.2.4
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nats-io/nats.go v1.38.0
-	github.com/okta/okta-sdk-golang/v2 v2.19.0
+	github.com/okta/okta-sdk-golang/v2 v2.20.0
+	github.com/okta/okta-sdk-golang/v5 v5.0.4
 	github.com/prometheus/client_golang v1.20.5
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
@@ -48,6 +49,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
 	github.com/gin-contrib/sse v0.1.0 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect

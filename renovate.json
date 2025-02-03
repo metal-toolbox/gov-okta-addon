@@ -1,6 +1,6 @@
 {
   "extends": [
-    "config:base"
+    "config:recommended"
   ],
   "packageRules": [
     {
@@ -20,5 +20,8 @@
         "github.com/XSAM/otelsql"
       ]
     }
+  ],
+  "postUpdateOptions": [
+    "gomodTidy"
   ]
 }

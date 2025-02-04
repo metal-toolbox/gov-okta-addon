@@ -485,8 +485,8 @@ github.com/metal-toolbox/addonx v0.1.1 h1:Co0VpY/OIrNZlzwpz7KSbalnqhpef4tZU6GANt
 github.com/metal-toolbox/addonx v0.1.1/go.mod h1:9QoCAjufpj9jqgh/Ja1lBnAaZEKxSIPqcXxxeMZrgN4=
 github.com/metal-toolbox/auditevent v0.8.0 h1:uKEwwYnxAEgvFNpleZzIblLymCDK44WwpsKi36mznVQ=
 github.com/metal-toolbox/auditevent v0.8.0/go.mod h1:yladFT4ayNx+4wrNczvUjYFsg7Qvq+G8YBIDvjeeiLw=
-github.com/metal-toolbox/governor-api v0.2.4 h1:TPIdBsLRZ8e2K9AYf8mYpw2SnUjSVOnN5FDjRVI2oqc=
-github.com/metal-toolbox/governor-api v0.2.4/go.mod h1:E1OfyyDEsLkTY3e9fExtmDcGbgmPBALVztpim9Fprt8=
+github.com/metal-toolbox/governor-api v0.2.6 h1:Iru5QwRy5TmOJCKa+qECwmeNie3S5dmwTkhCr9Ispcw=
+github.com/metal-toolbox/governor-api v0.2.6/go.mod h1:n+dJSPr3wwCTXll8NLvr8/Jm3RlD8IteP1/DHfE+tis=
 github.com/mfridman/interpolate v0.0.2 h1:pnuTK7MQIxxFz1Gr+rjSIx9u7qVjf5VOoM/u6BbAxPY=
 github.com/mfridman/interpolate v0.0.2/go.mod h1:p+7uk6oE07mpE/Ik1b8EckO0O4ZXiGAfshKBWLUM9Xg=
 github.com/microsoft/go-mssqldb v0.17.0/go.mod h1:OkoNGhGEs8EZqchVTtochlXruEhEOaO4S0d2sB5aeGQ=
@@ -686,8 +686,8 @@ go.etcd.io/etcd/api/v3 v3.5.4/go.mod h1:5GB2vv4A4AOn3yk7MftYGHkUfGtDHnEraIjym4dY
 go.etcd.io/etcd/client/pkg/v3 v3.5.4/go.mod h1:IJHfcCEKxYu1Os13ZdwCwIUTUVGYTSAM3YSwc9/Ac1g=
 go.etcd.io/etcd/client/v2 v2.305.4/go.mod h1:Ud+VUwIi9/uQHOMA+4ekToJ12lTxlv0zB/+DHwTGEbU=
 go.etcd.io/etcd/client/v3 v3.5.4/go.mod h1:ZaRkVgBZC+L+dLCjTcF1hRXpgZXQPOvnA/Ak/gq3kiY=
-go.hollow.sh/toolbox v0.6.2 h1:g0qKvo7rVgZ05dh7qxbAymPixumCd4MxVbq9gs90/3c=
-go.hollow.sh/toolbox v0.6.2/go.mod h1:nl+5RDDyYY/+wukOUzHHX2mOyWKRjlTOXUcGxny+tns=
+go.hollow.sh/toolbox v0.6.3 h1:IJOjiGdiwWwXJ2QfOkJuSucSIqrdXJbUBFst3u6T6z4=
+go.hollow.sh/toolbox v0.6.3/go.mod h1:nl+5RDDyYY/+wukOUzHHX2mOyWKRjlTOXUcGxny+tns=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
 go.opencensus.io v0.22.0/go.mod h1:+kGneAE2xo2IficOXnaByMWTGM9T73dGwxeWcUqIpI8=
 go.opencensus.io v0.22.2/go.mod h1:yxeiOL68Rb0Xd1ddK5vPZ/oVn4vY4Ynel7k9FzqtOIw=

@@ -12,7 +12,7 @@ require (
 	github.com/gosimple/slug v1.15.0
 	github.com/metal-toolbox/addonx v0.1.1
 	github.com/metal-toolbox/auditevent v0.8.0
-	github.com/metal-toolbox/governor-api v0.2.4
+	github.com/metal-toolbox/governor-api v0.2.6
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nats-io/nats.go v1.38.0
 	github.com/okta/okta-sdk-golang/v2 v2.19.0
@@ -86,6 +86,7 @@ require (
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/patrickmn/go-cache v0.0.0-20180815053127-5633e0862627 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.55.0 // indirect
@@ -104,7 +105,7 @@ require (
 	github.com/volatiletech/randomize v0.0.1 // indirect
 	github.com/volatiletech/sqlboiler/v4 v4.16.2 // indirect
 	github.com/volatiletech/strmangle v0.0.6 // indirect
-	go.hollow.sh/toolbox v0.6.2 // indirect
+	go.hollow.sh/toolbox v0.6.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.34.0 // indirect
 	go.opentelemetry.io/otel/metric v1.34.0 // indirect

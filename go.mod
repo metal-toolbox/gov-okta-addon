@@ -14,7 +14,7 @@ require (
 	github.com/metal-toolbox/auditevent v0.8.0
 	github.com/metal-toolbox/governor-api v0.3.0
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/nats-io/nats.go v1.38.0
+	github.com/nats-io/nats.go v1.39.0
 	github.com/okta/okta-sdk-golang/v2 v2.19.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/spf13/cobra v1.8.1

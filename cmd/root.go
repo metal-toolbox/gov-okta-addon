@@ -11,7 +11,10 @@ import (
 	"go.uber.org/zap"
 )
 
-const appName = "gov-okta-addon"
+const (
+	appName                         = "gov-okta-addon"
+	defaultIAMRuntimeTimeoutSeconds = 15
+)
 
 var (
 	cfgFile string

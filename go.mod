@@ -1,8 +1,8 @@
 module github.com/metal-toolbox/gov-okta-addon
 
-go 1.23
+go 1.24
 
-toolchain go1.23.6
+toolchain go1.24.1
 
 require (
 	github.com/gin-contrib/cors v1.7.3
@@ -11,15 +11,15 @@ require (
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/gosimple/slug v1.15.0
 	github.com/metal-toolbox/addonx v0.1.1
-	github.com/metal-toolbox/auditevent v0.8.0
+	github.com/metal-toolbox/auditevent v0.9.0
 	github.com/metal-toolbox/governor-api v0.3.0
 	github.com/metal-toolbox/iam-runtime v0.4.1
 	github.com/metal-toolbox/iam-runtime-contrib v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nats-io/nats.go v1.39.0
 	github.com/okta/okta-sdk-golang/v2 v2.19.0
-	github.com/prometheus/client_golang v1.20.5
-	github.com/spf13/cobra v1.8.1
+	github.com/prometheus/client_golang v1.21.1
+	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.6
 	github.com/spf13/viper v1.19.0
 	github.com/stretchr/testify v1.10.0
@@ -74,7 +74,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
-	github.com/klauspost/compress v1.17.9 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.9 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
@@ -91,7 +91,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
-	github.com/prometheus/common v0.55.0 // indirect
+	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect

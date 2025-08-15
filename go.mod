@@ -10,7 +10,7 @@ require (
 	github.com/gosimple/slug v1.15.0
 	github.com/metal-toolbox/addonx v0.1.1
 	github.com/metal-toolbox/auditevent v0.9.0
-	github.com/metal-toolbox/governor-api v0.5.0
+	github.com/metal-toolbox/governor-api v0.9.1
 	github.com/metal-toolbox/iam-runtime v0.4.1
 	github.com/metal-toolbox/iam-runtime-contrib v1.0.0
 	github.com/mitchellh/go-homedir v1.1.0

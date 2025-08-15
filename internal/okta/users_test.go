@@ -94,7 +94,7 @@ func TestClient_ClearUserSessions(t *testing.T) {
 		{
 			name:    "okta error",
 			id:      "user101",
-			err:     errors.New("boomsauce"), //nolint:goerr113
+			err:     errors.New("boomsauce"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -133,7 +133,7 @@ func TestClient_DeactivateUser(t *testing.T) {
 		{
 			name:    "okta error",
 			id:      "user101",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -189,7 +189,7 @@ func TestClient_DeleteUser(t *testing.T) {
 			users: []*okta.User{
 				{Id: "11111111"},
 			},
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -234,7 +234,7 @@ func TestClient_SuspendUser(t *testing.T) {
 		{
 			name:    "okta error",
 			id:      "user101",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -273,7 +273,7 @@ func TestClient_UnsuspendUser(t *testing.T) {
 		{
 			name:    "okta error",
 			id:      "user101",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -321,7 +321,7 @@ func TestClient_GetUserIDByEmail(t *testing.T) {
 				{Id: "11111111"},
 			},
 			email:   "foo@example.com",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 		{
@@ -390,7 +390,7 @@ func TestClient_ListUsers(t *testing.T) {
 				{Id: "user1"},
 				{Id: "user1"},
 			},
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -429,7 +429,7 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 	}
 
 	errMe := func(_ context.Context, _ *okta.User) (*okta.User, error) {
-		return nil, errors.New("boomsauce") //nolint:goerr113
+		return nil, errors.New("boomsauce") //nolint:err113
 	}
 
 	type args struct {
@@ -467,7 +467,7 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 				{Id: "heyThere"},
 				{Id: "skipMe"},
 			},
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 		{

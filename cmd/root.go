@@ -18,8 +18,8 @@ const (
 )
 
 var (
-	cfgFile string
-	logger  *zap.SugaredLogger
+	cfgFile   string
+	logger    *zap.SugaredLogger
 	appConfig configs.Configs
 )
 

@@ -1,8 +1,6 @@
 module github.com/metal-toolbox/gov-okta-addon
 
-go 1.24.4
-
-toolchain go1.24.6
+go 1.24.6
 
 require (
 	github.com/aarondl/null/v8 v8.1.3

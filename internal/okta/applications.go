@@ -62,11 +62,7 @@ func (c *Client) listApplications(ctx context.Context, qp *query.Params) ([]okta
 	list := make([]okta.App, len(apps))
 	copy(list, apps)
 
-	for {
-		if !resp.HasNextPage() {
-			break
-		}
-
+	for resp.HasNextPage() {
 		resp, err = resp.Next(ctx, &apps)
 		if err != nil {
 			return nil, err
@@ -134,11 +130,7 @@ func (c *Client) ListGroupApplicationAssignment(ctx context.Context, appID strin
 		groups = append(groups, a.Id)
 	}
 
-	for {
-		if !resp.HasNextPage() {
-			break
-		}
-
+	for resp.HasNextPage() {
 		resp, err = resp.Next(ctx, &assignments)
 		if err != nil {
 			return nil, err

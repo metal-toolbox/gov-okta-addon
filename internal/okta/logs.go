@@ -29,11 +29,7 @@ func (c *Client) GetLogsBounded(ctx context.Context, since, until time.Time, qp 
 
 	evtsResp := events
 
-	for {
-		if !resp.HasNextPage() {
-			break
-		}
-
+	for resp.HasNextPage() {
 		nextPage := []*okta.LogEvent{}
 
 		resp, err = resp.Next(ctx, &nextPage)

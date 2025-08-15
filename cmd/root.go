@@ -4,6 +4,7 @@ package cmd
 import (
 	"strings"
 
+	"github.com/metal-toolbox/governor-api/pkg/configs"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -19,6 +20,7 @@ const (
 var (
 	cfgFile string
 	logger  *zap.SugaredLogger
+	appConfig configs.Configs
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -73,6 +75,10 @@ func initConfig() {
 		logger.Infow("using config file",
 			"file", viper.ConfigFileUsed(),
 		)
+	}
+
+	if err := viper.Unmarshal(&appConfig); err != nil {
+		logger.Fatalw("failed to unmarshal config", "error", err)
 	}
 }
 

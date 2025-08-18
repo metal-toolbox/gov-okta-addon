@@ -92,7 +92,7 @@ func TestClient_AssignGroupToApplication(t *testing.T) {
 			name:    "error",
 			appID:   "14270ca5-ea9f-43b7-a560-f2014399bddc",
 			groupID: "39712500-37a8-4102-bce9-432cbe2c28d2",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -144,7 +144,7 @@ func TestClient_RemoveApplicationGroupAssignment(t *testing.T) {
 			name:    "error",
 			appID:   "14270ca5-ea9f-43b7-a560-f2014399bddc",
 			groupID: "39712500-37a8-4102-bce9-432cbe2c28d2",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -200,7 +200,7 @@ func TestClient_ListGroupApplicationAssignment(t *testing.T) {
 		{
 			name:    "api error",
 			appID:   "47819d20-70e5-4ab9-b008-898be42adde7",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -261,7 +261,7 @@ func TestClient_listApplications(t *testing.T) {
 		},
 		{
 			name:    "api error",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -371,7 +371,7 @@ func TestClient_GithubCloudApplications(t *testing.T) {
 		},
 		{
 			name:    "error",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}

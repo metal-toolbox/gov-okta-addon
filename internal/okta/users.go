@@ -126,11 +126,7 @@ func (c *Client) ListUsers(ctx context.Context) ([]*okta.User, error) {
 
 	userResp := users
 
-	for {
-		if !resp.HasNextPage() {
-			break
-		}
-
+	for resp.HasNextPage() {
 		nextPage := []*okta.User{}
 
 		resp, err = resp.Next(ctx, &nextPage)
@@ -171,11 +167,7 @@ func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, 
 		}
 	}
 
-	for {
-		if !resp.HasNextPage() {
-			break
-		}
-
+	for resp.HasNextPage() {
 		nextPage := []*okta.User{}
 
 		resp, err = resp.Next(ctx, &nextPage)
@@ -241,7 +233,7 @@ func EmailFromUserProfile(u *okta.User) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("email not found for user %s", u.Id) //nolint:goerr113
+	return "", fmt.Errorf("email not found for user %s", u.Id) //nolint:err113
 }
 
 // FirstNameFromUserProfile parses the firstName from the okta user profile
@@ -257,7 +249,7 @@ func FirstNameFromUserProfile(u *okta.User) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("firstName not found for user %s", u.Id) //nolint:goerr113
+	return "", fmt.Errorf("firstName not found for user %s", u.Id) //nolint:err113
 }
 
 // LastNameFromUserProfile parses the lastName from the okta user profile
@@ -273,7 +265,7 @@ func LastNameFromUserProfile(u *okta.User) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("lastName not found for user %s", u.Id) //nolint:goerr113
+	return "", fmt.Errorf("lastName not found for user %s", u.Id) //nolint:err113
 }
 
 // UserDetailsFromOktaUser parses the relevant user details from the okta user object
@@ -315,15 +307,15 @@ func UserDetailsFromOktaUser(u *okta.User) (*UserDetails, error) {
 	}
 
 	if firstName == "" {
-		return nil, fmt.Errorf("firstName not found for user %s", u.Id) //nolint:goerr113
+		return nil, fmt.Errorf("firstName not found for user %s", u.Id) //nolint:err113
 	}
 
 	if lastName == "" {
-		return nil, fmt.Errorf("lastName not found for user %s", u.Id) //nolint:goerr113
+		return nil, fmt.Errorf("lastName not found for user %s", u.Id) //nolint:err113
 	}
 
 	if d.Email == "" {
-		return nil, fmt.Errorf("email not found for user %s", u.Id) //nolint:goerr113
+		return nil, fmt.Errorf("email not found for user %s", u.Id) //nolint:err113
 	}
 
 	d.Name = fmt.Sprintf("%s %s", firstName, lastName)

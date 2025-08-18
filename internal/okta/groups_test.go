@@ -122,7 +122,7 @@ func TestClient_CreateGroup(t *testing.T) {
 				desc:    "my test group",
 				profile: map[string]interface{}{"governor_id": "abc123"},
 			},
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -181,7 +181,7 @@ func TestClient_UpdateGroup(t *testing.T) {
 				desc:    "my test group",
 				profile: map[string]interface{}{"governor_id": "abc123"},
 			},
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -220,7 +220,7 @@ func TestClient_DeleteGroup(t *testing.T) {
 		{
 			name:    "okta error",
 			id:      "11111111",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -268,7 +268,7 @@ func TestClient_GetGroupByGovernorID(t *testing.T) {
 				{Id: "11111111"},
 			},
 			id:      "2222222",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 		{
@@ -327,7 +327,7 @@ func TestClient_AddGroupUser(t *testing.T) {
 			name:    "okta error",
 			groupID: "11111111",
 			userID:  "22222222",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -370,7 +370,7 @@ func TestClient_RemoveGroupUser(t *testing.T) {
 			name:    "okta error",
 			groupID: "11111111",
 			userID:  "22222222",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -421,7 +421,7 @@ func TestClient_ListGroupMembership(t *testing.T) {
 		{
 			name:    "error",
 			gid:     "group-02",
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 	}
@@ -459,7 +459,7 @@ func TestClient_ListGroupsWithModifier(t *testing.T) {
 	}
 
 	errMe := func(_ context.Context, _ *okta.Group) (*okta.Group, error) {
-		return nil, errors.New("boomsauce") //nolint:goerr113
+		return nil, errors.New("boomsauce") //nolint:err113
 	}
 
 	type args struct {
@@ -497,7 +497,7 @@ func TestClient_ListGroupsWithModifier(t *testing.T) {
 				{Id: "heyThere"},
 				{Id: "skipMe"},
 			},
-			err:     errors.New("boom"), //nolint:goerr113
+			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 		{
@@ -636,7 +636,7 @@ func TestClient_listAssignedApplicationsForGroup(t *testing.T) {
 		{
 			name:    "list error",
 			groupID: "873121ec-646f-4e70-84ad-fd56db401631",
-			err:     errors.New("boomsauce"), //nolint:goerr113
+			err:     errors.New("boomsauce"), //nolint:err113
 			wantErr: true,
 		},
 		{
@@ -736,7 +736,7 @@ func TestClient_GroupGithubCloudApplications(t *testing.T) {
 		{
 			name:    "list error",
 			groupID: "873121ec-646f-4e70-84ad-fd56db401631",
-			err:     errors.New("boomsauce"), //nolint:goerr113
+			err:     errors.New("boomsauce"), //nolint:err113
 			wantErr: true,
 		},
 		{

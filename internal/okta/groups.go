@@ -138,11 +138,7 @@ func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]*okta.U
 
 	usersResp := users
 
-	for {
-		if !resp.HasNextPage() {
-			break
-		}
-
+	for resp.HasNextPage() {
 		resp, err = resp.Next(ctx, &users)
 		if err != nil {
 			return nil, err
@@ -180,11 +176,7 @@ func (c *Client) ListGroupsWithModifier(ctx context.Context, f GroupModifierFunc
 		}
 	}
 
-	for {
-		if !resp.HasNextPage() {
-			break
-		}
-
+	for resp.HasNextPage() {
 		nextPage := []*okta.Group{}
 
 		resp, err = resp.Next(ctx, &nextPage)
@@ -298,11 +290,7 @@ func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID s
 	list := make([]okta.App, len(apps))
 	copy(list, apps)
 
-	for {
-		if !resp.HasNextPage() {
-			break
-		}
-
+	for resp.HasNextPage() {
 		resp, err = resp.Next(ctx, &apps)
 		if err != nil {
 			return nil, err

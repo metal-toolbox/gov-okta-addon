@@ -127,6 +127,7 @@ func (s *Server) Run(ctx context.Context) error {
 	<-ctx.Done()
 
 	ctxShutDown, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+
 	defer func() {
 		cancel()
 	}()

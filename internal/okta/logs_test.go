@@ -103,7 +103,7 @@ func TestClient_GetLogsBounded(t *testing.T) {
 				},
 			},
 		},
-		//nolint:gofumpt,govet,goerr113
+		//nolint:gofumpt,govet,err113
 		{
 			name:      "error",
 			logEvents: []*okta.LogEvent{},
@@ -177,7 +177,7 @@ func TestClient_pollLogs(t *testing.T) {
 		logEventIface: &mockLogEventsClient{
 			t:         t,
 			logEvents: testEvents,
-			err:       errors.New("boomsauce"), //nolint:goerr113
+			err:       errors.New("boomsauce"), //nolint:err113
 			maxIter:   1,
 		},
 	}

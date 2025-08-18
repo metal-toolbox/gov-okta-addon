@@ -269,7 +269,7 @@ func governorUserFromOktaUser(ctx context.Context, gc *governor.Client, oktaUser
 		case count == 0:
 			return nil, ErrUserNotFound
 		case count > 1:
-			return nil, fmt.Errorf("unexpected user count: %d expected 1", count) //nolint:goerr113
+			return nil, fmt.Errorf("unexpected user count: %d expected 1", count) //nolint:err113
 		}
 
 		userCache[email] = u[0]

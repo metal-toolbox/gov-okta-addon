@@ -321,5 +321,5 @@ func userType(u *okt.User) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("userType not found for user %s", u.Id) //nolint:goerr113
+	return "", fmt.Errorf("userType not found for user %s", u.Id) //nolint:err113
 }

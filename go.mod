@@ -16,8 +16,8 @@ require (
 	github.com/nats-io/nats.go v1.44.0
 	github.com/okta/okta-sdk-golang/v2 v2.20.0
 	github.com/prometheus/client_golang v1.23.0
-	github.com/spf13/cobra v1.9.1
-	github.com/spf13/pflag v1.0.7
+	github.com/spf13/cobra v1.10.2
+	github.com/spf13/pflag v1.0.9
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
 	github.com/zsais/go-gin-prometheus v1.0.2

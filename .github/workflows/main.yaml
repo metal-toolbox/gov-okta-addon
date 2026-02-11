@@ -1,0 +1,85 @@
+on:
+  workflow_dispatch:
+  push:
+    
+env:
+  APP_NAME: gov-okta-addon
+  IMAGE_REPO: ghcr.io/metal-toolbox/gov-okta-addon
+
+jobs:
+  setup:
+    name: ⚙️ setup
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ github.run_number }}-${{ steps.shortsha.outputs.short-sha }}
+      image_repo: ${{ env.IMAGE_REPO }}
+      app_name: ${{ env.APP_NAME }}
+    steps:
+      - id: shortsha
+        uses: metal-toolbox/ci-toolbox/actions/short-sha@v0.0.1
+
+  lint: 
+    name: 📎 lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: metal-toolbox/ci-toolbox/actions/golangci-lint@v0.0.1
+
+  test:
+    name: 🧪 test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: metal-toolbox/ci-toolbox/actions/setup-go@v0.0.1
+      - name: tests
+        run: go test -cover -race ./...
+
+  build-go:
+    name: 🏗️ build go
+    runs-on: ubuntu-latest
+    env:
+      CGO_ENABLED: 0
+      GOOS: linux
+    steps:
+      - uses: metal-toolbox/ci-toolbox/actions/setup-go@v0.0.1
+      - name: build
+        run: go build -buildvcs=false -mod=mod -a -o bin/${{ env.APP_NAME }}
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: ${{ env.APP_NAME }}-bin
+          path: bin/${{ env.APP_NAME }}
+    outputs:
+      artifact-name: ${{ env.APP_NAME }}-bin
+
+  build-docker:
+    name: 🐳 build and publish docker image
+    needs:
+      - setup
+      - build-go
+      - lint
+      - test
+    permissions:
+      contents: write
+      id-token: write
+      packages: write
+    uses: metal-toolbox/ci-toolbox/.github/workflows/build-docker.yaml@v0.0.1
+    with:
+      artifact-name: ${{ needs.build-go.outputs.artifact-name }}
+      artifact-path: bin
+      user: ${{ github.actor }}
+      image-repo: ${{ needs.setup.outputs.image_repo }}
+      image-tag: ${{ needs.setup.outputs.image_tag }}
+      build-args: |
+        NAME=${{ needs.setup.outputs.app_name }}
+    secrets: inherit
+
+  trivy-scan:
+    name: 🔍 scan image
+    needs:
+      - build-docker
+      - setup
+    permissions:
+      contents: read
+      security-events: write
+    uses: metal-toolbox/ci-toolbox/.github/workflows/trivy.yaml@v0.0.1
+    with:
+      scan-type: image
+      image-ref: ${{ needs.setup.outputs.image_repo }}:${{ needs.setup.outputs.image_tag }}

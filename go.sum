@@ -232,8 +232,8 @@ github.com/metal-toolbox/addonx v0.1.1 h1:Co0VpY/OIrNZlzwpz7KSbalnqhpef4tZU6GANt
 github.com/metal-toolbox/addonx v0.1.1/go.mod h1:9QoCAjufpj9jqgh/Ja1lBnAaZEKxSIPqcXxxeMZrgN4=
 github.com/metal-toolbox/auditevent v0.9.0 h1:LlXP38RsysaTdWTqBdreNcOmUXI/yDK0LycNYuTIjfM=
 github.com/metal-toolbox/auditevent v0.9.0/go.mod h1:2MYKYriPI4EheqlerPwHwx4V4AUaJjmxJg1bQsBwiIU=
-github.com/metal-toolbox/governor-api v0.12.0 h1:fQz0Hw/oVongN+riICXTXmIlelKzfjryd+gHnx3m8c0=
-github.com/metal-toolbox/governor-api v0.12.0/go.mod h1:XuPplkdE9c4yX40yZHnIAk/Uemvs8XIA4lcDVX8uyH8=
+github.com/metal-toolbox/governor-api v0.13.0 h1:PtblsFVs5tjKkAH79BgJfyOevSwJTIpNPG4631syum8=
+github.com/metal-toolbox/governor-api v0.13.0/go.mod h1:F2nIqZaThk589OFGvxiZ7id7fYj9LrfCLM2O2VatfmU=
 github.com/metal-toolbox/iam-runtime v0.4.1 h1:xeUSB9gnc2e4MYhoWXAwBHGJDQFlPEFDcid5PEzR7lA=
 github.com/metal-toolbox/iam-runtime v0.4.1/go.mod h1:tZZ1qJy1Rc/onvsX9TRdEu5IYCa9H5WnFlM1EviFqP8=
 github.com/metal-toolbox/iam-runtime-contrib v1.0.1 h1:y6DxcWCXnRxLqWc3yHzx8gJ0EsAMel49NYs445357d4=

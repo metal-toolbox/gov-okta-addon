@@ -4,6 +4,7 @@ go 1.26.4
 
 require (
 	github.com/aarondl/null/v8 v8.1.3
+	github.com/aarondl/null/v9 v9.0.1
 	github.com/gin-contrib/cors v1.7.7
 	github.com/gin-contrib/zap v1.1.7
 	github.com/gin-gonic/gin v1.12.0

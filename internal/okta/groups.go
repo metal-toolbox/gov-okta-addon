@@ -116,7 +116,14 @@ func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, e
 
 	f := fmt.Sprintf("profile.governor_id eq \"%s\"", id)
 
-	groups, err := collectPages(c.client.GroupAPI.ListGroups(ctx).Search(f).Limit(defaultPageLimit).Execute())
+	groups, err := paginate(func(after string) ([]okta.Group, *okta.APIResponse, error) {
+		req := c.client.GroupAPI.ListGroups(ctx).Search(f).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return "", err
 	}
@@ -160,7 +167,14 @@ func (c *Client) RemoveGroupUser(ctx context.Context, groupID, userID string) er
 func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]*okta.User, error) {
 	c.logger.Debug("listing okta group members", zap.String("okta.group.id", gid))
 
-	users, err := collectPages(c.client.GroupAPI.ListGroupUsers(ctx, gid).Limit(defaultPageLimit).Execute())
+	users, err := paginate(func(after string) ([]okta.User, *okta.APIResponse, error) {
+		req := c.client.GroupAPI.ListGroupUsers(ctx, gid).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -181,12 +195,18 @@ func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]*okta.U
 func (c *Client) ListGroupsWithModifier(ctx context.Context, f GroupModifierFunc, search string) ([]*okta.Group, error) {
 	c.logger.Debug("listing groups with func")
 
-	req := c.client.GroupAPI.ListGroups(ctx).Limit(defaultPageLimit)
-	if search != "" {
-		req = req.Search(search)
-	}
+	groups, err := paginate(func(after string) ([]okta.Group, *okta.APIResponse, error) {
+		req := c.client.GroupAPI.ListGroups(ctx).Limit(defaultPageLimit)
+		if search != "" {
+			req = req.Search(search)
+		}
 
-	groups, err := collectPages(req.Execute())
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +302,14 @@ func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID s
 
 	c.logger.Debug("listing okta applications assigned to group", zap.Any("okta.group.id", groupID))
 
-	apps, err := collectPages(c.client.GroupAPI.ListAssignedApplicationsForGroup(ctx, groupID).Limit(defaultPageLimit).Execute())
+	apps, err := paginate(func(after string) ([]okta.ListApplications200ResponseInner, *okta.APIResponse, error) {
+		req := c.client.GroupAPI.ListAssignedApplicationsForGroup(ctx, groupID).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}

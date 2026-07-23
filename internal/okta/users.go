@@ -124,7 +124,14 @@ func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, er
 
 	f := fmt.Sprintf("profile.email eq \"%s\"", email)
 
-	users, err := collectPages(c.client.UserAPI.ListUsers(ctx).Search(f).Limit(defaultPageLimit).Execute())
+	users, err := paginate(func(after string) ([]okta.User, *okta.APIResponse, error) {
+		req := c.client.UserAPI.ListUsers(ctx).Search(f).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return "", err
 	}
@@ -144,7 +151,14 @@ func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, er
 func (c *Client) ListUsers(ctx context.Context) ([]*okta.User, error) {
 	c.logger.Debug("listing users")
 
-	users, err := collectPages(c.client.UserAPI.ListUsers(ctx).Limit(defaultPageLimit).Execute())
+	users, err := paginate(func(after string) ([]okta.User, *okta.APIResponse, error) {
+		req := c.client.UserAPI.ListUsers(ctx).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -164,12 +178,18 @@ func (c *Client) ListUsers(ctx context.Context) ([]*okta.User, error) {
 func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, search string) ([]*okta.User, error) {
 	c.logger.Debug("listing users with func")
 
-	req := c.client.UserAPI.ListUsers(ctx).Limit(defaultPageLimit)
-	if search != "" {
-		req = req.Search(search)
-	}
+	users, err := paginate(func(after string) ([]okta.User, *okta.APIResponse, error) {
+		req := c.client.UserAPI.ListUsers(ctx).Limit(defaultPageLimit)
+		if search != "" {
+			req = req.Search(search)
+		}
 
-	users, err := collectPages(req.Execute())
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}

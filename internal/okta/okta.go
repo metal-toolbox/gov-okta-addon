@@ -72,26 +72,28 @@ func NewClient(opts ...Option) (*Client, error) {
 	return &client, nil
 }
 
-// collectPages accumulates all pages of a paginated okta list endpoint.  It is meant to be
-// called directly with the result of an Execute() call, e.g.
-//
-//	collectPages(c.client.GroupAPI.ListGroups(ctx).Execute())
-func collectPages[T any](first []T, resp *okta.APIResponse, err error) ([]T, error) {
-	if err != nil {
-		return nil, err
-	}
+// paginate accumulates all pages of a paginated okta list endpoint.  fetch is invoked once
+// per page with the "after" cursor for that page ("" on the first call) and must issue the
+// request with the caller's context, so cancellation/deadlines propagate across pages.  We
+// re-issue the request builder with .After() rather than using the SDK's resp.Next() helper,
+// which reuses the client's background context instead of the caller's.
+func paginate[T any](fetch func(after string) ([]T, *okta.APIResponse, error)) ([]T, error) {
+	var all []T
 
-	all := first
+	after := ""
 
-	for resp.HasNextPage() {
-		var page []T
-
-		resp, err = resp.Next(&page)
+	for {
+		page, resp, err := fetch(after)
 		if err != nil {
 			return nil, err
 		}
 
 		all = append(all, page...)
+
+		after = nextAfter(resp)
+		if after == "" {
+			break
+		}
 	}
 
 	return all, nil

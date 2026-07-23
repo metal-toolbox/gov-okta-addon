@@ -72,12 +72,18 @@ func (c *Client) GithubCloudApplications(ctx context.Context) (map[string]string
 
 // listApplications returns all of the applications matching the given filter
 func (c *Client) listApplications(ctx context.Context, filter string) ([]okta.ListApplications200ResponseInner, error) {
-	req := c.client.ApplicationAPI.ListApplications(ctx).Limit(defaultPageLimit)
-	if filter != "" {
-		req = req.Filter(filter)
-	}
+	apps, err := paginate(func(after string) ([]okta.ListApplications200ResponseInner, *okta.APIResponse, error) {
+		req := c.client.ApplicationAPI.ListApplications(ctx).Limit(defaultPageLimit)
+		if filter != "" {
+			req = req.Filter(filter)
+		}
 
-	apps, err := collectPages(req.Execute())
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -130,7 +136,14 @@ func (c *Client) ListGroupApplicationAssignment(ctx context.Context, appID strin
 
 	c.logger.Debug("listing okta application group assignments", zap.Any("okta.application.id", appID))
 
-	assignments, err := collectPages(c.client.ApplicationGroupsAPI.ListApplicationGroupAssignments(ctx, appID).Limit(defaultPageLimit).Execute())
+	assignments, err := paginate(func(after string) ([]okta.ApplicationGroupAssignment, *okta.APIResponse, error) {
+		req := c.client.ApplicationGroupsAPI.ListApplicationGroupAssignments(ctx, appID).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}

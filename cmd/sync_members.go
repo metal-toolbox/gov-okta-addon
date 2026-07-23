@@ -63,7 +63,7 @@ func syncGroupMembersToGovernor(ctx context.Context) error {
 	gc, err := governor.NewClient(
 		governor.WithLogger(logger),
 		governor.WithURL(viper.GetString("governor.url")),
-		governor.WithClientCredentialConfig(&clientcredentials.Config{
+		governor.WithTokenSource((&clientcredentials.Config{
 			ClientID:       viper.GetString("governor.client-id"),
 			ClientSecret:   viper.GetString("governor.client-secret"),
 			TokenURL:       viper.GetString("governor.token-url"),
@@ -73,7 +73,7 @@ func syncGroupMembersToGovernor(ctx context.Context) error {
 				"read:governor:groups",
 				"read:governor:users",
 			},
-		}),
+		}).TokenSource(ctx)),
 	)
 	if err != nil {
 		return err

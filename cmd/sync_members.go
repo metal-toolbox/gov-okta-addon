@@ -9,7 +9,7 @@ import (
 	"github.com/metal-toolbox/gov-okta-addon/internal/okta"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	governor "github.com/metal-toolbox/governor-api/pkg/client"
-	okt "github.com/okta/okta-sdk-golang/v2/okta"
+	okt "github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -63,7 +63,7 @@ func syncGroupMembersToGovernor(ctx context.Context) error {
 	gc, err := governor.NewClient(
 		governor.WithLogger(logger),
 		governor.WithURL(viper.GetString("governor.url")),
-		governor.WithClientCredentialConfig(&clientcredentials.Config{
+		governor.WithTokenSource((&clientcredentials.Config{
 			ClientID:       viper.GetString("governor.client-id"),
 			ClientSecret:   viper.GetString("governor.client-secret"),
 			TokenURL:       viper.GetString("governor.token-url"),
@@ -73,7 +73,7 @@ func syncGroupMembersToGovernor(ctx context.Context) error {
 				"read:governor:groups",
 				"read:governor:users",
 			},
-		}),
+		}).TokenSource(ctx)),
 	)
 	if err != nil {
 		return err
@@ -177,11 +177,11 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 		if err != nil {
 			if errors.Is(err, ErrUserNotFound) {
 				l.Info("user not found in governor, skipping",
-					zap.String("okta.user.id", member.Id),
+					zap.String("okta.user.id", member.GetId()),
 					zap.Error(err),
 				)
 
-				skipped = append(skipped, member.Id)
+				skipped = append(skipped, member.GetId())
 
 				continue
 			}
@@ -193,7 +193,7 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 			zap.String("goveror.user.id", user.ID),
 			zap.String("goveror.user.email", user.Email),
 			zap.String("goveror.user.external_id", user.ExternalID.String),
-			zap.String("okta.user.id", member.Id),
+			zap.String("okta.user.id", member.GetId()),
 		)
 
 		expectedMembers = append(expectedMembers, user.ID)
@@ -208,7 +208,7 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 				}
 			}
 
-			added = append(added, member.Id)
+			added = append(added, member.GetId())
 		}
 	}
 

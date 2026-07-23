@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v6/okta"
 	"go.uber.org/zap"
 )
 
@@ -17,6 +16,50 @@ const (
 // GroupModifierFunc modifies a an okta group response
 type GroupModifierFunc func(context.Context, *okta.Group) (*okta.Group, error)
 
+// groupProfileFields returns the name, description and additional (custom) attributes from
+// an okta group profile.  The v6 SDK models the group profile as a oneOf union; okta populates
+// the Active Directory variant for API responses, so that variant is checked first.  ok is
+// false when the group or its profile is nil.
+func groupProfileFields(group *okta.Group) (name, description string, additional map[string]interface{}, ok bool) {
+	if group == nil || group.Profile == nil {
+		return "", "", nil, false
+	}
+
+	if p := group.Profile.OktaActiveDirectoryGroupProfile; p != nil {
+		return p.GetName(), p.GetDescription(), p.AdditionalProperties, true
+	}
+
+	if p := group.Profile.OktaUserGroupProfile; p != nil {
+		return p.GetName(), p.GetDescription(), p.AdditionalProperties, true
+	}
+
+	return "", "", nil, true
+}
+
+// GroupProfileName returns the name from an okta group profile
+func GroupProfileName(group *okta.Group) string {
+	name, _, _, _ := groupProfileFields(group)
+	return name
+}
+
+// GroupProfileDescription returns the description from an okta group profile
+func GroupProfileDescription(group *okta.Group) string {
+	_, description, _, _ := groupProfileFields(group)
+	return description
+}
+
+// groupProfileRequest builds an okta group profile request from a name, description and
+// extended schema profile.
+func groupProfileRequest(name, desc string, profile map[string]interface{}) okta.AddGroupRequest {
+	return okta.AddGroupRequest{
+		Profile: &okta.OktaUserGroupProfile{
+			Name:                 okta.PtrString(name),
+			Description:          okta.PtrString(desc),
+			AdditionalProperties: profile,
+		},
+	}
+}
+
 // CreateGroup creates a simple group in Okta with a name, description and an extended schema profile
 func (c *Client) CreateGroup(ctx context.Context, name, desc string, profile map[string]interface{}) (string, error) {
 	c.logger.Info("creating Okta group",
@@ -25,20 +68,14 @@ func (c *Client) CreateGroup(ctx context.Context, name, desc string, profile map
 		zap.Any("okta.group.profile", profile),
 	)
 
-	group, _, err := c.groupIface.CreateGroup(ctx, okta.Group{
-		Profile: &okta.GroupProfile{
-			Name:            name,
-			Description:     desc,
-			GroupProfileMap: okta.GroupProfileMap(profile),
-		},
-	})
+	group, _, err := c.client.GroupAPI.AddGroup(ctx).Group(groupProfileRequest(name, desc, profile)).Execute()
 	if err != nil {
 		return "", err
 	}
 
-	c.logger.Debug("created okta group", zap.String("okta.group.id", group.Id))
+	c.logger.Debug("created okta group", zap.String("okta.group.id", group.GetId()))
 
-	return group.Id, nil
+	return group.GetId(), nil
 }
 
 // UpdateGroup updates a group in Okta and returns the updated group
@@ -50,13 +87,7 @@ func (c *Client) UpdateGroup(ctx context.Context, id, name, desc string, profile
 		zap.Any("okta.group.profile", profile),
 	)
 
-	group, _, err := c.groupIface.UpdateGroup(ctx, id, okta.Group{
-		Profile: &okta.GroupProfile{
-			Name:            name,
-			Description:     desc,
-			GroupProfileMap: okta.GroupProfileMap(profile),
-		},
-	})
+	group, _, err := c.client.GroupAPI.ReplaceGroup(ctx, id).Group(groupProfileRequest(name, desc, profile)).Execute()
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +101,7 @@ func (c *Client) UpdateGroup(ctx context.Context, id, name, desc string, profile
 func (c *Client) DeleteGroup(ctx context.Context, id string) error {
 	c.logger.Info("deleting Okta group", zap.String("okta.group.id", id))
 
-	if _, err := c.groupIface.DeleteGroup(ctx, id); err != nil {
+	if _, err := c.client.GroupAPI.DeleteGroup(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -85,7 +116,14 @@ func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, e
 
 	f := fmt.Sprintf("profile.governor_id eq \"%s\"", id)
 
-	groups, _, err := c.groupIface.ListGroups(ctx, &query.Params{Search: f})
+	groups, err := paginate(func(after string) ([]okta.Group, *okta.APIResponse, error) {
+		req := c.client.GroupAPI.ListGroups(ctx).Search(f).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +134,7 @@ func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, e
 		return "", ErrUnexpectedGroupsCount
 	}
 
-	gid := groups[0].Id
+	gid := groups[0].GetId()
 
 	c.logger.Debug("found okta group by governor id", zap.String("governor.id", id), zap.String("okta.group.id", gid))
 
@@ -107,7 +145,7 @@ func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, e
 func (c *Client) AddGroupUser(ctx context.Context, groupID, userID string) error {
 	c.logger.Info("adding user to okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
 
-	if _, err := c.groupIface.AddUserToGroup(ctx, groupID, userID); err != nil {
+	if _, err := c.client.GroupAPI.AssignUserToGroup(ctx, groupID, userID).Execute(); err != nil {
 		return err
 	}
 
@@ -118,7 +156,7 @@ func (c *Client) AddGroupUser(ctx context.Context, groupID, userID string) error
 func (c *Client) RemoveGroupUser(ctx context.Context, groupID, userID string) error {
 	c.logger.Info("removing user from okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
 
-	if _, err := c.groupIface.RemoveUserFromGroup(ctx, groupID, userID); err != nil {
+	if _, err := c.client.GroupAPI.UnassignUserFromGroup(ctx, groupID, userID).Execute(); err != nil {
 		return err
 	}
 
@@ -129,22 +167,23 @@ func (c *Client) RemoveGroupUser(ctx context.Context, groupID, userID string) er
 func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]*okta.User, error) {
 	c.logger.Debug("listing okta group members", zap.String("okta.group.id", gid))
 
-	users, resp, err := c.groupIface.ListGroupUsers(ctx, gid, &query.Params{Limit: defaultPageLimit})
+	users, err := paginate(func(after string) ([]okta.User, *okta.APIResponse, error) {
+		req := c.client.GroupAPI.ListGroupUsers(ctx, gid).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	c.logger.Debug("output from listing group users", zap.Any("okta.group.users", users))
 
-	usersResp := users
-
-	for resp.HasNextPage() {
-		resp, err = resp.Next(ctx, &users)
-		if err != nil {
-			return nil, err
-		}
-
-		usersResp = append(usersResp, users...)
+	usersResp := make([]*okta.User, len(users))
+	for i := range users {
+		usersResp[i] = &users[i]
 	}
 
 	return usersResp, nil
@@ -153,17 +192,30 @@ func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]*okta.U
 // ListGroupsWithModifier lists okta groups and modifies the group response with the given
 // GroupModifierFunc.  If nil is returned from the GroupModifierFunc, the group will not be returned
 // in the response.
-func (c *Client) ListGroupsWithModifier(ctx context.Context, f GroupModifierFunc, q *query.Params) ([]*okta.Group, error) {
+func (c *Client) ListGroupsWithModifier(ctx context.Context, f GroupModifierFunc, search string) ([]*okta.Group, error) {
 	c.logger.Debug("listing groups with func")
 
-	groups, resp, err := c.groupIface.ListGroups(ctx, q)
+	groups, err := paginate(func(after string) ([]okta.Group, *okta.APIResponse, error) {
+		req := c.client.GroupAPI.ListGroups(ctx).Limit(defaultPageLimit)
+		if search != "" {
+			req = req.Search(search)
+		}
+
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	groupResp := []*okta.Group{}
 
-	for _, g := range groups {
+	for i := range groups {
+		g := &groups[i]
+
 		c.logger.Debug("running function on group", zap.Any("group", g))
 
 		group, err := f(ctx, g)
@@ -173,28 +225,6 @@ func (c *Client) ListGroupsWithModifier(ctx context.Context, f GroupModifierFunc
 
 		if group != nil {
 			groupResp = append(groupResp, group)
-		}
-	}
-
-	for resp.HasNextPage() {
-		nextPage := []*okta.Group{}
-
-		resp, err = resp.Next(ctx, &nextPage)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, g := range nextPage {
-			c.logger.Debug("running function on group", zap.Any("group", g))
-
-			group, err := f(ctx, g)
-			if err != nil {
-				return nil, err
-			}
-
-			if group != nil {
-				groupResp = append(groupResp, group)
-			}
 		}
 	}
 
@@ -213,22 +243,23 @@ func GroupGovernorID(group *okta.Group) (string, error) {
 		return "", ErrNilGroupProfile
 	}
 
-	for k, v := range group.Profile.GroupProfileMap {
-		if k == GroupProfileGovernorIDKey {
-			kv, ok := v.(string)
-			if !ok {
-				return "", ErrGroupGovernorIDNotString
-			}
+	_, _, additional, _ := groupProfileFields(group)
 
-			if kv == "" {
-				return "", ErrGroupGovernorIDNotFound
-			}
-
-			return kv, nil
-		}
+	v, found := additional[GroupProfileGovernorIDKey]
+	if !found {
+		return "", ErrGroupGovernorIDNotFound
 	}
 
-	return "", ErrGroupGovernorIDNotFound
+	kv, ok := v.(string)
+	if !ok {
+		return "", ErrGroupGovernorIDNotString
+	}
+
+	if kv == "" {
+		return "", ErrGroupGovernorIDNotFound
+	}
+
+	return kv, nil
 }
 
 // GroupGithubCloudApplications returns a map of Okta Github cloud applications assigned to an Okta
@@ -236,7 +267,7 @@ func GroupGovernorID(group *okta.Group) (string, error) {
 func (c *Client) GroupGithubCloudApplications(ctx context.Context, groupID string) (map[string]string, error) {
 	c.logger.Debug("listing okta githubcloud application for group", zap.String("okta.group.id", groupID))
 
-	applications, err := c.listAssignedApplicationsForGroup(ctx, groupID, &query.Params{Filter: "name eq \"githubcloud\"", Limit: defaultPageLimit})
+	applications, err := c.listAssignedApplicationsForGroup(ctx, groupID)
 	if err != nil {
 		return nil, err
 	}
@@ -246,58 +277,44 @@ func (c *Client) GroupGithubCloudApplications(ctx context.Context, groupID strin
 	apps := map[string]string{}
 
 	for _, a := range applications {
-		app, ok := a.(*okta.Application)
+		id, v, ok := appGithubOrg(a)
 		if !ok {
 			continue
 		}
 
-		// trudge through the app settings looking for the github org
-		if app.Settings != nil && app.Settings.App != nil {
-			for k, v := range *app.Settings.App {
-				c.logger.Debug("okta app setting", zap.String("okta.app.setting.key", k), zap.Any("okta.app.setting.value", v))
-
-				if k == "githubOrg" {
-					org, ok := v.(string)
-					if !ok {
-						c.logger.Warn("okta app setting for githubOrg is not a string", zap.Any("okta.app.settings", *app.Settings.App))
-						break
-					}
-
-					apps[org] = app.Id
-				}
-			}
+		org, ok := v.(string)
+		if !ok {
+			c.logger.Warn("okta app setting for githubOrg is not a string", zap.Any("okta.app.setting.githubOrg", v))
+			continue
 		}
+
+		apps[org] = id
 	}
 
 	return apps, nil
 }
 
 // listAssignedApplicationsForGroup lists the applications that are assigned to a group ID
-func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID string, qp *query.Params) ([]okta.App, error) {
+func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID string) ([]okta.ListApplications200ResponseInner, error) {
 	if groupID == "" {
 		return nil, ErrApplicationBadParameters
 	}
 
 	c.logger.Debug("listing okta applications assigned to group", zap.Any("okta.group.id", groupID))
 
-	apps, resp, err := c.groupIface.ListAssignedApplicationsForGroup(ctx, groupID, qp)
+	apps, err := paginate(func(after string) ([]okta.ListApplications200ResponseInner, *okta.APIResponse, error) {
+		req := c.client.GroupAPI.ListAssignedApplicationsForGroup(ctx, groupID).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	c.logger.Debug("output from listing application group assignments", zap.Any("okta.applications", apps))
 
-	list := make([]okta.App, len(apps))
-	copy(list, apps)
-
-	for resp.HasNextPage() {
-		resp, err = resp.Next(ctx, &apps)
-		if err != nil {
-			return nil, err
-		}
-
-		list = append(list, apps...)
-	}
-
-	return list, nil
+	return apps, nil
 }

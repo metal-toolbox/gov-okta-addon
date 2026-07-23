@@ -1,61 +1,20 @@
 package okta
 
 import (
-	"context"
+	"net/url"
 
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v6/okta"
 	"go.uber.org/zap"
 )
 
 // Client is a client that can talk to Okta
 type Client struct {
-	appIface      ApplicationInterface
-	groupIface    GroupInterface
-	logEventIface LogEventInterface
-	userIface     UserInterface
-	logger        *zap.Logger
+	client *okta.APIClient
+	logger *zap.Logger
 
 	url          string
 	token        string
 	cacheEnabled bool
-}
-
-// ApplicationInterface abstracts the interactions with okta applications
-type ApplicationInterface interface {
-	ListApplications(context.Context, *query.Params) ([]okta.App, *okta.Response, error)
-	CreateApplicationGroupAssignment(context.Context, string, string, okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error)
-	DeleteApplicationGroupAssignment(context.Context, string, string) (*okta.Response, error)
-	GetApplicationGroupAssignment(context.Context, string, string, *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error)
-	ListApplicationGroupAssignments(context.Context, string, *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error)
-}
-
-// GroupInterface is the interface for managing groups in Okta
-type GroupInterface interface {
-	CreateGroup(context.Context, okta.Group) (*okta.Group, *okta.Response, error)
-	UpdateGroup(context.Context, string, okta.Group) (*okta.Group, *okta.Response, error)
-	DeleteGroup(context.Context, string) (*okta.Response, error)
-	ListGroups(context.Context, *query.Params) ([]*okta.Group, *okta.Response, error)
-	AddUserToGroup(context.Context, string, string) (*okta.Response, error)
-	RemoveUserFromGroup(context.Context, string, string) (*okta.Response, error)
-	ListGroupUsers(context.Context, string, *query.Params) ([]*okta.User, *okta.Response, error)
-	ListAssignedApplicationsForGroup(context.Context, string, *query.Params) ([]okta.App, *okta.Response, error)
-}
-
-// UserInterface is the interface for managing users in Okta
-type UserInterface interface {
-	ClearUserSessions(context.Context, string, *query.Params) (*okta.Response, error)
-	DeactivateUser(context.Context, string, *query.Params) (*okta.Response, error)
-	DeactivateOrDeleteUser(context.Context, string, *query.Params) (*okta.Response, error)
-	GetUser(context.Context, string) (*okta.User, *okta.Response, error)
-	ListUsers(context.Context, *query.Params) ([]*okta.User, *okta.Response, error)
-	SuspendUser(context.Context, string) (*okta.Response, error)
-	UnsuspendUser(context.Context, string) (*okta.Response, error)
-}
-
-// LogEventInterface is the interface for getting log events from okta
-type LogEventInterface interface {
-	GetLogs(ctx context.Context, qp *query.Params) ([]*okta.LogEvent, *okta.Response, error)
 }
 
 // Option is a functional configuration option
@@ -99,8 +58,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		opt(&client)
 	}
 
-	_, c, err := okta.NewClient(
-		context.TODO(),
+	config, err := okta.NewConfiguration(
 		okta.WithOrgUrl(client.url),
 		okta.WithToken(client.token),
 		okta.WithCache(client.cacheEnabled),
@@ -109,10 +67,49 @@ func NewClient(opts ...Option) (*Client, error) {
 		return nil, err
 	}
 
-	client.appIface = c.Application
-	client.groupIface = c.Group
-	client.userIface = c.User
-	client.logEventIface = c.LogEvent
+	client.client = okta.NewAPIClient(config)
 
 	return &client, nil
+}
+
+// paginate accumulates all pages of a paginated okta list endpoint.  fetch is invoked once
+// per page with the "after" cursor for that page ("" on the first call) and must issue the
+// request with the caller's context, so cancellation/deadlines propagate across pages.  We
+// re-issue the request builder with .After() rather than using the SDK's resp.Next() helper,
+// which reuses the client's background context instead of the caller's.
+func paginate[T any](fetch func(after string) ([]T, *okta.APIResponse, error)) ([]T, error) {
+	var all []T
+
+	after := ""
+
+	for {
+		page, resp, err := fetch(after)
+		if err != nil {
+			return nil, err
+		}
+
+		all = append(all, page...)
+
+		after = nextAfter(resp)
+		if after == "" {
+			break
+		}
+	}
+
+	return all, nil
+}
+
+// nextAfter parses the "after" pagination cursor from an okta APIResponse.  It returns an
+// empty string when there are no more pages.
+func nextAfter(resp *okta.APIResponse) string {
+	if resp == nil || !resp.HasNextPage() {
+		return ""
+	}
+
+	u, err := url.Parse(resp.NextPage())
+	if err != nil {
+		return ""
+	}
+
+	return u.Query().Get("after")
 }

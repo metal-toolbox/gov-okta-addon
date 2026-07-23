@@ -110,7 +110,7 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 		return "", err
 	}
 
-	if oktaUser.Status != "ACTIVE" && oktaUser.Status != "SUSPENDED" {
+	if oktaUser.GetStatus() != "ACTIVE" && oktaUser.GetStatus() != "SUSPENDED" {
 		return extID, nil
 	}
 
@@ -122,16 +122,16 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 	logger.Info("updating okta user")
 
 	// user suspended
-	if user.Status.String == v1alpha1.UserStatusSuspended && oktaUser.Status == "ACTIVE" {
-		if err := r.oktaClient.SuspendUser(ctx, oktaUser.Id); err != nil {
+	if user.Status.String == v1alpha1.UserStatusSuspended && oktaUser.GetStatus() == "ACTIVE" {
+		if err := r.oktaClient.SuspendUser(ctx, oktaUser.GetId()); err != nil {
 			logger.Error("error suspending okta user", zap.Error(err))
 			return "", err
 		}
 	}
 
 	// user un-suspended
-	if user.Status.String == v1alpha1.UserStatusActive && oktaUser.Status == "SUSPENDED" {
-		if err := r.oktaClient.UnsuspendUser(ctx, oktaUser.Id); err != nil {
+	if user.Status.String == v1alpha1.UserStatusActive && oktaUser.GetStatus() == "SUSPENDED" {
+		if err := r.oktaClient.UnsuspendUser(ctx, oktaUser.GetId()); err != nil {
 			logger.Error("error un-suspending okta user", zap.Error(err))
 			return "", err
 		}
@@ -142,12 +142,12 @@ func (r *Reconciler) UserUpdate(ctx context.Context, govID string) (string, erro
 	if err := auctx.WriteAuditEvent(ctx, r.auditEventWriter, "UserUpdate", map[string]string{
 		"governor.user.email": user.Email,
 		"governor.user.id":    user.ID,
-		"okta.user.id":        oktaUser.Id,
+		"okta.user.id":        oktaUser.GetId(),
 	}); err != nil {
 		r.logger.Error("error writing audit event", zap.Error(err))
 	}
 
-	return oktaUser.Id, nil
+	return oktaUser.GetId(), nil
 }
 
 // userDeleted returns true if the given user has been deleted in governor within the specified cutoff time period.

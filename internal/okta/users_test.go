@@ -2,113 +2,57 @@ package okta
 
 import (
 	"context"
-	"errors"
+	"net/http"
+	"strings"
 	"testing"
 
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
-type mockUserClient struct {
-	t   *testing.T
-	err error
+// userProfile builds an okta user profile from the given fields, leaving unset any field
+// passed as an empty string.
+func userProfile(email, first, last string) *okta.UserProfile {
+	p := &okta.UserProfile{}
 
-	users []*okta.User
-
-	resp *okta.Response
-
-	deactivatedUser bool
-}
-
-func (m *mockUserClient) ClearUserSessions(_ context.Context, _ string, _ *query.Params) (*okta.Response, error) {
-	if m.err != nil {
-		return nil, m.err
+	if email != "" {
+		p.Email = okta.PtrString(email)
 	}
 
-	return m.resp, nil
-}
-
-func (m *mockUserClient) DeactivateUser(_ context.Context, _ string, _ *query.Params) (*okta.Response, error) {
-	m.deactivatedUser = true
-
-	if m.err != nil {
-		return nil, m.err
+	if first != "" {
+		p.FirstName = *okta.NewNullableString(okta.PtrString(first))
 	}
 
-	return m.resp, nil
-}
-
-func (m *mockUserClient) DeactivateOrDeleteUser(_ context.Context, _ string, _ *query.Params) (*okta.Response, error) {
-	if m.err != nil {
-		return nil, m.err
+	if last != "" {
+		p.LastName = *okta.NewNullableString(okta.PtrString(last))
 	}
 
-	return m.resp, nil
-}
-
-func (m *mockUserClient) GetUser(_ context.Context, _ string) (*okta.User, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return m.users[0], m.resp, nil
-}
-
-func (m *mockUserClient) ListUsers(_ context.Context, _ *query.Params) ([]*okta.User, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return m.users, m.resp, nil
-}
-
-func (m *mockUserClient) SuspendUser(_ context.Context, _ string) (*okta.Response, error) {
-	if m.err != nil {
-		return nil, m.err
-	}
-
-	return m.resp, nil
-}
-
-func (m *mockUserClient) UnsuspendUser(_ context.Context, _ string) (*okta.Response, error) {
-	if m.err != nil {
-		return nil, m.err
-	}
-
-	return m.resp, nil
+	return p
 }
 
 func TestClient_ClearUserSessions(t *testing.T) {
 	tests := []struct {
 		name    string
-		id      string
-		err     error
+		apiErr  bool
 		wantErr bool
 	}{
-		{
-			name: "example clear user sessions",
-			id:   "user101",
-		},
-		{
-			name:    "okta error",
-			id:      "user101",
-			err:     errors.New("boomsauce"), //nolint:err113
-			wantErr: true,
-		},
+		{name: "example clear user sessions"},
+		{name: "okta error", apiErr: true, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				userIface: &mockUserClient{
-					t:   t,
-					err: tt.err,
-				},
+			var h http.Handler
+			if tt.apiErr {
+				h = errorHandler()
+			} else {
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusNoContent, nil)
+				})
 			}
 
-			err := c.ClearUserSessions(context.TODO(), tt.id)
+			c := newTestClient(t, h)
+
+			err := c.ClearUserSessions(context.TODO(), "user101")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -122,32 +66,26 @@ func TestClient_ClearUserSessions(t *testing.T) {
 func TestClient_DeactivateUser(t *testing.T) {
 	tests := []struct {
 		name    string
-		id      string
-		err     error
+		apiErr  bool
 		wantErr bool
 	}{
-		{
-			name: "example deactivate user",
-			id:   "user101",
-		},
-		{
-			name:    "okta error",
-			id:      "user101",
-			err:     errors.New("boom"), //nolint:err113
-			wantErr: true,
-		},
+		{name: "example deactivate user"},
+		{name: "okta error", apiErr: true, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				userIface: &mockUserClient{
-					t:   t,
-					err: tt.err,
-				},
+			var h http.Handler
+			if tt.apiErr {
+				h = errorHandler()
+			} else {
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusOK, okta.User{Id: okta.PtrString("user101")})
+				})
 			}
 
-			err := c.DeactivateUser(context.TODO(), tt.id)
+			c := newTestClient(t, h)
+
+			err := c.DeactivateUser(context.TODO(), "user101")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -159,63 +97,53 @@ func TestClient_DeactivateUser(t *testing.T) {
 }
 
 func TestClient_DeleteUser(t *testing.T) {
+	const id = "user101"
+
 	tests := []struct {
 		name    string
-		id      string
-		users   []*okta.User
-		err     error
+		status  string
+		apiErr  bool
 		wantDA  bool
 		wantErr bool
 	}{
-		{
-			name: "delete active user",
-			id:   "user101",
-			users: []*okta.User{
-				{Id: "11111111", Status: "ACTIVE"},
-			},
-			wantDA: true,
-		},
-		{
-			name: "delete deactivated user",
-			id:   "user101",
-			users: []*okta.User{
-				{Id: "11111111", Status: "DEPROVISIONED"},
-			},
-			wantDA: false,
-		},
-		{
-			name: "okta error",
-			id:   "user101",
-			users: []*okta.User{
-				{Id: "11111111"},
-			},
-			err:     errors.New("boom"), //nolint:err113
-			wantErr: true,
-		},
+		{name: "delete active user", status: "ACTIVE", wantDA: true},
+		{name: "delete deactivated user", status: "DEPROVISIONED", wantDA: false},
+		{name: "okta error", apiErr: true, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			m := &mockUserClient{
-				t:               t,
-				err:             tt.err,
-				users:           tt.users,
-				resp:            &okta.Response{},
-				deactivatedUser: false,
+			var deactivated bool
+
+			var h http.Handler
+			if tt.apiErr {
+				h = errorHandler()
+			} else {
+				h = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					switch {
+					case r.Method == http.MethodGet && r.URL.Path == "/api/v1/users/"+id:
+						writeJSON(t, w, http.StatusOK, okta.UserGetSingleton{Id: okta.PtrString(id), Status: okta.PtrString(tt.status)})
+					case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/lifecycle/deactivate"):
+						deactivated = true
+
+						writeJSON(t, w, http.StatusOK, nil)
+					case r.Method == http.MethodDelete && r.URL.Path == "/api/v1/users/"+id:
+						writeJSON(t, w, http.StatusNoContent, nil)
+					default:
+						t.Errorf("unexpected okta api call: %s %s", r.Method, r.URL.Path)
+					}
+				})
 			}
 
-			c := &Client{
-				logger:    zap.NewNop(),
-				userIface: m,
-			}
+			c := newTestClient(t, h)
 
-			err := c.DeleteUser(context.TODO(), tt.id)
+			err := c.DeleteUser(context.TODO(), id)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.wantDA, m.deactivatedUser)
+			assert.Equal(t, tt.wantDA, deactivated)
 		})
 	}
 }
@@ -223,32 +151,26 @@ func TestClient_DeleteUser(t *testing.T) {
 func TestClient_SuspendUser(t *testing.T) {
 	tests := []struct {
 		name    string
-		id      string
-		err     error
+		apiErr  bool
 		wantErr bool
 	}{
-		{
-			name: "example suspend user",
-			id:   "user101",
-		},
-		{
-			name:    "okta error",
-			id:      "user101",
-			err:     errors.New("boom"), //nolint:err113
-			wantErr: true,
-		},
+		{name: "example suspend user"},
+		{name: "okta error", apiErr: true, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				userIface: &mockUserClient{
-					t:   t,
-					err: tt.err,
-				},
+			var h http.Handler
+			if tt.apiErr {
+				h = errorHandler()
+			} else {
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusOK, nil)
+				})
 			}
 
-			err := c.SuspendUser(context.TODO(), tt.id)
+			c := newTestClient(t, h)
+
+			err := c.SuspendUser(context.TODO(), "user101")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -262,32 +184,26 @@ func TestClient_SuspendUser(t *testing.T) {
 func TestClient_UnsuspendUser(t *testing.T) {
 	tests := []struct {
 		name    string
-		id      string
-		err     error
+		apiErr  bool
 		wantErr bool
 	}{
-		{
-			name: "example un-suspend user",
-			id:   "user101",
-		},
-		{
-			name:    "okta error",
-			id:      "user101",
-			err:     errors.New("boom"), //nolint:err113
-			wantErr: true,
-		},
+		{name: "example un-suspend user"},
+		{name: "okta error", apiErr: true, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				userIface: &mockUserClient{
-					t:   t,
-					err: tt.err,
-				},
+			var h http.Handler
+			if tt.apiErr {
+				h = errorHandler()
+			} else {
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusOK, nil)
+				})
 			}
 
-			err := c.UnsuspendUser(context.TODO(), tt.id)
+			c := newTestClient(t, h)
+
+			err := c.UnsuspendUser(context.TODO(), "user101")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -301,57 +217,46 @@ func TestClient_UnsuspendUser(t *testing.T) {
 func TestClient_GetUserIDByEmail(t *testing.T) {
 	tests := []struct {
 		name    string
-		email   string
-		users   []*okta.User
-		err     error
+		users   []okta.User
+		apiErr  bool
 		want    string
 		wantErr bool
 	}{
 		{
-			name: "example get user by email",
-			users: []*okta.User{
-				{Id: "11111111"},
-			},
-			email: "foo@example.com",
+			name:  "example get user by email",
+			users: []okta.User{{Id: okta.PtrString("11111111")}},
 			want:  "11111111",
 		},
 		{
-			name: "okta error",
-			users: []*okta.User{
-				{Id: "11111111"},
-			},
-			email:   "foo@example.com",
-			err:     errors.New("boom"), //nolint:err113
+			name:    "okta error",
+			apiErr:  true,
 			wantErr: true,
 		},
 		{
 			name:    "empty list",
-			users:   []*okta.User{},
-			email:   "foo@example.com",
+			users:   []okta.User{},
 			wantErr: true,
 		},
 		{
-			name: "more than one group returned",
-			users: []*okta.User{
-				{Id: "11111111"},
-				{Id: "33333333"},
-			},
-			email:   "foo@example.com",
+			name:    "more than one user returned",
+			users:   []okta.User{{Id: okta.PtrString("11111111")}, {Id: okta.PtrString("33333333")}},
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				userIface: &mockUserClient{
-					t:     t,
-					err:   tt.err,
-					users: tt.users,
-				},
+			var h http.Handler
+			if tt.apiErr {
+				h = errorHandler()
+			} else {
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusOK, tt.users)
+				})
 			}
 
-			got, err := c.GetUserIDByEmail(context.TODO(), tt.email)
+			c := newTestClient(t, h)
+
+			got, err := c.GetUserIDByEmail(context.TODO(), "foo@example.com")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -366,46 +271,40 @@ func TestClient_GetUserIDByEmail(t *testing.T) {
 func TestClient_ListUsers(t *testing.T) {
 	tests := []struct {
 		name    string
-		err     error
-		users   []*okta.User
-		want    []*okta.User
+		apiErr  bool
+		users   []okta.User
+		want    []string
 		wantErr bool
 	}{
 		{
-			name: "successful list users",
-			users: []*okta.User{
-				{Id: "user1"},
-				{Id: "user2"},
-			},
-			want: []*okta.User{{Id: "user1"}, {Id: "user2"}},
+			name:  "successful list users",
+			users: []okta.User{{Id: okta.PtrString("user1")}, {Id: okta.PtrString("user2")}},
+			want:  []string{"user1", "user2"},
 		},
 		{
 			name:  "empty list users",
-			users: []*okta.User{},
-			want:  []*okta.User{},
+			users: []okta.User{},
+			want:  []string{},
 		},
 		{
-			name: "okta error",
-			users: []*okta.User{
-				{Id: "user1"},
-				{Id: "user1"},
-			},
-			err:     errors.New("boom"), //nolint:err113
+			name:    "okta error",
+			apiErr:  true,
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				userIface: &mockUserClient{
-					t:     t,
-					err:   tt.err,
-					users: tt.users,
-					resp:  &okta.Response{},
-				},
+			var h http.Handler
+			if tt.apiErr {
+				h = errorHandler()
+			} else {
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusOK, tt.users)
+				})
 			}
+
+			c := newTestClient(t, h)
 
 			got, err := c.ListUsers(context.TODO())
 			if tt.wantErr {
@@ -414,14 +313,14 @@ func TestClient_ListUsers(t *testing.T) {
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, userIDs(got))
 		})
 	}
 }
 
 func TestClient_ListUsersWithModifier(t *testing.T) {
 	skipUser := func(_ context.Context, u *okta.User) (*okta.User, error) {
-		if u.Id == "skipMe" {
+		if u.GetId() == "skipMe" {
 			return nil, nil
 		}
 
@@ -429,81 +328,60 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 	}
 
 	errMe := func(_ context.Context, _ *okta.User) (*okta.User, error) {
-		return nil, errors.New("boomsauce") //nolint:err113
+		return nil, assert.AnError
 	}
 
-	type args struct {
-		f UserModifierFunc
-		q *query.Params
+	users := []okta.User{
+		{Id: okta.PtrString("heyThere")},
+		{Id: okta.PtrString("skipMe")},
 	}
 
 	tests := []struct {
 		name    string
-		args    args
-		err     error
-		users   []*okta.User
-		want    []*okta.User
+		f       UserModifierFunc
+		apiErr  bool
+		want    []string
 		wantErr bool
 	}{
 		{
 			name: "example skip user",
-			args: args{
-				f: skipUser,
-				q: &query.Params{},
-			},
-			users: []*okta.User{
-				{Id: "heyThere"},
-				{Id: "skipMe"},
-			},
-			want: []*okta.User{{Id: "heyThere"}},
+			f:    skipUser,
+			want: []string{"heyThere"},
 		},
 		{
-			name: "okta error",
-			args: args{
-				f: skipUser,
-				q: &query.Params{},
-			},
-			users: []*okta.User{
-				{Id: "heyThere"},
-				{Id: "skipMe"},
-			},
-			err:     errors.New("boom"), //nolint:err113
+			name:    "okta error",
+			f:       skipUser,
+			apiErr:  true,
 			wantErr: true,
 		},
 		{
-			name: "func error",
-			args: args{
-				f: errMe,
-				q: &query.Params{},
-			},
-			users: []*okta.User{
-				{Id: "heyThere"},
-				{Id: "skipMe"},
-			},
+			name:    "func error",
+			f:       errMe,
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				userIface: &mockUserClient{
-					t:     t,
-					err:   tt.err,
-					users: tt.users,
-					resp:  &okta.Response{},
-				},
+			var h http.Handler
+			if tt.apiErr {
+				h = errorHandler()
+			} else {
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusOK, users)
+				})
 			}
 
-			got, err := c.ListUsersWithModifier(context.TODO(), tt.args.f, tt.args.q)
+			c := newTestClient(t, h)
+
+			got, err := c.ListUsersWithModifier(context.TODO(), tt.f, "")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
 			}
 
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, userIDs(got))
 		})
 	}
 }
@@ -517,27 +395,12 @@ func TestClient_EmailFromUserProfile(t *testing.T) {
 	}{
 		{
 			name: "example email",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"email": "test1@test.com",
-				},
-			},
+			user: &okta.User{Profile: userProfile("test1@test.com", "", "")},
 			want: "test1@test.com",
 		},
 		{
-			name: "not found",
-			user: &okta.User{
-				Profile: &okta.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"email": 12345,
-				},
-			},
+			name:    "not found",
+			user:    &okta.User{Profile: &okta.UserProfile{}},
 			wantErr: true,
 		},
 	}
@@ -564,27 +427,12 @@ func TestClient_FirstNameFromUserProfile(t *testing.T) {
 	}{
 		{
 			name: "example firstName",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"firstName": "Test",
-				},
-			},
+			user: &okta.User{Profile: userProfile("", "Test", "")},
 			want: "Test",
 		},
 		{
-			name: "not found",
-			user: &okta.User{
-				Profile: &okta.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"firstName": 12345,
-				},
-			},
+			name:    "not found",
+			user:    &okta.User{Profile: &okta.UserProfile{}},
 			wantErr: true,
 		},
 	}
@@ -611,27 +459,12 @@ func TestClient_LastNameFromUserProfile(t *testing.T) {
 	}{
 		{
 			name: "example lastName",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"lastName": "One",
-				},
-			},
+			user: &okta.User{Profile: userProfile("", "", "One")},
 			want: "One",
 		},
 		{
-			name: "not found",
-			user: &okta.User{
-				Profile: &okta.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"lastName": 12345,
-				},
-			},
+			name:    "not found",
+			user:    &okta.User{Profile: &okta.UserProfile{}},
 			wantErr: true,
 		},
 	}
@@ -659,13 +492,9 @@ func TestClient_UserDetailsFromOktaUser(t *testing.T) {
 		{
 			name: "successful example",
 			user: &okta.User{
-				Id:     "00u123456789abcde697",
-				Status: "ACTIVE",
-				Profile: &okta.UserProfile{
-					"firstName": "Burrow",
-					"lastName":  "Blaster",
-					"email":     "bblaster@gopher.com",
-				},
+				Id:      okta.PtrString("00u123456789abcde697"),
+				Status:  okta.PtrString("ACTIVE"),
+				Profile: userProfile("bblaster@gopher.com", "Burrow", "Blaster"),
 			},
 			want: &UserDetails{
 				ID:     "00u123456789abcde697",
@@ -675,30 +504,13 @@ func TestClient_UserDetailsFromOktaUser(t *testing.T) {
 			},
 		},
 		{
-			name: "empty profile",
-			user: &okta.User{
-				Profile: &okta.UserProfile{},
-			},
+			name:    "empty profile",
+			user:    &okta.User{Profile: &okta.UserProfile{}},
 			wantErr: true,
 		},
 		{
-			name: "missing email",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"firstName": "Burrow",
-					"lastName":  "Blaster",
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"firstName": "Burrow",
-					"lastName":  12345,
-				},
-			},
+			name:    "missing email",
+			user:    &okta.User{Profile: userProfile("", "Burrow", "Blaster")},
 			wantErr: true,
 		},
 	}

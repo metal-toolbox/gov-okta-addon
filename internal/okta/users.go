@@ -2,10 +2,10 @@ package okta
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v6/okta"
 	"go.uber.org/zap"
 )
 
@@ -20,11 +20,36 @@ type UserDetails struct {
 	Status string
 }
 
+// userFromGetSingleton converts the okta UserGetSingleton returned by GetUser into a
+// *okta.User via a JSON round-trip so callers can work with a single user type.
+func userFromGetSingleton(singleton *okta.UserGetSingleton) (*okta.User, error) {
+	if singleton == nil {
+		return nil, nil
+	}
+
+	b, err := json.Marshal(singleton)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &okta.User{}
+	if err := json.Unmarshal(b, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 // GetUser gets an okta user by id
 func (c *Client) GetUser(ctx context.Context, id string) (*okta.User, error) {
 	c.logger.Debug("getting okta user", zap.String("okta.user.id", id))
 
-	user, _, err := c.userIface.GetUser(ctx, id)
+	singleton, _, err := c.client.UserAPI.GetUser(ctx, id).Execute()
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := userFromGetSingleton(singleton)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +63,7 @@ func (c *Client) GetUser(ctx context.Context, id string) (*okta.User, error) {
 func (c *Client) DeactivateUser(ctx context.Context, id string) error {
 	c.logger.Info("deactivating okta user", zap.String("okta.user.id", id))
 
-	if _, err := c.userIface.DeactivateUser(ctx, id, &query.Params{}); err != nil {
+	if _, err := c.client.UserLifecycleAPI.DeactivateUser(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -53,23 +78,23 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 	c.logger.Info("deleting okta user", zap.String("okta.user.id", id))
 
 	// look up the user in okta so we can get their status
-	user, _, err := c.userIface.GetUser(ctx, id)
+	user, err := c.GetUser(ctx, id)
 	if err != nil {
 		return err
 	}
 
-	c.logger.Debug("got okta user status", zap.String("okta.user.status", user.Status))
+	c.logger.Debug("got okta user status", zap.String("okta.user.status", user.GetStatus()))
 
 	// make sure the user is deactivated first
-	if user.Status != "DEPROVISIONED" {
+	if user.GetStatus() != "DEPROVISIONED" {
 		c.logger.Debug("deactivating user", zap.String("okta.user.id", id))
 
-		if _, err := c.userIface.DeactivateUser(ctx, id, &query.Params{}); err != nil {
+		if _, err := c.client.UserLifecycleAPI.DeactivateUser(ctx, id).Execute(); err != nil {
 			return err
 		}
 	}
 
-	if _, err := c.userIface.DeactivateOrDeleteUser(ctx, id, &query.Params{}); err != nil {
+	if _, err := c.client.UserAPI.DeleteUser(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -84,7 +109,7 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 func (c *Client) ClearUserSessions(ctx context.Context, id string) error {
 	c.logger.Info("clearing user sessions", zap.String("okta.user.id", id))
 
-	if _, err := c.userIface.ClearUserSessions(ctx, id, &query.Params{}); err != nil {
+	if _, err := c.client.UserSessionsAPI.RevokeUserSessions(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -99,7 +124,14 @@ func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, er
 
 	f := fmt.Sprintf("profile.email eq \"%s\"", email)
 
-	users, _, err := c.userIface.ListUsers(ctx, &query.Params{Search: f})
+	users, err := paginate(func(after string) ([]okta.User, *okta.APIResponse, error) {
+		req := c.client.UserAPI.ListUsers(ctx).Search(f).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return "", err
 	}
@@ -108,7 +140,7 @@ func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, er
 		return "", ErrUnexpectedUsersCount
 	}
 
-	uid := users[0].Id
+	uid := users[0].GetId()
 
 	c.logger.Debug("found okta user by email", zap.String("user.email", email), zap.String("okta.user.id", uid))
 
@@ -119,22 +151,21 @@ func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, er
 func (c *Client) ListUsers(ctx context.Context) ([]*okta.User, error) {
 	c.logger.Debug("listing users")
 
-	users, resp, err := c.userIface.ListUsers(ctx, &query.Params{})
+	users, err := paginate(func(after string) ([]okta.User, *okta.APIResponse, error) {
+		req := c.client.UserAPI.ListUsers(ctx).Limit(defaultPageLimit)
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	userResp := users
-
-	for resp.HasNextPage() {
-		nextPage := []*okta.User{}
-
-		resp, err = resp.Next(ctx, &nextPage)
-		if err != nil {
-			return nil, err
-		}
-
-		userResp = append(userResp, nextPage...)
+	userResp := make([]*okta.User, len(users))
+	for i := range users {
+		userResp[i] = &users[i]
 	}
 
 	c.logger.Debug("returning list of users", zap.Int("num.okta.users", len(userResp)))
@@ -144,17 +175,30 @@ func (c *Client) ListUsers(ctx context.Context) ([]*okta.User, error) {
 
 // ListUsersWithModifier lists okta users and modifies the user response with the given UserModifierFunc.  If nil is
 // returned from the UserModifierFunc, the user will not be returned in the response.
-func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, q *query.Params) ([]*okta.User, error) {
+func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, search string) ([]*okta.User, error) {
 	c.logger.Debug("listing users with func")
 
-	users, resp, err := c.userIface.ListUsers(ctx, q)
+	users, err := paginate(func(after string) ([]okta.User, *okta.APIResponse, error) {
+		req := c.client.UserAPI.ListUsers(ctx).Limit(defaultPageLimit)
+		if search != "" {
+			req = req.Search(search)
+		}
+
+		if after != "" {
+			req = req.After(after)
+		}
+
+		return req.Execute()
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	userResp := []*okta.User{}
 
-	for _, u := range users {
+	for i := range users {
+		u := &users[i]
+
 		c.logger.Debug("running function on user", zap.Any("user", u))
 
 		user, err := f(ctx, u)
@@ -167,28 +211,6 @@ func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, 
 		}
 	}
 
-	for resp.HasNextPage() {
-		nextPage := []*okta.User{}
-
-		resp, err = resp.Next(ctx, &nextPage)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, u := range nextPage {
-			c.logger.Debug("running function on user", zap.Any("user", u))
-
-			user, err := f(ctx, u)
-			if err != nil {
-				return nil, err
-			}
-
-			if user != nil {
-				userResp = append(userResp, user)
-			}
-		}
-	}
-
 	c.logger.Debug("returning list of users", zap.Int("num.okta.users", len(userResp)))
 
 	return userResp, nil
@@ -198,7 +220,7 @@ func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, 
 func (c *Client) SuspendUser(ctx context.Context, id string) error {
 	c.logger.Info("suspending okta user", zap.String("okta.user.id", id))
 
-	if _, err := c.userIface.SuspendUser(ctx, id); err != nil {
+	if _, err := c.client.UserLifecycleAPI.SuspendUser(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -211,7 +233,7 @@ func (c *Client) SuspendUser(ctx context.Context, id string) error {
 func (c *Client) UnsuspendUser(ctx context.Context, id string) error {
 	c.logger.Info("un-suspending okta user", zap.String("okta.user.id", id))
 
-	if _, err := c.userIface.UnsuspendUser(ctx, id); err != nil {
+	if _, err := c.client.UserLifecycleAPI.UnsuspendUser(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -222,100 +244,64 @@ func (c *Client) UnsuspendUser(ctx context.Context, id string) error {
 
 // EmailFromUserProfile parses the email from the okta user profile
 func EmailFromUserProfile(u *okta.User) (string, error) {
-	// get the email from the user profile
-	for k, v := range *u.Profile {
-		if k == "email" {
-			if fv, ok := v.(string); ok {
-				return fv, nil
-			}
-
-			return "", ErrOktaUserEmailNotString
-		}
+	if u.Profile != nil && u.Profile.Email != nil {
+		return *u.Profile.Email, nil
 	}
 
-	return "", fmt.Errorf("email not found for user %s", u.Id) //nolint:err113
+	return "", fmt.Errorf("email not found for user %s", u.GetId()) //nolint:err113
 }
 
 // FirstNameFromUserProfile parses the firstName from the okta user profile
 func FirstNameFromUserProfile(u *okta.User) (string, error) {
-	// get the firstName from the user profile
-	for k, v := range *u.Profile {
-		if k == "firstName" {
-			if fv, ok := v.(string); ok {
-				return fv, nil
-			}
-
-			return "", ErrOktaUserFirstNameNotString
-		}
+	if u.Profile != nil && u.Profile.FirstName.Get() != nil {
+		return *u.Profile.FirstName.Get(), nil
 	}
 
-	return "", fmt.Errorf("firstName not found for user %s", u.Id) //nolint:err113
+	return "", fmt.Errorf("firstName not found for user %s", u.GetId()) //nolint:err113
 }
 
 // LastNameFromUserProfile parses the lastName from the okta user profile
 func LastNameFromUserProfile(u *okta.User) (string, error) {
-	// get the lastName from the user profile
-	for k, v := range *u.Profile {
-		if k == "lastName" {
-			if fv, ok := v.(string); ok {
-				return fv, nil
-			}
-
-			return "", ErrOktaUserLastNameNotString
-		}
+	if u.Profile != nil && u.Profile.LastName.Get() != nil {
+		return *u.Profile.LastName.Get(), nil
 	}
 
-	return "", fmt.Errorf("lastName not found for user %s", u.Id) //nolint:err113
+	return "", fmt.Errorf("lastName not found for user %s", u.GetId()) //nolint:err113
 }
 
 // UserDetailsFromOktaUser parses the relevant user details from the okta user object
 func UserDetailsFromOktaUser(u *okta.User) (*UserDetails, error) {
 	d := &UserDetails{
-		ID:     u.Id,
-		Status: u.Status,
+		ID:     u.GetId(),
+		Status: u.GetStatus(),
 	}
 
 	var firstName, lastName string
 
-	for k, v := range *u.Profile {
-		if k == "firstName" {
-			fn, ok := v.(string)
-			if !ok {
-				return nil, ErrOktaUserLastNameNotString
-			}
-
-			firstName = fn
+	if u.Profile != nil {
+		if u.Profile.FirstName.Get() != nil {
+			firstName = *u.Profile.FirstName.Get()
 		}
 
-		if k == "lastName" {
-			ln, ok := v.(string)
-			if !ok {
-				return nil, ErrOktaUserFirstNameNotString
-			}
-
-			lastName = ln
+		if u.Profile.LastName.Get() != nil {
+			lastName = *u.Profile.LastName.Get()
 		}
 
-		if k == "email" {
-			e, ok := v.(string)
-			if !ok {
-				return nil, ErrOktaUserEmailNotString
-			}
-
-			d.Email = e
+		if u.Profile.Email != nil {
+			d.Email = *u.Profile.Email
 		}
 	}
 
 	if firstName == "" {
-		return nil, fmt.Errorf("firstName not found for user %s", u.Id) //nolint:err113
+		return nil, fmt.Errorf("firstName not found for user %s", u.GetId()) //nolint:err113
 	}
 
 	if lastName == "" {
-		return nil, fmt.Errorf("lastName not found for user %s", u.Id) //nolint:err113
+		return nil, fmt.Errorf("lastName not found for user %s", u.GetId()) //nolint:err113
 	}
 
 	if d.Email == "" {
-		return nil, fmt.Errorf("email not found for user %s", u.Id) //nolint:err113
+		return nil, fmt.Errorf("email not found for user %s", u.GetId()) //nolint:err113
 	}
 
 	d.Name = fmt.Sprintf("%s %s", firstName, lastName)

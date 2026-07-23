@@ -6,63 +6,60 @@ import (
 	"testing"
 	"time"
 
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
 
-//nolint:gofumpt,govet
-var (
-	testEvents = []*okta.LogEvent{
-		{
-			Actor:          &okta.LogActor{"system@okta.com", nil, "Okta System", "zzzzzzzzz", "SystemPrincipal"},
-			EventType:      "user.lifecycle.create",
-			DisplayMessage: "Create okta user",
-			Published:      published(time.Date(2013, time.June, 19, 07, 14, 00, 00, time.UTC)),
-		},
-		{
-			Actor:          &okta.LogActor{"system@okta.com", nil, "Okta System", "zzzzzzzzz", "SystemPrincipal"},
-			EventType:      "user.lifecycle.create",
-			DisplayMessage: "Create okta user",
-			Published:      published(time.Date(2015, time.November, 20, 04, 40, 00, 00, time.UTC)),
-		},
-		{
-			Actor:          &okta.LogActor{"system@okta.com", nil, "Okta System", "zzzzzzzzz", "SystemPrincipal"},
-			EventType:      "user.lifecycle.create",
-			DisplayMessage: "Create okta user",
-			Published:      published(time.Date(2019, time.March, 28, 21, 21, 00, 00, time.UTC)),
-		},
+func testActor() *okta.LogActor {
+	return &okta.LogActor{
+		AlternateId: okta.PtrString("system@okta.com"),
+		DisplayName: okta.PtrString("Okta System"),
+		Id:          okta.PtrString("zzzzzzzzz"),
+		Type:        okta.PtrString("SystemPrincipal"),
 	}
-)
+}
+
+func logEvent(published time.Time) okta.LogEvent {
+	return okta.LogEvent{
+		Actor:          testActor(),
+		EventType:      okta.PtrString("user.lifecycle.create"),
+		DisplayMessage: okta.PtrString("Create okta user"),
+		Published:      okta.PtrTime(published),
+	}
+}
+
+var testEvents = []okta.LogEvent{
+	logEvent(time.Date(2013, time.June, 19, 0o7, 14, 0o0, 0o0, time.UTC)),
+	logEvent(time.Date(2015, time.November, 20, 0o4, 40, 0o0, 0o0, time.UTC)),
+	logEvent(time.Date(2019, time.March, 28, 21, 21, 0o0, 0o0, time.UTC)),
+}
 
 type mockLogEventsClient struct {
 	t   *testing.T
 	err error
 
-	logEvents []*okta.LogEvent
+	logEvents []okta.LogEvent
 
 	maxIter int
 	iter    int
-
-	resp *okta.Response
 }
 
-func (m *mockLogEventsClient) GetLogs(_ context.Context, qp *query.Params) ([]*okta.LogEvent, *okta.Response, error) {
+func (m *mockLogEventsClient) GetLogs(_ context.Context, since, _, _, _ string, _ int32) ([]okta.LogEvent, string, error) {
 	if m.err != nil {
-		return nil, nil, m.err
+		return nil, "", m.err
 	}
 
-	s, err := time.Parse("2006-01-02T15:04:05Z", qp.Since)
+	s, err := time.Parse(oktaTimeFormat, since)
 	if err != nil {
-		return nil, nil, err
+		return nil, "", err
 	}
 
-	events := []*okta.LogEvent{}
+	events := []okta.LogEvent{}
 
 	if m.iter < m.maxIter {
 		for _, e := range m.logEvents {
-			if e.Published.Before(s) {
+			if e.GetPublished().Before(s) {
 				continue
 			}
 
@@ -72,43 +69,36 @@ func (m *mockLogEventsClient) GetLogs(_ context.Context, qp *query.Params) ([]*o
 
 	m.iter++
 
-	return events, &okta.Response{}, nil
-}
-
-func published(d time.Time) *time.Time {
-	return &d
+	return events, "", nil
 }
 
 func TestClient_GetLogsBounded(t *testing.T) {
 	tests := []struct {
 		name      string
 		err       error
-		logEvents []*okta.LogEvent
+		logEvents []okta.LogEvent
 		since     time.Time
-		qp        *query.Params
 		want      []*okta.LogEvent
 		wantErr   bool
 	}{
-		//nolint:gofumpt,govet
 		{
 			name:      "example",
 			logEvents: testEvents,
-			since:     time.Date(2018, time.January, 01, 00, 00, 00, 00, time.UTC),
+			since:     time.Date(2018, time.January, 0o1, 0o0, 0o0, 0o0, 0o0, time.UTC),
 			want: []*okta.LogEvent{
 				{
-					Actor:          &okta.LogActor{"system@okta.com", nil, "Okta System", "zzzzzzzzz", "SystemPrincipal"},
-					EventType:      "user.lifecycle.create",
-					DisplayMessage: "Create okta user",
-					Published:      published(time.Date(2019, time.March, 28, 21, 21, 00, 00, time.UTC)),
+					Actor:          testActor(),
+					EventType:      okta.PtrString("user.lifecycle.create"),
+					DisplayMessage: okta.PtrString("Create okta user"),
+					Published:      okta.PtrTime(time.Date(2019, time.March, 28, 21, 21, 0o0, 0o0, time.UTC)),
 				},
 			},
 		},
-		//nolint:gofumpt,govet,err113
 		{
 			name:      "error",
-			logEvents: []*okta.LogEvent{},
-			since:     time.Date(2018, time.January, 01, 00, 00, 00, 00, time.UTC),
-			err:       errors.New("boomsauce"),
+			logEvents: []okta.LogEvent{},
+			since:     time.Date(2018, time.January, 0o1, 0o0, 0o0, 0o0, 0o0, time.UTC),
+			err:       errors.New("boomsauce"), //nolint:err113
 			wantErr:   true,
 		},
 	}
@@ -121,12 +111,11 @@ func TestClient_GetLogsBounded(t *testing.T) {
 					t:         t,
 					err:       tt.err,
 					logEvents: tt.logEvents,
-					resp:      &okta.Response{},
 					maxIter:   10,
 				},
 			}
 
-			got, err := c.GetLogsBounded(context.TODO(), tt.since, time.Now().UTC(), tt.qp)
+			got, err := c.GetLogsBounded(context.TODO(), tt.since, time.Now().UTC(), "")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -139,7 +128,7 @@ func TestClient_GetLogsBounded(t *testing.T) {
 }
 
 func TestClient_pollLogs(t *testing.T) {
-	testTime := time.Date(2011, time.September, 20, 15, 15, 00, 00, time.UTC) //nolint:gofumpt
+	testTime := time.Date(2011, time.September, 20, 15, 15, 0o0, 0o0, time.UTC)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 	defer cancel()
@@ -159,7 +148,7 @@ func TestClient_pollLogs(t *testing.T) {
 		ctx,
 		1*time.Microsecond,
 		testTime,
-		nil,
+		"",
 		func(_ context.Context, le *okta.LogEvent) {
 			events = append(events, le)
 		},
@@ -167,7 +156,12 @@ func TestClient_pollLogs(t *testing.T) {
 
 	<-ctx.Done()
 
-	assert.Equal(t, testEvents, events)
+	want := make([]*okta.LogEvent, len(testEvents))
+	for i := range testEvents {
+		want[i] = &testEvents[i]
+	}
+
+	assert.Equal(t, want, events)
 
 	errCtx, errCancel := context.WithTimeout(context.TODO(), 1*time.Second)
 	defer errCancel()
@@ -188,9 +182,9 @@ func TestClient_pollLogs(t *testing.T) {
 		ctx,
 		1*time.Microsecond,
 		testTime,
-		nil,
+		"",
 		func(_ context.Context, le *okta.LogEvent) {
-			events = append(events, le)
+			errEvents = append(errEvents, le)
 		},
 	)
 

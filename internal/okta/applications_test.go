@@ -5,8 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -14,55 +13,62 @@ import (
 type mockApplicationClient struct {
 	t                   *testing.T
 	err                 error
-	resp                *okta.Response
-	apps                []okta.App
-	appGroupAssignments []*okta.ApplicationGroupAssignment
+	apps                []okta.ListApplications200ResponseInner
+	appGroupAssignments []okta.ApplicationGroupAssignment
 }
 
-func (m *mockApplicationClient) ListApplications(context.Context, *query.Params) ([]okta.App, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return m.apps, m.resp, nil
-}
-
-func (m *mockApplicationClient) CreateApplicationGroupAssignment(_ context.Context, _, _ string, _ okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return nil, m.resp, nil
-}
-
-func (m *mockApplicationClient) DeleteApplicationGroupAssignment(_ context.Context, _, _ string) (*okta.Response, error) {
+func (m *mockApplicationClient) ListApplications(context.Context, string) ([]okta.ListApplications200ResponseInner, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 
-	return m.resp, nil
+	return m.apps, nil
 }
 
-func (m *mockApplicationClient) GetApplicationGroupAssignment(_ context.Context, _, _ string, _ *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error) {
+func (m *mockApplicationClient) CreateApplicationGroupAssignment(_ context.Context, _, _ string) (*okta.ApplicationGroupAssignment, error) {
 	if m.err != nil {
-		return nil, nil, m.err
+		return nil, m.err
 	}
 
-	return nil, m.resp, nil
+	return nil, nil
 }
 
-func (m *mockApplicationClient) ListApplicationGroupAssignments(_ context.Context, _ string, _ *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error) {
+func (m *mockApplicationClient) DeleteApplicationGroupAssignment(_ context.Context, _, _ string) error {
+	return m.err
+}
+
+func (m *mockApplicationClient) GetApplicationGroupAssignment(_ context.Context, _, _ string) (*okta.ApplicationGroupAssignment, error) {
 	if m.err != nil {
-		return nil, nil, m.err
+		return nil, m.err
 	}
 
-	return m.appGroupAssignments, m.resp, nil
+	return nil, nil
 }
 
-type otherApplication struct{}
+func (m *mockApplicationClient) ListApplicationGroupAssignments(_ context.Context, _ string) ([]okta.ApplicationGroupAssignment, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
 
-func (o *otherApplication) IsApplicationInstance() bool {
-	return false
+	return m.appGroupAssignments, nil
+}
+
+// samlAppWithGithubOrg builds an okta application (as the oneOf response wrapper) with the
+// given id and, optionally, a githubOrg app setting.
+func samlAppWithGithubOrg(id string, githubOrg interface{}) okta.ListApplications200ResponseInner {
+	app := &okta.SamlApplication{
+		Application: okta.Application{Id: okta.PtrString(id)},
+	}
+
+	if githubOrg != nil {
+		app.Settings = &okta.SamlApplicationSettings{
+			AdditionalProperties: map[string]interface{}{
+				"app": map[string]interface{}{"githubOrg": githubOrg},
+			},
+		}
+	}
+
+	return okta.ListApplications200ResponseInner{SamlApplication: app}
 }
 
 func TestClient_AssignGroupToApplication(t *testing.T) {
@@ -174,23 +180,17 @@ func TestClient_ListGroupApplicationAssignment(t *testing.T) {
 		name        string
 		appID       string
 		err         error
-		assignments []*okta.ApplicationGroupAssignment
-		resp        *okta.Response
+		assignments []okta.ApplicationGroupAssignment
 		want        []string
 		wantErr     bool
 	}{
 		{
 			name:  "example",
 			appID: "47819d20-70e5-4ab9-b008-898be42adde7",
-			assignments: []*okta.ApplicationGroupAssignment{
-				{
-					Id: "group-001",
-				},
-				{
-					Id: "group-002",
-				},
+			assignments: []okta.ApplicationGroupAssignment{
+				{Id: okta.PtrString("group-001")},
+				{Id: okta.PtrString("group-002")},
 			},
-			resp: &okta.Response{},
 			want: []string{"group-001", "group-002"},
 		},
 		{
@@ -213,7 +213,6 @@ func TestClient_ListGroupApplicationAssignment(t *testing.T) {
 					t:                   t,
 					err:                 tt.err,
 					appGroupAssignments: tt.assignments,
-					resp:                tt.resp,
 				},
 			}
 
@@ -232,32 +231,28 @@ func TestClient_ListGroupApplicationAssignment(t *testing.T) {
 func TestClient_listApplications(t *testing.T) {
 	tests := []struct {
 		name    string
-		qp      *query.Params
-		resp    *okta.Response
 		err     error
-		apps    []okta.App
-		want    []okta.App
+		apps    []okta.ListApplications200ResponseInner
+		want    []okta.ListApplications200ResponseInner
 		wantErr bool
 	}{
 		{
 			name: "example",
-			resp: &okta.Response{},
-			apps: []okta.App{
-				&okta.Application{Id: "app-01"},
-				&okta.Application{Id: "app-02"},
-				&okta.Application{Id: "app-03"},
+			apps: []okta.ListApplications200ResponseInner{
+				samlAppWithGithubOrg("app-01", nil),
+				samlAppWithGithubOrg("app-02", nil),
+				samlAppWithGithubOrg("app-03", nil),
 			},
-			want: []okta.App{
-				&okta.Application{Id: "app-01"},
-				&okta.Application{Id: "app-02"},
-				&okta.Application{Id: "app-03"},
+			want: []okta.ListApplications200ResponseInner{
+				samlAppWithGithubOrg("app-01", nil),
+				samlAppWithGithubOrg("app-02", nil),
+				samlAppWithGithubOrg("app-03", nil),
 			},
 		},
 		{
 			name: "example empty response",
-			resp: &okta.Response{},
-			apps: []okta.App{},
-			want: []okta.App{},
+			apps: []okta.ListApplications200ResponseInner{},
+			want: []okta.ListApplications200ResponseInner{},
 		},
 		{
 			name:    "api error",
@@ -272,12 +267,11 @@ func TestClient_listApplications(t *testing.T) {
 				appIface: &mockApplicationClient{
 					t:    t,
 					err:  tt.err,
-					resp: tt.resp,
 					apps: tt.apps,
 				},
 			}
 
-			got, err := c.listApplications(context.TODO(), tt.qp)
+			got, err := c.listApplications(context.TODO(), "")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -293,45 +287,18 @@ func TestClient_GithubCloudApplications(t *testing.T) {
 	tests := []struct {
 		name    string
 		err     error
-		resp    *okta.Response
-		apps    []okta.App
+		apps    []okta.ListApplications200ResponseInner
 		want    map[string]string
 		wantErr bool
 	}{
 		{
 			name: "example apps",
-			resp: &okta.Response{},
-			apps: []okta.App{
-				&okta.Application{
-					Id: "app-01",
-					Settings: &okta.ApplicationSettings{
-						App: &okta.ApplicationSettingsApplication{
-							"githubOrg": "testorg01",
-						},
-					},
-				},
-				&okta.Application{
-					Id: "app-02",
-					Settings: &okta.ApplicationSettings{
-						App: &okta.ApplicationSettingsApplication{
-							"githubOrg": "testorg02",
-						},
-					},
-				},
-				&okta.Application{
-					Id:       "app-03",
-					Settings: &okta.ApplicationSettings{},
-				},
-				&okta.Application{
-					Id: "app-05",
-					Settings: &okta.ApplicationSettings{
-						App: &okta.ApplicationSettingsApplication{
-							"githubOrg": []string{"some", "not", "string"},
-						},
-					},
-				},
-				&okta.Application{Id: "app-06"},
-				&otherApplication{},
+			apps: []okta.ListApplications200ResponseInner{
+				samlAppWithGithubOrg("app-01", "testorg01"),
+				samlAppWithGithubOrg("app-02", "testorg02"),
+				samlAppWithGithubOrg("app-03", nil),
+				samlAppWithGithubOrg("app-05", []string{"some", "not", "string"}),
+				samlAppWithGithubOrg("app-06", nil),
 			},
 			want: map[string]string{
 				"testorg01": "app-01",
@@ -340,32 +307,10 @@ func TestClient_GithubCloudApplications(t *testing.T) {
 		},
 		{
 			name: "nil settings",
-			resp: &okta.Response{},
-			apps: []okta.App{
-				&okta.Application{Id: "app-01"},
-				&okta.Application{Id: "app-02"},
-				&okta.Application{Id: "app-03"},
-				&otherApplication{},
-			},
-			want: map[string]string{},
-		},
-		{
-			name: "nil settings app",
-			resp: &okta.Response{},
-			apps: []okta.App{
-				&okta.Application{
-					Id:       "app-01",
-					Settings: &okta.ApplicationSettings{},
-				},
-				&okta.Application{
-					Id:       "app-02",
-					Settings: &okta.ApplicationSettings{},
-				},
-				&okta.Application{
-					Id:       "app-03",
-					Settings: &okta.ApplicationSettings{},
-				},
-				&otherApplication{},
+			apps: []okta.ListApplications200ResponseInner{
+				samlAppWithGithubOrg("app-01", nil),
+				samlAppWithGithubOrg("app-02", nil),
+				samlAppWithGithubOrg("app-03", nil),
 			},
 			want: map[string]string{},
 		},
@@ -382,7 +327,6 @@ func TestClient_GithubCloudApplications(t *testing.T) {
 				appIface: &mockApplicationClient{
 					t:    t,
 					err:  tt.err,
-					resp: tt.resp,
 					apps: tt.apps,
 				},
 			}

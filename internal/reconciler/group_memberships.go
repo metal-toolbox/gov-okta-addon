@@ -29,7 +29,7 @@ func (r *Reconciler) GroupMembership(ctx context.Context, gid, oktaGID string) e
 
 	oktaGroupMemberIDs := make([]string, len(oktaGroupMembers))
 	for i, g := range oktaGroupMembers {
-		oktaGroupMemberIDs[i] = g.Id
+		oktaGroupMemberIDs[i] = g.GetId()
 	}
 
 	// keep a map of okta uids to governor uids for quick lookup and less calls

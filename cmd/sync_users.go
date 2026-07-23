@@ -8,8 +8,7 @@ import (
 	"github.com/metal-toolbox/gov-okta-addon/internal/okta"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	governor "github.com/metal-toolbox/governor-api/pkg/client"
-	okt "github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	okt "github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -72,7 +71,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 	// modifier function to get okta users that don't exist in governor and create them
 	syncFunc := func(ctx context.Context, u *okt.User) (*okt.User, error) {
-		logger.Debug("processing okta user", zap.String("okta.user.id", u.Id))
+		logger.Debug("processing okta user", zap.String("okta.user.id", u.GetId()))
 
 		email, err := okta.EmailFromUserProfile(u)
 		if err != nil {
@@ -90,7 +89,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 		}
 
 		// the external id in governor is simply the okta id
-		extID := u.Id
+		extID := u.GetId()
 
 		// check if user exists in governor
 		gUsers, err := gc.UsersQuery(ctx, map[string][]string{"email": {email}})
@@ -103,7 +102,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 		if len(gUsers) > 1 {
 			logger.Warn("unexpected user count for email",
 				zap.String("okta.user.email", email),
-				zap.String("okta.user.id", u.Id),
+				zap.String("okta.user.id", u.GetId()),
 				zap.Int("num.governor.users", len(gUsers)),
 			)
 
@@ -114,7 +113,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 			gUser := gUsers[0]
 
 			l := logger.With(zap.String("okta.user.email", email),
-				zap.String("okta.user.id", u.Id),
+				zap.String("okta.user.id", u.GetId()),
 				zap.String("governor.user.id", gUser.ID))
 
 			if gUser.Status.String != v1alpha1.UserStatusPending {
@@ -123,7 +122,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 			}
 
 			logger.Info("user exists in governor and is marked pending, marking active",
-				zap.String("okta.user.id", u.Id),
+				zap.String("okta.user.id", u.GetId()),
 				zap.String("okta.user.email", email),
 			)
 
@@ -141,7 +140,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 				l.Debug("updated governor user from okta sync",
 					zap.String("governor.user.id", gUser.ID),
-					zap.String("okta.user.id", u.Id),
+					zap.String("okta.user.id", u.GetId()),
 					zap.String("okta.user.email", email),
 				)
 			}
@@ -152,7 +151,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 		}
 
 		logger.Info("user not found in governor, creating",
-			zap.String("okta.user.id", u.Id),
+			zap.String("okta.user.id", u.GetId()),
 			zap.String("okta.user.email", email),
 		)
 
@@ -169,7 +168,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 			logger.Debug("created governor user from okta sync",
 				zap.String("governor.user.id", gUser.ID),
-				zap.String("okta.user.id", u.Id),
+				zap.String("okta.user.id", u.GetId()),
 				zap.String("okta.user.email", email),
 			)
 		}
@@ -181,7 +180,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 	logger.Info("starting to sync missing okta users into governor", zap.Bool("dry-run", dryRun))
 
-	users, err := oc.ListUsersWithModifier(ctx, syncFunc, &query.Params{})
+	users, err := oc.ListUsersWithModifier(ctx, syncFunc, "")
 	if err != nil {
 		return err
 	}
@@ -281,7 +280,7 @@ func uniqueEmails(users []*okt.User) map[string]string {
 		if err != nil {
 			l.Error("error getting email address from okta user",
 				zap.Error(err),
-				zap.String("okta.user.id", u.Id),
+				zap.String("okta.user.id", u.GetId()),
 			)
 
 			continue
@@ -289,12 +288,12 @@ func uniqueEmails(users []*okt.User) map[string]string {
 
 		if _, ok := emails[email]; ok {
 			l.Info("email already exists in list of emails",
-				zap.String("okta.user.id", u.Id),
+				zap.String("okta.user.id", u.GetId()),
 				zap.String("okta.user.email", email),
 			)
 		}
 
-		emails[email] = u.Id
+		emails[email] = u.GetId()
 	}
 
 	l.Debug("returning list of unique email address from okta users",
@@ -309,17 +308,11 @@ func userType(u *okt.User) (string, error) {
 	l := logger.Desugar()
 
 	// get the userType from the user profile
-	for k, v := range *u.Profile {
-		if k == "userType" {
-			if pv, ok := v.(string); ok {
-				return pv, nil
-			}
-
-			l.Warn("okta user userType in profile is not a string", zap.String("okta.user.id", u.Id), zap.Any("userType", v))
-
-			return "", ErrOktaUserTypeNotString
-		}
+	if u.Profile != nil && u.Profile.UserType.Get() != nil {
+		return *u.Profile.UserType.Get(), nil
 	}
 
-	return "", fmt.Errorf("userType not found for user %s", u.Id) //nolint:err113
+	l.Debug("userType not found in okta user profile", zap.String("okta.user.id", u.GetId()))
+
+	return "", fmt.Errorf("userType not found for user %s", u.GetId()) //nolint:err113
 }

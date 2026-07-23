@@ -3,8 +3,7 @@ package okta
 import (
 	"context"
 
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v6/okta"
 	"go.uber.org/zap"
 )
 
@@ -23,39 +22,42 @@ type Client struct {
 
 // ApplicationInterface abstracts the interactions with okta applications
 type ApplicationInterface interface {
-	ListApplications(context.Context, *query.Params) ([]okta.App, *okta.Response, error)
-	CreateApplicationGroupAssignment(context.Context, string, string, okta.ApplicationGroupAssignment) (*okta.ApplicationGroupAssignment, *okta.Response, error)
-	DeleteApplicationGroupAssignment(context.Context, string, string) (*okta.Response, error)
-	GetApplicationGroupAssignment(context.Context, string, string, *query.Params) (*okta.ApplicationGroupAssignment, *okta.Response, error)
-	ListApplicationGroupAssignments(context.Context, string, *query.Params) ([]*okta.ApplicationGroupAssignment, *okta.Response, error)
+	ListApplications(ctx context.Context, filter string) ([]okta.ListApplications200ResponseInner, error)
+	CreateApplicationGroupAssignment(ctx context.Context, appID, groupID string) (*okta.ApplicationGroupAssignment, error)
+	DeleteApplicationGroupAssignment(ctx context.Context, appID, groupID string) error
+	GetApplicationGroupAssignment(ctx context.Context, appID, groupID string) (*okta.ApplicationGroupAssignment, error)
+	ListApplicationGroupAssignments(ctx context.Context, appID string) ([]okta.ApplicationGroupAssignment, error)
 }
 
 // GroupInterface is the interface for managing groups in Okta
 type GroupInterface interface {
-	CreateGroup(context.Context, okta.Group) (*okta.Group, *okta.Response, error)
-	UpdateGroup(context.Context, string, okta.Group) (*okta.Group, *okta.Response, error)
-	DeleteGroup(context.Context, string) (*okta.Response, error)
-	ListGroups(context.Context, *query.Params) ([]*okta.Group, *okta.Response, error)
-	AddUserToGroup(context.Context, string, string) (*okta.Response, error)
-	RemoveUserFromGroup(context.Context, string, string) (*okta.Response, error)
-	ListGroupUsers(context.Context, string, *query.Params) ([]*okta.User, *okta.Response, error)
-	ListAssignedApplicationsForGroup(context.Context, string, *query.Params) ([]okta.App, *okta.Response, error)
+	CreateGroup(ctx context.Context, group okta.AddGroupRequest) (*okta.Group, error)
+	UpdateGroup(ctx context.Context, id string, group okta.AddGroupRequest) (*okta.Group, error)
+	DeleteGroup(ctx context.Context, id string) error
+	ListGroups(ctx context.Context, search string) ([]okta.Group, error)
+	AddUserToGroup(ctx context.Context, groupID, userID string) error
+	RemoveUserFromGroup(ctx context.Context, groupID, userID string) error
+	ListGroupUsers(ctx context.Context, groupID string) ([]okta.User, error)
+	ListAssignedApplicationsForGroup(ctx context.Context, groupID string) ([]okta.ListApplications200ResponseInner, error)
 }
 
 // UserInterface is the interface for managing users in Okta
 type UserInterface interface {
-	ClearUserSessions(context.Context, string, *query.Params) (*okta.Response, error)
-	DeactivateUser(context.Context, string, *query.Params) (*okta.Response, error)
-	DeactivateOrDeleteUser(context.Context, string, *query.Params) (*okta.Response, error)
-	GetUser(context.Context, string) (*okta.User, *okta.Response, error)
-	ListUsers(context.Context, *query.Params) ([]*okta.User, *okta.Response, error)
-	SuspendUser(context.Context, string) (*okta.Response, error)
-	UnsuspendUser(context.Context, string) (*okta.Response, error)
+	ClearUserSessions(ctx context.Context, id string) error
+	DeactivateUser(ctx context.Context, id string) error
+	DeactivateOrDeleteUser(ctx context.Context, id string) error
+	GetUser(ctx context.Context, id string) (*okta.User, error)
+	ListUsers(ctx context.Context, search string) ([]okta.User, error)
+	SuspendUser(ctx context.Context, id string) error
+	UnsuspendUser(ctx context.Context, id string) error
 }
 
 // LogEventInterface is the interface for getting log events from okta
 type LogEventInterface interface {
-	GetLogs(ctx context.Context, qp *query.Params) ([]*okta.LogEvent, *okta.Response, error)
+	// GetLogs returns a page of log events along with the "after" cursor for the next
+	// page (empty when there are no more pages).  Passing a non-empty after cursor
+	// requests the next page following a previous call.
+	GetLogs(ctx context.Context, since, until, after, filter string, limit int32) ([]okta.LogEvent, string, error)
 }
 
 // Option is a functional configuration option
@@ -99,8 +101,7 @@ func NewClient(opts ...Option) (*Client, error) {
 		opt(&client)
 	}
 
-	_, c, err := okta.NewClient(
-		context.TODO(),
+	config, err := okta.NewConfiguration(
 		okta.WithOrgUrl(client.url),
 		okta.WithToken(client.token),
 		okta.WithCache(client.cacheEnabled),
@@ -109,10 +110,12 @@ func NewClient(opts ...Option) (*Client, error) {
 		return nil, err
 	}
 
-	client.appIface = c.Application
-	client.groupIface = c.Group
-	client.userIface = c.User
-	client.logEventIface = c.LogEvent
+	c := okta.NewAPIClient(config)
+
+	client.appIface = &applicationService{client: c}
+	client.groupIface = &groupService{client: c}
+	client.userIface = &userService{client: c}
+	client.logEventIface = &logEventService{client: c}
 
 	return &client, nil
 }

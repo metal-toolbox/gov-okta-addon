@@ -5,8 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -15,69 +14,67 @@ type mockUserClient struct {
 	t   *testing.T
 	err error
 
-	users []*okta.User
-
-	resp *okta.Response
+	users []okta.User
 
 	deactivatedUser bool
 }
 
-func (m *mockUserClient) ClearUserSessions(_ context.Context, _ string, _ *query.Params) (*okta.Response, error) {
-	if m.err != nil {
-		return nil, m.err
-	}
-
-	return m.resp, nil
+func (m *mockUserClient) ClearUserSessions(_ context.Context, _ string) error {
+	return m.err
 }
 
-func (m *mockUserClient) DeactivateUser(_ context.Context, _ string, _ *query.Params) (*okta.Response, error) {
+func (m *mockUserClient) DeactivateUser(_ context.Context, _ string) error {
 	m.deactivatedUser = true
 
+	return m.err
+}
+
+func (m *mockUserClient) DeactivateOrDeleteUser(_ context.Context, _ string) error {
+	return m.err
+}
+
+func (m *mockUserClient) GetUser(_ context.Context, _ string) (*okta.User, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 
-	return m.resp, nil
+	return &m.users[0], nil
 }
 
-func (m *mockUserClient) DeactivateOrDeleteUser(_ context.Context, _ string, _ *query.Params) (*okta.Response, error) {
+func (m *mockUserClient) ListUsers(_ context.Context, _ string) ([]okta.User, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 
-	return m.resp, nil
+	return m.users, nil
 }
 
-func (m *mockUserClient) GetUser(_ context.Context, _ string) (*okta.User, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return m.users[0], m.resp, nil
+func (m *mockUserClient) SuspendUser(_ context.Context, _ string) error {
+	return m.err
 }
 
-func (m *mockUserClient) ListUsers(_ context.Context, _ *query.Params) ([]*okta.User, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return m.users, m.resp, nil
+func (m *mockUserClient) UnsuspendUser(_ context.Context, _ string) error {
+	return m.err
 }
 
-func (m *mockUserClient) SuspendUser(_ context.Context, _ string) (*okta.Response, error) {
-	if m.err != nil {
-		return nil, m.err
+// userProfile builds an okta user profile from the given fields, leaving unset any field
+// passed as an empty string.
+func userProfile(email, first, last string) *okta.UserProfile {
+	p := &okta.UserProfile{}
+
+	if email != "" {
+		p.Email = okta.PtrString(email)
 	}
 
-	return m.resp, nil
-}
-
-func (m *mockUserClient) UnsuspendUser(_ context.Context, _ string) (*okta.Response, error) {
-	if m.err != nil {
-		return nil, m.err
+	if first != "" {
+		p.FirstName = *okta.NewNullableString(okta.PtrString(first))
 	}
 
-	return m.resp, nil
+	if last != "" {
+		p.LastName = *okta.NewNullableString(okta.PtrString(last))
+	}
+
+	return p
 }
 
 func TestClient_ClearUserSessions(t *testing.T) {
@@ -162,7 +159,7 @@ func TestClient_DeleteUser(t *testing.T) {
 	tests := []struct {
 		name    string
 		id      string
-		users   []*okta.User
+		users   []okta.User
 		err     error
 		wantDA  bool
 		wantErr bool
@@ -170,24 +167,24 @@ func TestClient_DeleteUser(t *testing.T) {
 		{
 			name: "delete active user",
 			id:   "user101",
-			users: []*okta.User{
-				{Id: "11111111", Status: "ACTIVE"},
+			users: []okta.User{
+				{Id: okta.PtrString("11111111"), Status: okta.PtrString("ACTIVE")},
 			},
 			wantDA: true,
 		},
 		{
 			name: "delete deactivated user",
 			id:   "user101",
-			users: []*okta.User{
-				{Id: "11111111", Status: "DEPROVISIONED"},
+			users: []okta.User{
+				{Id: okta.PtrString("11111111"), Status: okta.PtrString("DEPROVISIONED")},
 			},
 			wantDA: false,
 		},
 		{
 			name: "okta error",
 			id:   "user101",
-			users: []*okta.User{
-				{Id: "11111111"},
+			users: []okta.User{
+				{Id: okta.PtrString("11111111")},
 			},
 			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
@@ -199,7 +196,6 @@ func TestClient_DeleteUser(t *testing.T) {
 				t:               t,
 				err:             tt.err,
 				users:           tt.users,
-				resp:            &okta.Response{},
 				deactivatedUser: false,
 			}
 
@@ -302,23 +298,23 @@ func TestClient_GetUserIDByEmail(t *testing.T) {
 	tests := []struct {
 		name    string
 		email   string
-		users   []*okta.User
+		users   []okta.User
 		err     error
 		want    string
 		wantErr bool
 	}{
 		{
 			name: "example get user by email",
-			users: []*okta.User{
-				{Id: "11111111"},
+			users: []okta.User{
+				{Id: okta.PtrString("11111111")},
 			},
 			email: "foo@example.com",
 			want:  "11111111",
 		},
 		{
 			name: "okta error",
-			users: []*okta.User{
-				{Id: "11111111"},
+			users: []okta.User{
+				{Id: okta.PtrString("11111111")},
 			},
 			email:   "foo@example.com",
 			err:     errors.New("boom"), //nolint:err113
@@ -326,15 +322,15 @@ func TestClient_GetUserIDByEmail(t *testing.T) {
 		},
 		{
 			name:    "empty list",
-			users:   []*okta.User{},
+			users:   []okta.User{},
 			email:   "foo@example.com",
 			wantErr: true,
 		},
 		{
 			name: "more than one group returned",
-			users: []*okta.User{
-				{Id: "11111111"},
-				{Id: "33333333"},
+			users: []okta.User{
+				{Id: okta.PtrString("11111111")},
+				{Id: okta.PtrString("33333333")},
 			},
 			email:   "foo@example.com",
 			wantErr: true,
@@ -367,28 +363,28 @@ func TestClient_ListUsers(t *testing.T) {
 	tests := []struct {
 		name    string
 		err     error
-		users   []*okta.User
+		users   []okta.User
 		want    []*okta.User
 		wantErr bool
 	}{
 		{
 			name: "successful list users",
-			users: []*okta.User{
-				{Id: "user1"},
-				{Id: "user2"},
+			users: []okta.User{
+				{Id: okta.PtrString("user1")},
+				{Id: okta.PtrString("user2")},
 			},
-			want: []*okta.User{{Id: "user1"}, {Id: "user2"}},
+			want: []*okta.User{{Id: okta.PtrString("user1")}, {Id: okta.PtrString("user2")}},
 		},
 		{
 			name:  "empty list users",
-			users: []*okta.User{},
+			users: []okta.User{},
 			want:  []*okta.User{},
 		},
 		{
 			name: "okta error",
-			users: []*okta.User{
-				{Id: "user1"},
-				{Id: "user1"},
+			users: []okta.User{
+				{Id: okta.PtrString("user1")},
+				{Id: okta.PtrString("user1")},
 			},
 			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
@@ -403,7 +399,6 @@ func TestClient_ListUsers(t *testing.T) {
 					t:     t,
 					err:   tt.err,
 					users: tt.users,
-					resp:  &okta.Response{},
 				},
 			}
 
@@ -421,7 +416,7 @@ func TestClient_ListUsers(t *testing.T) {
 
 func TestClient_ListUsersWithModifier(t *testing.T) {
 	skipUser := func(_ context.Context, u *okta.User) (*okta.User, error) {
-		if u.Id == "skipMe" {
+		if u.GetId() == "skipMe" {
 			return nil, nil
 		}
 
@@ -432,53 +427,39 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 		return nil, errors.New("boomsauce") //nolint:err113
 	}
 
-	type args struct {
-		f UserModifierFunc
-		q *query.Params
-	}
-
 	tests := []struct {
 		name    string
-		args    args
+		f       UserModifierFunc
 		err     error
-		users   []*okta.User
+		users   []okta.User
 		want    []*okta.User
 		wantErr bool
 	}{
 		{
 			name: "example skip user",
-			args: args{
-				f: skipUser,
-				q: &query.Params{},
+			f:    skipUser,
+			users: []okta.User{
+				{Id: okta.PtrString("heyThere")},
+				{Id: okta.PtrString("skipMe")},
 			},
-			users: []*okta.User{
-				{Id: "heyThere"},
-				{Id: "skipMe"},
-			},
-			want: []*okta.User{{Id: "heyThere"}},
+			want: []*okta.User{{Id: okta.PtrString("heyThere")}},
 		},
 		{
 			name: "okta error",
-			args: args{
-				f: skipUser,
-				q: &query.Params{},
-			},
-			users: []*okta.User{
-				{Id: "heyThere"},
-				{Id: "skipMe"},
+			f:    skipUser,
+			users: []okta.User{
+				{Id: okta.PtrString("heyThere")},
+				{Id: okta.PtrString("skipMe")},
 			},
 			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 		{
 			name: "func error",
-			args: args{
-				f: errMe,
-				q: &query.Params{},
-			},
-			users: []*okta.User{
-				{Id: "heyThere"},
-				{Id: "skipMe"},
+			f:    errMe,
+			users: []okta.User{
+				{Id: okta.PtrString("heyThere")},
+				{Id: okta.PtrString("skipMe")},
 			},
 			wantErr: true,
 		},
@@ -492,11 +473,10 @@ func TestClient_ListUsersWithModifier(t *testing.T) {
 					t:     t,
 					err:   tt.err,
 					users: tt.users,
-					resp:  &okta.Response{},
 				},
 			}
 
-			got, err := c.ListUsersWithModifier(context.TODO(), tt.args.f, tt.args.q)
+			got, err := c.ListUsersWithModifier(context.TODO(), tt.f, "")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -518,9 +498,7 @@ func TestClient_EmailFromUserProfile(t *testing.T) {
 		{
 			name: "example email",
 			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"email": "test1@test.com",
-				},
+				Profile: userProfile("test1@test.com", "", ""),
 			},
 			want: "test1@test.com",
 		},
@@ -528,15 +506,6 @@ func TestClient_EmailFromUserProfile(t *testing.T) {
 			name: "not found",
 			user: &okta.User{
 				Profile: &okta.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"email": 12345,
-				},
 			},
 			wantErr: true,
 		},
@@ -565,9 +534,7 @@ func TestClient_FirstNameFromUserProfile(t *testing.T) {
 		{
 			name: "example firstName",
 			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"firstName": "Test",
-				},
+				Profile: userProfile("", "Test", ""),
 			},
 			want: "Test",
 		},
@@ -575,15 +542,6 @@ func TestClient_FirstNameFromUserProfile(t *testing.T) {
 			name: "not found",
 			user: &okta.User{
 				Profile: &okta.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"firstName": 12345,
-				},
 			},
 			wantErr: true,
 		},
@@ -612,9 +570,7 @@ func TestClient_LastNameFromUserProfile(t *testing.T) {
 		{
 			name: "example lastName",
 			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"lastName": "One",
-				},
+				Profile: userProfile("", "", "One"),
 			},
 			want: "One",
 		},
@@ -622,15 +578,6 @@ func TestClient_LastNameFromUserProfile(t *testing.T) {
 			name: "not found",
 			user: &okta.User{
 				Profile: &okta.UserProfile{},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"lastName": 12345,
-				},
 			},
 			wantErr: true,
 		},
@@ -659,13 +606,9 @@ func TestClient_UserDetailsFromOktaUser(t *testing.T) {
 		{
 			name: "successful example",
 			user: &okta.User{
-				Id:     "00u123456789abcde697",
-				Status: "ACTIVE",
-				Profile: &okta.UserProfile{
-					"firstName": "Burrow",
-					"lastName":  "Blaster",
-					"email":     "bblaster@gopher.com",
-				},
+				Id:      okta.PtrString("00u123456789abcde697"),
+				Status:  okta.PtrString("ACTIVE"),
+				Profile: userProfile("bblaster@gopher.com", "Burrow", "Blaster"),
 			},
 			want: &UserDetails{
 				ID:     "00u123456789abcde697",
@@ -684,20 +627,7 @@ func TestClient_UserDetailsFromOktaUser(t *testing.T) {
 		{
 			name: "missing email",
 			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"firstName": "Burrow",
-					"lastName":  "Blaster",
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name: "bad values",
-			user: &okta.User{
-				Profile: &okta.UserProfile{
-					"firstName": "Burrow",
-					"lastName":  12345,
-				},
+				Profile: userProfile("", "Burrow", "Blaster"),
 			},
 			wantErr: true,
 		},

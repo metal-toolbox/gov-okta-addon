@@ -10,8 +10,7 @@ import (
 	"github.com/metal-toolbox/gov-okta-addon/internal/okta"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	governor "github.com/metal-toolbox/governor-api/pkg/client"
-	okt "github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	okt "github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -88,18 +87,18 @@ func syncGroupsToGovernor(ctx context.Context) error {
 	}
 
 	syncFunc := func(ctx context.Context, g *okt.Group) (*okt.Group, error) {
-		l := logger.With(zap.String("okta.group.id", g.Id))
+		l := logger.With(zap.String("okta.group.id", g.GetId()))
 
 		if g.Profile == nil {
 			return nil, okta.ErrNilGroupProfile
 		}
 
-		groupName := g.Profile.Name
-		groupDesc := g.Profile.Description
+		groupName := okta.GroupProfileName(g)
+		groupDesc := okta.GroupProfileDescription(g)
 
 		l = l.With(zap.String("okta.group.name", groupName))
 
-		if g.Type == "APP_GROUP" {
+		if g.GetType() == "APP_GROUP" {
 			l.Info("skipping app group")
 
 			skipped++
@@ -175,7 +174,7 @@ func syncGroupsToGovernor(ctx context.Context) error {
 		// if we found the group by slug or if we created the group, we should update the okta
 		// group profile to contain the correct governor id
 		if !found {
-			grp, err := updateOktaGroupProfile(ctx, oc, g.Id, groupName, groupDesc, govGroup, l)
+			grp, err := updateOktaGroupProfile(ctx, oc, g.GetId(), groupName, groupDesc, govGroup, l)
 			if err != nil {
 				return nil, err
 			}
@@ -183,7 +182,7 @@ func syncGroupsToGovernor(ctx context.Context) error {
 			g = grp
 		}
 
-		apps, err := oc.GroupGithubCloudApplications(ctx, g.Id)
+		apps, err := oc.GroupGithubCloudApplications(ctx, g.GetId())
 		if err != nil {
 			return nil, err
 		}
@@ -208,7 +207,7 @@ func syncGroupsToGovernor(ctx context.Context) error {
 		return g, nil
 	}
 
-	groups, err := oc.ListGroupsWithModifier(ctx, syncFunc, &query.Params{})
+	groups, err := oc.ListGroupsWithModifier(ctx, syncFunc, "")
 	if err != nil {
 		return err
 	}
@@ -472,21 +471,23 @@ func updateOktaGroupProfile(
 	if skipOkta || dryRun {
 		l.Info("skipping okta update of governor id")
 
+		profile := &okt.OktaUserGroupProfile{
+			Name:                 okt.PtrString(groupName),
+			Description:          okt.PtrString(groupDesc),
+			AdditionalProperties: map[string]interface{}{},
+		}
+
 		grp := &okt.Group{
-			Id: gID,
-			Profile: &okt.GroupProfile{
-				Name:            groupName,
-				Description:     groupDesc,
-				GroupProfileMap: okt.GroupProfileMap{},
-			},
+			Id:      okt.PtrString(gID),
+			Profile: &okt.GroupProfile{OktaUserGroupProfile: profile},
 		}
 
 		if dryRun {
-			grp.Profile.GroupProfileMap[okta.GroupProfileGovernorIDKey] = "FAKE"
+			profile.AdditionalProperties[okta.GroupProfileGovernorIDKey] = "FAKE"
 			return grp, nil
 		}
 
-		grp.Profile.GroupProfileMap[okta.GroupProfileGovernorIDKey] = govGroup.ID
+		profile.AdditionalProperties[okta.GroupProfileGovernorIDKey] = govGroup.ID
 
 		return grp, nil
 	}

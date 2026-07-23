@@ -5,8 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/okta/okta-sdk-golang/v2/okta"
-	"github.com/okta/okta-sdk-golang/v2/okta/query"
+	"github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -15,78 +14,64 @@ type mockGroupClient struct {
 	t   *testing.T
 	err error
 
-	apps []okta.App
+	apps []okta.ListApplications200ResponseInner
 
 	group  *okta.Group
-	groups []*okta.Group
+	groups []okta.Group
 
-	users []*okta.User
-
-	resp *okta.Response
+	users []okta.User
 }
 
-func (m *mockGroupClient) CreateGroup(_ context.Context, _ okta.Group) (*okta.Group, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return m.group, m.resp, nil
-}
-
-func (m *mockGroupClient) UpdateGroup(_ context.Context, _ string, _ okta.Group) (*okta.Group, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return m.group, m.resp, nil
-}
-
-func (m *mockGroupClient) DeleteGroup(_ context.Context, _ string) (*okta.Response, error) {
+func (m *mockGroupClient) CreateGroup(_ context.Context, _ okta.AddGroupRequest) (*okta.Group, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 
-	return m.resp, nil
+	return m.group, nil
 }
 
-func (m *mockGroupClient) ListGroups(_ context.Context, _ *query.Params) ([]*okta.Group, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return m.groups, m.resp, nil
-}
-
-func (m *mockGroupClient) AddUserToGroup(_ context.Context, _, _ string) (*okta.Response, error) {
+func (m *mockGroupClient) UpdateGroup(_ context.Context, _ string, _ okta.AddGroupRequest) (*okta.Group, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 
-	return m.resp, nil
+	return m.group, nil
 }
 
-func (m *mockGroupClient) RemoveUserFromGroup(_ context.Context, _, _ string) (*okta.Response, error) {
+func (m *mockGroupClient) DeleteGroup(_ context.Context, _ string) error {
+	return m.err
+}
+
+func (m *mockGroupClient) ListGroups(_ context.Context, _ string) ([]okta.Group, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
 
-	return m.resp, nil
+	return m.groups, nil
 }
 
-func (m *mockGroupClient) ListGroupUsers(_ context.Context, _ string, _ *query.Params) ([]*okta.User, *okta.Response, error) {
-	if m.err != nil {
-		return nil, nil, m.err
-	}
-
-	return m.users, m.resp, nil
+func (m *mockGroupClient) AddUserToGroup(_ context.Context, _, _ string) error {
+	return m.err
 }
 
-func (m *mockGroupClient) ListAssignedApplicationsForGroup(_ context.Context, _ string, _ *query.Params) ([]okta.App, *okta.Response, error) {
+func (m *mockGroupClient) RemoveUserFromGroup(_ context.Context, _, _ string) error {
+	return m.err
+}
+
+func (m *mockGroupClient) ListGroupUsers(_ context.Context, _ string) ([]okta.User, error) {
 	if m.err != nil {
-		return nil, nil, m.err
+		return nil, m.err
 	}
 
-	return m.apps, m.resp, nil
+	return m.users, nil
+}
+
+func (m *mockGroupClient) ListAssignedApplicationsForGroup(_ context.Context, _ string) ([]okta.ListApplications200ResponseInner, error) {
+	if m.err != nil {
+		return nil, m.err
+	}
+
+	return m.apps, nil
 }
 
 func TestClient_CreateGroup(t *testing.T) {
@@ -106,7 +91,7 @@ func TestClient_CreateGroup(t *testing.T) {
 	}{
 		{
 			name:  "example create group",
-			group: &okta.Group{Id: "11111111"},
+			group: &okta.Group{Id: okta.PtrString("11111111")},
 			args: args{
 				name:    "testgroup",
 				desc:    "my test group",
@@ -116,7 +101,7 @@ func TestClient_CreateGroup(t *testing.T) {
 		},
 		{
 			name:  "okta error",
-			group: &okta.Group{Id: "11111111"},
+			group: &okta.Group{Id: okta.PtrString("11111111")},
 			args: args{
 				name:    "testgroup",
 				desc:    "my test group",
@@ -249,23 +234,23 @@ func TestClient_GetGroupByGovernorID(t *testing.T) {
 	tests := []struct {
 		name    string
 		id      string
-		groups  []*okta.Group
+		groups  []okta.Group
 		err     error
 		want    string
 		wantErr bool
 	}{
 		{
 			name: "example create group",
-			groups: []*okta.Group{
-				{Id: "11111111"},
+			groups: []okta.Group{
+				{Id: okta.PtrString("11111111")},
 			},
 			id:   "2222222",
 			want: "11111111",
 		},
 		{
 			name: "okta error",
-			groups: []*okta.Group{
-				{Id: "11111111"},
+			groups: []okta.Group{
+				{Id: okta.PtrString("11111111")},
 			},
 			id:      "2222222",
 			err:     errors.New("boom"), //nolint:err113
@@ -273,15 +258,15 @@ func TestClient_GetGroupByGovernorID(t *testing.T) {
 		},
 		{
 			name:    "empty list",
-			groups:  []*okta.Group{},
+			groups:  []okta.Group{},
 			id:      "2222222",
 			wantErr: true,
 		},
 		{
 			name: "more than one group returned",
-			groups: []*okta.Group{
-				{Id: "11111111"},
-				{Id: "33333333"},
+			groups: []okta.Group{
+				{Id: okta.PtrString("11111111")},
+				{Id: okta.PtrString("33333333")},
 			},
 			id:      "2222222",
 			wantErr: true,
@@ -398,7 +383,7 @@ func TestClient_RemoveGroupUser(t *testing.T) {
 func TestClient_ListGroupMembership(t *testing.T) {
 	tests := []struct {
 		name    string
-		users   []*okta.User
+		users   []okta.User
 		err     error
 		gid     string
 		want    []*okta.User
@@ -406,16 +391,16 @@ func TestClient_ListGroupMembership(t *testing.T) {
 	}{
 		{
 			name: "example",
-			users: []*okta.User{
-				{Id: "user-01"},
-				{Id: "user-02"},
-				{Id: "user-03"},
+			users: []okta.User{
+				{Id: okta.PtrString("user-01")},
+				{Id: okta.PtrString("user-02")},
+				{Id: okta.PtrString("user-03")},
 			},
 			gid: "group-01",
 			want: []*okta.User{
-				{Id: "user-01"},
-				{Id: "user-02"},
-				{Id: "user-03"},
+				{Id: okta.PtrString("user-01")},
+				{Id: okta.PtrString("user-02")},
+				{Id: okta.PtrString("user-03")},
 			},
 		},
 		{
@@ -432,7 +417,6 @@ func TestClient_ListGroupMembership(t *testing.T) {
 					t:     t,
 					err:   tt.err,
 					users: tt.users,
-					resp:  &okta.Response{},
 				},
 				logger: zap.NewNop(),
 			}
@@ -451,7 +435,7 @@ func TestClient_ListGroupMembership(t *testing.T) {
 
 func TestClient_ListGroupsWithModifier(t *testing.T) {
 	skipGroup := func(_ context.Context, g *okta.Group) (*okta.Group, error) {
-		if g.Id == "skipMe" {
+		if g.GetId() == "skipMe" {
 			return nil, nil
 		}
 
@@ -462,53 +446,39 @@ func TestClient_ListGroupsWithModifier(t *testing.T) {
 		return nil, errors.New("boomsauce") //nolint:err113
 	}
 
-	type args struct {
-		f GroupModifierFunc
-		q *query.Params
-	}
-
 	tests := []struct {
 		name    string
-		args    args
+		f       GroupModifierFunc
 		err     error
-		groups  []*okta.Group
+		groups  []okta.Group
 		want    []*okta.Group
 		wantErr bool
 	}{
 		{
 			name: "example skip user",
-			args: args{
-				f: skipGroup,
-				q: &query.Params{},
+			f:    skipGroup,
+			groups: []okta.Group{
+				{Id: okta.PtrString("heyThere")},
+				{Id: okta.PtrString("skipMe")},
 			},
-			groups: []*okta.Group{
-				{Id: "heyThere"},
-				{Id: "skipMe"},
-			},
-			want: []*okta.Group{{Id: "heyThere"}},
+			want: []*okta.Group{{Id: okta.PtrString("heyThere")}},
 		},
 		{
 			name: "okta error",
-			args: args{
-				f: skipGroup,
-				q: &query.Params{},
-			},
-			groups: []*okta.Group{
-				{Id: "heyThere"},
-				{Id: "skipMe"},
+			f:    skipGroup,
+			groups: []okta.Group{
+				{Id: okta.PtrString("heyThere")},
+				{Id: okta.PtrString("skipMe")},
 			},
 			err:     errors.New("boom"), //nolint:err113
 			wantErr: true,
 		},
 		{
 			name: "func error",
-			args: args{
-				f: errMe,
-				q: &query.Params{},
-			},
-			groups: []*okta.Group{
-				{Id: "heyThere"},
-				{Id: "skipMe"},
+			f:    errMe,
+			groups: []okta.Group{
+				{Id: okta.PtrString("heyThere")},
+				{Id: okta.PtrString("skipMe")},
 			},
 			wantErr: true,
 		},
@@ -522,11 +492,10 @@ func TestClient_ListGroupsWithModifier(t *testing.T) {
 					t:      t,
 					err:    tt.err,
 					groups: tt.groups,
-					resp:   &okta.Response{},
 				},
 			}
 
-			got, err := c.ListGroupsWithModifier(context.TODO(), tt.args.f, tt.args.q)
+			got, err := c.ListGroupsWithModifier(context.TODO(), tt.f, "")
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -546,13 +515,30 @@ func TestGroupGovernorID(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "example group",
+			name: "example group (user profile)",
 			group: &okta.Group{
 				Profile: &okta.GroupProfile{
-					Name:        "example",
-					Description: "an example group",
-					GroupProfileMap: okta.GroupProfileMap{
-						GroupProfileGovernorIDKey: "some-governor-id",
+					OktaUserGroupProfile: &okta.OktaUserGroupProfile{
+						Name:        okta.PtrString("example"),
+						Description: okta.PtrString("an example group"),
+						AdditionalProperties: map[string]interface{}{
+							GroupProfileGovernorIDKey: "some-governor-id",
+						},
+					},
+				},
+			},
+			want: "some-governor-id",
+		},
+		{
+			name: "example group (active directory profile)",
+			group: &okta.Group{
+				Profile: &okta.GroupProfile{
+					OktaActiveDirectoryGroupProfile: &okta.OktaActiveDirectoryGroupProfile{
+						Name:        okta.PtrString("example"),
+						Description: okta.PtrString("an example group"),
+						AdditionalProperties: map[string]interface{}{
+							GroupProfileGovernorIDKey: "some-governor-id",
+						},
 					},
 				},
 			},
@@ -562,10 +548,12 @@ func TestGroupGovernorID(t *testing.T) {
 			name: "non string governor id",
 			group: &okta.Group{
 				Profile: &okta.GroupProfile{
-					Name:        "example",
-					Description: "an example group",
-					GroupProfileMap: okta.GroupProfileMap{
-						GroupProfileGovernorIDKey: 12345,
+					OktaUserGroupProfile: &okta.OktaUserGroupProfile{
+						Name:        okta.PtrString("example"),
+						Description: okta.PtrString("an example group"),
+						AdditionalProperties: map[string]interface{}{
+							GroupProfileGovernorIDKey: 12345,
+						},
 					},
 				},
 			},
@@ -575,10 +563,12 @@ func TestGroupGovernorID(t *testing.T) {
 			name: "empty governor id",
 			group: &okta.Group{
 				Profile: &okta.GroupProfile{
-					Name:        "example",
-					Description: "an example group",
-					GroupProfileMap: okta.GroupProfileMap{
-						GroupProfileGovernorIDKey: "",
+					OktaUserGroupProfile: &okta.OktaUserGroupProfile{
+						Name:        okta.PtrString("example"),
+						Description: okta.PtrString("an example group"),
+						AdditionalProperties: map[string]interface{}{
+							GroupProfileGovernorIDKey: "",
+						},
 					},
 				},
 			},
@@ -603,34 +593,21 @@ func TestClient_listAssignedApplicationsForGroup(t *testing.T) {
 	tests := []struct {
 		name    string
 		groupID string
-		qp      *query.Params
 		err     error
-		apps    []okta.App
-		want    []okta.App
+		apps    []okta.ListApplications200ResponseInner
+		want    []okta.ListApplications200ResponseInner
 		wantErr bool
 	}{
 		{
 			name:    "example app list",
 			groupID: "873121ec-646f-4e70-84ad-fd56db401631",
-			apps: []okta.App{
-				&okta.Application{
-					Id:   "app-01",
-					Name: "App 01",
-				},
-				&okta.Application{
-					Id:   "app-02",
-					Name: "App 02",
-				},
+			apps: []okta.ListApplications200ResponseInner{
+				samlAppWithGithubOrg("app-01", nil),
+				samlAppWithGithubOrg("app-02", nil),
 			},
-			want: []okta.App{
-				&okta.Application{
-					Id:   "app-01",
-					Name: "App 01",
-				},
-				&okta.Application{
-					Id:   "app-02",
-					Name: "App 02",
-				},
+			want: []okta.ListApplications200ResponseInner{
+				samlAppWithGithubOrg("app-01", nil),
+				samlAppWithGithubOrg("app-02", nil),
 			},
 		},
 		{
@@ -651,12 +628,11 @@ func TestClient_listAssignedApplicationsForGroup(t *testing.T) {
 					t:    t,
 					err:  tt.err,
 					apps: tt.apps,
-					resp: &okta.Response{},
 				},
 				logger: zap.NewNop(),
 			}
 
-			got, err := c.listAssignedApplicationsForGroup(context.TODO(), tt.groupID, tt.qp)
+			got, err := c.listAssignedApplicationsForGroup(context.TODO(), tt.groupID)
 			if tt.wantErr {
 				assert.Error(t, err)
 				return
@@ -672,8 +648,7 @@ func TestClient_GroupGithubCloudApplications(t *testing.T) {
 	tests := []struct {
 		name    string
 		groupID string
-		qp      *query.Params
-		apps    []okta.App
+		apps    []okta.ListApplications200ResponseInner
 		err     error
 		want    map[string]string
 		wantErr bool
@@ -681,55 +656,27 @@ func TestClient_GroupGithubCloudApplications(t *testing.T) {
 		{
 			name:    "example app list",
 			groupID: "873121ec-646f-4e70-84ad-fd56db401631",
-			apps: []okta.App{
-				&okta.Application{
-					Id:   "app-01",
-					Name: "App 01",
-					Settings: &okta.ApplicationSettings{
-						App: &okta.ApplicationSettingsApplication{
-							"githubOrg": "test-org-01",
-						},
-					},
-				},
-				&okta.Application{
-					Id:   "app-02",
-					Name: "App 02",
-				},
+			apps: []okta.ListApplications200ResponseInner{
+				samlAppWithGithubOrg("app-01", "test-org-01"),
+				samlAppWithGithubOrg("app-02", nil),
 			},
 			want: map[string]string{"test-org-01": "app-01"},
 		},
 		{
 			name:    "non-string githubOrg",
 			groupID: "873121ec-646f-4e70-84ad-fd56db401631",
-			apps: []okta.App{
-				&okta.Application{
-					Id:   "app-01",
-					Name: "App 01",
-					Settings: &okta.ApplicationSettings{
-						App: &okta.ApplicationSettingsApplication{
-							"githubOrg": 1234,
-						},
-					},
-				},
-				&okta.Application{
-					Id:   "app-02",
-					Name: "App 02",
-				},
+			apps: []okta.ListApplications200ResponseInner{
+				samlAppWithGithubOrg("app-01", 1234),
+				samlAppWithGithubOrg("app-02", nil),
 			},
 			want: map[string]string{},
 		},
 		{
 			name:    "example app list without github",
 			groupID: "873121ec-646f-4e70-84ad-fd56db401631",
-			apps: []okta.App{
-				&okta.Application{
-					Id:   "app-01",
-					Name: "App 01",
-				},
-				&okta.Application{
-					Id:   "app-02",
-					Name: "App 02",
-				},
+			apps: []okta.ListApplications200ResponseInner{
+				samlAppWithGithubOrg("app-01", nil),
+				samlAppWithGithubOrg("app-02", nil),
 			},
 			want: map[string]string{},
 		},
@@ -751,7 +698,6 @@ func TestClient_GroupGithubCloudApplications(t *testing.T) {
 					t:    t,
 					err:  tt.err,
 					apps: tt.apps,
-					resp: &okta.Response{},
 				},
 				logger: zap.NewNop(),
 			}

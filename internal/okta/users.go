@@ -2,6 +2,7 @@ package okta
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/okta/okta-sdk-golang/v6/okta"
@@ -19,11 +20,36 @@ type UserDetails struct {
 	Status string
 }
 
+// userFromGetSingleton converts the okta UserGetSingleton returned by GetUser into a
+// *okta.User via a JSON round-trip so callers can work with a single user type.
+func userFromGetSingleton(singleton *okta.UserGetSingleton) (*okta.User, error) {
+	if singleton == nil {
+		return nil, nil
+	}
+
+	b, err := json.Marshal(singleton)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &okta.User{}
+	if err := json.Unmarshal(b, user); err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
 // GetUser gets an okta user by id
 func (c *Client) GetUser(ctx context.Context, id string) (*okta.User, error) {
 	c.logger.Debug("getting okta user", zap.String("okta.user.id", id))
 
-	user, err := c.userIface.GetUser(ctx, id)
+	singleton, _, err := c.client.UserAPI.GetUser(ctx, id).Execute()
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := userFromGetSingleton(singleton)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +63,7 @@ func (c *Client) GetUser(ctx context.Context, id string) (*okta.User, error) {
 func (c *Client) DeactivateUser(ctx context.Context, id string) error {
 	c.logger.Info("deactivating okta user", zap.String("okta.user.id", id))
 
-	if err := c.userIface.DeactivateUser(ctx, id); err != nil {
+	if _, err := c.client.UserLifecycleAPI.DeactivateUser(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -52,7 +78,7 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 	c.logger.Info("deleting okta user", zap.String("okta.user.id", id))
 
 	// look up the user in okta so we can get their status
-	user, err := c.userIface.GetUser(ctx, id)
+	user, err := c.GetUser(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -63,12 +89,12 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 	if user.GetStatus() != "DEPROVISIONED" {
 		c.logger.Debug("deactivating user", zap.String("okta.user.id", id))
 
-		if err := c.userIface.DeactivateUser(ctx, id); err != nil {
+		if _, err := c.client.UserLifecycleAPI.DeactivateUser(ctx, id).Execute(); err != nil {
 			return err
 		}
 	}
 
-	if err := c.userIface.DeactivateOrDeleteUser(ctx, id); err != nil {
+	if _, err := c.client.UserAPI.DeleteUser(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -83,7 +109,7 @@ func (c *Client) DeleteUser(ctx context.Context, id string) error {
 func (c *Client) ClearUserSessions(ctx context.Context, id string) error {
 	c.logger.Info("clearing user sessions", zap.String("okta.user.id", id))
 
-	if err := c.userIface.ClearUserSessions(ctx, id); err != nil {
+	if _, err := c.client.UserSessionsAPI.RevokeUserSessions(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -98,7 +124,7 @@ func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, er
 
 	f := fmt.Sprintf("profile.email eq \"%s\"", email)
 
-	users, err := c.userIface.ListUsers(ctx, f)
+	users, err := collectPages(c.client.UserAPI.ListUsers(ctx).Search(f).Limit(defaultPageLimit).Execute())
 	if err != nil {
 		return "", err
 	}
@@ -118,7 +144,7 @@ func (c *Client) GetUserIDByEmail(ctx context.Context, email string) (string, er
 func (c *Client) ListUsers(ctx context.Context) ([]*okta.User, error) {
 	c.logger.Debug("listing users")
 
-	users, err := c.userIface.ListUsers(ctx, "")
+	users, err := collectPages(c.client.UserAPI.ListUsers(ctx).Limit(defaultPageLimit).Execute())
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +164,12 @@ func (c *Client) ListUsers(ctx context.Context) ([]*okta.User, error) {
 func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, search string) ([]*okta.User, error) {
 	c.logger.Debug("listing users with func")
 
-	users, err := c.userIface.ListUsers(ctx, search)
+	req := c.client.UserAPI.ListUsers(ctx).Limit(defaultPageLimit)
+	if search != "" {
+		req = req.Search(search)
+	}
+
+	users, err := collectPages(req.Execute())
 	if err != nil {
 		return nil, err
 	}
@@ -169,7 +200,7 @@ func (c *Client) ListUsersWithModifier(ctx context.Context, f UserModifierFunc, 
 func (c *Client) SuspendUser(ctx context.Context, id string) error {
 	c.logger.Info("suspending okta user", zap.String("okta.user.id", id))
 
-	if err := c.userIface.SuspendUser(ctx, id); err != nil {
+	if _, err := c.client.UserLifecycleAPI.SuspendUser(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -182,7 +213,7 @@ func (c *Client) SuspendUser(ctx context.Context, id string) error {
 func (c *Client) UnsuspendUser(ctx context.Context, id string) error {
 	c.logger.Info("un-suspending okta user", zap.String("okta.user.id", id))
 
-	if err := c.userIface.UnsuspendUser(ctx, id); err != nil {
+	if _, err := c.client.UserLifecycleAPI.UnsuspendUser(ctx, id).Execute(); err != nil {
 		return err
 	}
 

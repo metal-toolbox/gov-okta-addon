@@ -72,7 +72,12 @@ func (c *Client) GithubCloudApplications(ctx context.Context) (map[string]string
 
 // listApplications returns all of the applications matching the given filter
 func (c *Client) listApplications(ctx context.Context, filter string) ([]okta.ListApplications200ResponseInner, error) {
-	apps, err := c.appIface.ListApplications(ctx, filter)
+	req := c.client.ApplicationAPI.ListApplications(ctx).Limit(defaultPageLimit)
+	if filter != "" {
+		req = req.Filter(filter)
+	}
+
+	apps, err := collectPages(req.Execute())
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +95,7 @@ func (c *Client) AssignGroupToApplication(ctx context.Context, appID, groupID st
 
 	c.logger.Info("adding okta application group assignments", zap.Any("okta.application.id", appID), zap.Any("okta.group.id", groupID))
 
-	assignment, err := c.appIface.CreateApplicationGroupAssignment(ctx, appID, groupID)
+	assignment, _, err := c.client.ApplicationGroupsAPI.AssignGroupToApplication(ctx, appID, groupID).Execute()
 	if err != nil {
 		return err
 	}
@@ -108,7 +113,7 @@ func (c *Client) RemoveApplicationGroupAssignment(ctx context.Context, appID, gr
 
 	c.logger.Info("removing okta application group assignments", zap.Any("okta.application.id", appID), zap.Any("okta.group.id", groupID))
 
-	if err := c.appIface.DeleteApplicationGroupAssignment(ctx, appID, groupID); err != nil {
+	if _, err := c.client.ApplicationGroupsAPI.UnassignApplicationFromGroup(ctx, appID, groupID).Execute(); err != nil {
 		return err
 	}
 
@@ -125,7 +130,7 @@ func (c *Client) ListGroupApplicationAssignment(ctx context.Context, appID strin
 
 	c.logger.Debug("listing okta application group assignments", zap.Any("okta.application.id", appID))
 
-	assignments, err := c.appIface.ListApplicationGroupAssignments(ctx, appID)
+	assignments, err := collectPages(c.client.ApplicationGroupsAPI.ListApplicationGroupAssignments(ctx, appID).Limit(defaultPageLimit).Execute())
 	if err != nil {
 		return nil, err
 	}

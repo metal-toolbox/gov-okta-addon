@@ -22,7 +22,16 @@ func (c *Client) GetLogsBounded(ctx context.Context, since, until time.Time, fil
 	after := ""
 
 	for {
-		events, next, err := c.logEventIface.GetLogs(ctx, sinceStr, untilStr, after, filter, defaultPageLimit)
+		req := c.client.SystemLogAPI.ListLogEvents(ctx).Since(sinceStr).Until(untilStr).Limit(defaultPageLimit)
+		if filter != "" {
+			req = req.Filter(filter)
+		}
+
+		if after != "" {
+			req = req.After(after)
+		}
+
+		events, resp, err := req.Execute()
 		if err != nil {
 			return nil, err
 		}
@@ -31,11 +40,10 @@ func (c *Client) GetLogsBounded(ctx context.Context, since, until time.Time, fil
 			evtsResp = append(evtsResp, &events[i])
 		}
 
-		if next == "" {
+		after = nextAfter(resp)
+		if after == "" {
 			break
 		}
-
-		after = next
 	}
 
 	return evtsResp, nil
@@ -64,12 +72,18 @@ func (c *Client) pollLogs(ctx context.Context, interval time.Duration, start tim
 		case <-tick.C:
 			c.logger.Debug("running poller loop")
 
-			since := sinceStr
-			if after != "" {
-				since = ""
+			req := c.client.SystemLogAPI.ListLogEvents(ctx).Limit(defaultPageLimit)
+			if filter != "" {
+				req = req.Filter(filter)
 			}
 
-			events, next, err := c.logEventIface.GetLogs(ctx, since, "", after, filter, defaultPageLimit)
+			if after != "" {
+				req = req.After(after)
+			} else {
+				req = req.Since(sinceStr)
+			}
+
+			events, resp, err := req.Execute()
 			if err != nil {
 				c.logger.Error("error getting log events from okta", zap.Error(err))
 				continue
@@ -79,7 +93,9 @@ func (c *Client) pollLogs(ctx context.Context, interval time.Duration, start tim
 				handler(ctx, &events[i])
 			}
 
-			after = next
+			if next := nextAfter(resp); next != "" {
+				after = next
+			}
 		case <-ctx.Done():
 			tick.Stop()
 			return

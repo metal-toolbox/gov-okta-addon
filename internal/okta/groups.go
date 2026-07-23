@@ -68,7 +68,7 @@ func (c *Client) CreateGroup(ctx context.Context, name, desc string, profile map
 		zap.Any("okta.group.profile", profile),
 	)
 
-	group, err := c.groupIface.CreateGroup(ctx, groupProfileRequest(name, desc, profile))
+	group, _, err := c.client.GroupAPI.AddGroup(ctx).Group(groupProfileRequest(name, desc, profile)).Execute()
 	if err != nil {
 		return "", err
 	}
@@ -87,7 +87,7 @@ func (c *Client) UpdateGroup(ctx context.Context, id, name, desc string, profile
 		zap.Any("okta.group.profile", profile),
 	)
 
-	group, err := c.groupIface.UpdateGroup(ctx, id, groupProfileRequest(name, desc, profile))
+	group, _, err := c.client.GroupAPI.ReplaceGroup(ctx, id).Group(groupProfileRequest(name, desc, profile)).Execute()
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (c *Client) UpdateGroup(ctx context.Context, id, name, desc string, profile
 func (c *Client) DeleteGroup(ctx context.Context, id string) error {
 	c.logger.Info("deleting Okta group", zap.String("okta.group.id", id))
 
-	if err := c.groupIface.DeleteGroup(ctx, id); err != nil {
+	if _, err := c.client.GroupAPI.DeleteGroup(ctx, id).Execute(); err != nil {
 		return err
 	}
 
@@ -116,7 +116,7 @@ func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, e
 
 	f := fmt.Sprintf("profile.governor_id eq \"%s\"", id)
 
-	groups, err := c.groupIface.ListGroups(ctx, f)
+	groups, err := collectPages(c.client.GroupAPI.ListGroups(ctx).Search(f).Limit(defaultPageLimit).Execute())
 	if err != nil {
 		return "", err
 	}
@@ -138,7 +138,7 @@ func (c *Client) GetGroupByGovernorID(ctx context.Context, id string) (string, e
 func (c *Client) AddGroupUser(ctx context.Context, groupID, userID string) error {
 	c.logger.Info("adding user to okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
 
-	if err := c.groupIface.AddUserToGroup(ctx, groupID, userID); err != nil {
+	if _, err := c.client.GroupAPI.AssignUserToGroup(ctx, groupID, userID).Execute(); err != nil {
 		return err
 	}
 
@@ -149,7 +149,7 @@ func (c *Client) AddGroupUser(ctx context.Context, groupID, userID string) error
 func (c *Client) RemoveGroupUser(ctx context.Context, groupID, userID string) error {
 	c.logger.Info("removing user from okta group", zap.String("okta.user.id", userID), zap.String("okta.group.id", groupID))
 
-	if err := c.groupIface.RemoveUserFromGroup(ctx, groupID, userID); err != nil {
+	if _, err := c.client.GroupAPI.UnassignUserFromGroup(ctx, groupID, userID).Execute(); err != nil {
 		return err
 	}
 
@@ -160,7 +160,7 @@ func (c *Client) RemoveGroupUser(ctx context.Context, groupID, userID string) er
 func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]*okta.User, error) {
 	c.logger.Debug("listing okta group members", zap.String("okta.group.id", gid))
 
-	users, err := c.groupIface.ListGroupUsers(ctx, gid)
+	users, err := collectPages(c.client.GroupAPI.ListGroupUsers(ctx, gid).Limit(defaultPageLimit).Execute())
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +181,12 @@ func (c *Client) ListGroupMembership(ctx context.Context, gid string) ([]*okta.U
 func (c *Client) ListGroupsWithModifier(ctx context.Context, f GroupModifierFunc, search string) ([]*okta.Group, error) {
 	c.logger.Debug("listing groups with func")
 
-	groups, err := c.groupIface.ListGroups(ctx, search)
+	req := c.client.GroupAPI.ListGroups(ctx).Limit(defaultPageLimit)
+	if search != "" {
+		req = req.Search(search)
+	}
+
+	groups, err := collectPages(req.Execute())
 	if err != nil {
 		return nil, err
 	}
@@ -277,7 +282,7 @@ func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID s
 
 	c.logger.Debug("listing okta applications assigned to group", zap.Any("okta.group.id", groupID))
 
-	apps, err := c.groupIface.ListAssignedApplicationsForGroup(ctx, groupID)
+	apps, err := collectPages(c.client.GroupAPI.ListAssignedApplicationsForGroup(ctx, groupID).Limit(defaultPageLimit).Execute())
 	if err != nil {
 		return nil, err
 	}

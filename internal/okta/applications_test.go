@@ -2,81 +2,19 @@ package okta
 
 import (
 	"context"
-	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
-
-type mockApplicationClient struct {
-	t                   *testing.T
-	err                 error
-	apps                []okta.ListApplications200ResponseInner
-	appGroupAssignments []okta.ApplicationGroupAssignment
-}
-
-func (m *mockApplicationClient) ListApplications(context.Context, string) ([]okta.ListApplications200ResponseInner, error) {
-	if m.err != nil {
-		return nil, m.err
-	}
-
-	return m.apps, nil
-}
-
-func (m *mockApplicationClient) CreateApplicationGroupAssignment(_ context.Context, _, _ string) (*okta.ApplicationGroupAssignment, error) {
-	if m.err != nil {
-		return nil, m.err
-	}
-
-	return nil, nil
-}
-
-func (m *mockApplicationClient) DeleteApplicationGroupAssignment(_ context.Context, _, _ string) error {
-	return m.err
-}
-
-func (m *mockApplicationClient) GetApplicationGroupAssignment(_ context.Context, _, _ string) (*okta.ApplicationGroupAssignment, error) {
-	if m.err != nil {
-		return nil, m.err
-	}
-
-	return nil, nil
-}
-
-func (m *mockApplicationClient) ListApplicationGroupAssignments(_ context.Context, _ string) ([]okta.ApplicationGroupAssignment, error) {
-	if m.err != nil {
-		return nil, m.err
-	}
-
-	return m.appGroupAssignments, nil
-}
-
-// samlAppWithGithubOrg builds an okta application (as the oneOf response wrapper) with the
-// given id and, optionally, a githubOrg app setting.
-func samlAppWithGithubOrg(id string, githubOrg interface{}) okta.ListApplications200ResponseInner {
-	app := &okta.SamlApplication{
-		Application: okta.Application{Id: okta.PtrString(id)},
-	}
-
-	if githubOrg != nil {
-		app.Settings = &okta.SamlApplicationSettings{
-			AdditionalProperties: map[string]interface{}{
-				"app": map[string]interface{}{"githubOrg": githubOrg},
-			},
-		}
-	}
-
-	return okta.ListApplications200ResponseInner{SamlApplication: app}
-}
 
 func TestClient_AssignGroupToApplication(t *testing.T) {
 	tests := []struct {
 		name    string
 		appID   string
 		groupID string
-		err     error
+		apiErr  bool
 		wantErr bool
 	}{
 		{
@@ -98,19 +36,26 @@ func TestClient_AssignGroupToApplication(t *testing.T) {
 			name:    "error",
 			appID:   "14270ca5-ea9f-43b7-a560-f2014399bddc",
 			groupID: "39712500-37a8-4102-bce9-432cbe2c28d2",
-			err:     errors.New("boom"), //nolint:err113
+			apiErr:  true,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				appIface: &mockApplicationClient{
-					t:   t,
-					err: tt.err,
-				},
+			var h http.Handler
+
+			switch {
+			case tt.appID == "" || tt.groupID == "":
+				h = noCallHandler(t)
+			case tt.apiErr:
+				h = errorHandler()
+			default:
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusOK, okta.ApplicationGroupAssignment{Id: okta.PtrString(tt.groupID)})
+				})
 			}
+
+			c := newTestClient(t, h)
 
 			err := c.AssignGroupToApplication(context.TODO(), tt.appID, tt.groupID)
 			if tt.wantErr {
@@ -128,7 +73,7 @@ func TestClient_RemoveApplicationGroupAssignment(t *testing.T) {
 		name    string
 		appID   string
 		groupID string
-		err     error
+		apiErr  bool
 		wantErr bool
 	}{
 		{
@@ -150,19 +95,26 @@ func TestClient_RemoveApplicationGroupAssignment(t *testing.T) {
 			name:    "error",
 			appID:   "14270ca5-ea9f-43b7-a560-f2014399bddc",
 			groupID: "39712500-37a8-4102-bce9-432cbe2c28d2",
-			err:     errors.New("boom"), //nolint:err113
+			apiErr:  true,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				appIface: &mockApplicationClient{
-					t:   t,
-					err: tt.err,
-				},
+			var h http.Handler
+
+			switch {
+			case tt.appID == "" || tt.groupID == "":
+				h = noCallHandler(t)
+			case tt.apiErr:
+				h = errorHandler()
+			default:
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusNoContent, nil)
+				})
 			}
+
+			c := newTestClient(t, h)
 
 			err := c.RemoveApplicationGroupAssignment(context.TODO(), tt.appID, tt.groupID)
 			if tt.wantErr {
@@ -179,7 +131,7 @@ func TestClient_ListGroupApplicationAssignment(t *testing.T) {
 	tests := []struct {
 		name        string
 		appID       string
-		err         error
+		apiErr      bool
 		assignments []okta.ApplicationGroupAssignment
 		want        []string
 		wantErr     bool
@@ -200,21 +152,27 @@ func TestClient_ListGroupApplicationAssignment(t *testing.T) {
 		{
 			name:    "api error",
 			appID:   "47819d20-70e5-4ab9-b008-898be42adde7",
-			err:     errors.New("boom"), //nolint:err113
+			apiErr:  true,
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				appIface: &mockApplicationClient{
-					t:                   t,
-					err:                 tt.err,
-					appGroupAssignments: tt.assignments,
-				},
+			var h http.Handler
+
+			switch {
+			case tt.appID == "":
+				h = noCallHandler(t)
+			case tt.apiErr:
+				h = errorHandler()
+			default:
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusOK, tt.assignments)
+				})
 			}
+
+			c := newTestClient(t, h)
 
 			got, err := c.ListGroupApplicationAssignment(context.TODO(), tt.appID)
 			if tt.wantErr {
@@ -229,64 +187,51 @@ func TestClient_ListGroupApplicationAssignment(t *testing.T) {
 }
 
 func TestClient_listApplications(t *testing.T) {
-	tests := []struct {
-		name    string
-		err     error
-		apps    []okta.ListApplications200ResponseInner
-		want    []okta.ListApplications200ResponseInner
-		wantErr bool
-	}{
-		{
-			name: "example",
-			apps: []okta.ListApplications200ResponseInner{
-				samlAppWithGithubOrg("app-01", nil),
-				samlAppWithGithubOrg("app-02", nil),
-				samlAppWithGithubOrg("app-03", nil),
-			},
-			want: []okta.ListApplications200ResponseInner{
-				samlAppWithGithubOrg("app-01", nil),
-				samlAppWithGithubOrg("app-02", nil),
-				samlAppWithGithubOrg("app-03", nil),
-			},
-		},
-		{
-			name: "example empty response",
-			apps: []okta.ListApplications200ResponseInner{},
-			want: []okta.ListApplications200ResponseInner{},
-		},
-		{
-			name:    "api error",
-			err:     errors.New("boom"), //nolint:err113
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				appIface: &mockApplicationClient{
-					t:    t,
-					err:  tt.err,
-					apps: tt.apps,
-				},
-			}
+	t.Run("single page", func(t *testing.T) {
+		apps := []okta.ListApplications200ResponseInner{
+			samlApp("app-01", nil),
+			samlApp("app-02", nil),
+			samlApp("app-03", nil),
+		}
 
-			got, err := c.listApplications(context.TODO(), "")
-			if tt.wantErr {
-				assert.Error(t, err)
+		c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			writeJSON(t, w, http.StatusOK, apps)
+		}))
+
+		got, err := c.listApplications(context.TODO(), "")
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"app-01", "app-02", "app-03"}, appIDs(got))
+	})
+
+	t.Run("paginated", func(t *testing.T) {
+		c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Query().Get("after") == "" {
+				w.Header().Set("Link", `<https://test.okta.local/api/v1/apps?after=page2>; rel="next"`)
+				writeJSON(t, w, http.StatusOK, []okta.ListApplications200ResponseInner{samlApp("app-01", nil), samlApp("app-02", nil)})
+
 				return
 			}
 
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+			writeJSON(t, w, http.StatusOK, []okta.ListApplications200ResponseInner{samlApp("app-03", nil)})
+		}))
+
+		got, err := c.listApplications(context.TODO(), "")
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"app-01", "app-02", "app-03"}, appIDs(got))
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		c := newTestClient(t, errorHandler())
+
+		_, err := c.listApplications(context.TODO(), "")
+		assert.Error(t, err)
+	})
 }
 
 func TestClient_GithubCloudApplications(t *testing.T) {
 	tests := []struct {
 		name    string
-		err     error
+		apiErr  bool
 		apps    []okta.ListApplications200ResponseInner
 		want    map[string]string
 		wantErr bool
@@ -294,11 +239,11 @@ func TestClient_GithubCloudApplications(t *testing.T) {
 		{
 			name: "example apps",
 			apps: []okta.ListApplications200ResponseInner{
-				samlAppWithGithubOrg("app-01", "testorg01"),
-				samlAppWithGithubOrg("app-02", "testorg02"),
-				samlAppWithGithubOrg("app-03", nil),
-				samlAppWithGithubOrg("app-05", []string{"some", "not", "string"}),
-				samlAppWithGithubOrg("app-06", nil),
+				samlApp("app-01", "testorg01"),
+				samlApp("app-02", "testorg02"),
+				samlApp("app-03", nil),
+				samlApp("app-05", []string{"some", "not", "string"}),
+				samlApp("app-06", nil),
 			},
 			want: map[string]string{
 				"testorg01": "app-01",
@@ -308,28 +253,30 @@ func TestClient_GithubCloudApplications(t *testing.T) {
 		{
 			name: "nil settings",
 			apps: []okta.ListApplications200ResponseInner{
-				samlAppWithGithubOrg("app-01", nil),
-				samlAppWithGithubOrg("app-02", nil),
-				samlAppWithGithubOrg("app-03", nil),
+				samlApp("app-01", nil),
+				samlApp("app-02", nil),
+				samlApp("app-03", nil),
 			},
 			want: map[string]string{},
 		},
 		{
 			name:    "error",
-			err:     errors.New("boom"), //nolint:err113
+			apiErr:  true,
 			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				appIface: &mockApplicationClient{
-					t:    t,
-					err:  tt.err,
-					apps: tt.apps,
-				},
+			var h http.Handler
+			if tt.apiErr {
+				h = errorHandler()
+			} else {
+				h = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					writeJSON(t, w, http.StatusOK, tt.apps)
+				})
 			}
+
+			c := newTestClient(t, h)
 
 			got, err := c.GithubCloudApplications(context.TODO())
 			if tt.wantErr {

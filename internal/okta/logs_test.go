@@ -2,193 +2,119 @@ package okta
 
 import (
 	"context"
-	"errors"
+	"net/http"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
-func testActor() *okta.LogActor {
-	return &okta.LogActor{
-		AlternateId: okta.PtrString("system@okta.com"),
-		DisplayName: okta.PtrString("Okta System"),
-		Id:          okta.PtrString("zzzzzzzzz"),
-		Type:        okta.PtrString("SystemPrincipal"),
-	}
-}
-
-func logEvent(published time.Time) okta.LogEvent {
-	return okta.LogEvent{
-		Actor:          testActor(),
-		EventType:      okta.PtrString("user.lifecycle.create"),
-		DisplayMessage: okta.PtrString("Create okta user"),
-		Published:      okta.PtrTime(published),
-	}
-}
-
-var testEvents = []okta.LogEvent{
-	logEvent(time.Date(2013, time.June, 19, 0o7, 14, 0o0, 0o0, time.UTC)),
-	logEvent(time.Date(2015, time.November, 20, 0o4, 40, 0o0, 0o0, time.UTC)),
-	logEvent(time.Date(2019, time.March, 28, 21, 21, 0o0, 0o0, time.UTC)),
-}
-
-type mockLogEventsClient struct {
-	t   *testing.T
-	err error
-
-	logEvents []okta.LogEvent
-
-	maxIter int
-	iter    int
-}
-
-func (m *mockLogEventsClient) GetLogs(_ context.Context, since, _, _, _ string, _ int32) ([]okta.LogEvent, string, error) {
-	if m.err != nil {
-		return nil, "", m.err
-	}
-
-	s, err := time.Parse(oktaTimeFormat, since)
-	if err != nil {
-		return nil, "", err
-	}
-
-	events := []okta.LogEvent{}
-
-	if m.iter < m.maxIter {
-		for _, e := range m.logEvents {
-			if e.GetPublished().Before(s) {
-				continue
-			}
-
-			events = append(events, e)
+// testLogEvents returns a fixed set of user.lifecycle.create log events.
+func testLogEvents() []okta.LogEvent {
+	event := func(published time.Time) okta.LogEvent {
+		return okta.LogEvent{
+			EventType:      okta.PtrString("user.lifecycle.create"),
+			DisplayMessage: okta.PtrString("Create okta user"),
+			Published:      okta.PtrTime(published),
 		}
 	}
 
-	m.iter++
-
-	return events, "", nil
+	return []okta.LogEvent{
+		event(time.Date(2013, time.June, 19, 7, 14, 0, 0, time.UTC)),
+		event(time.Date(2015, time.November, 20, 4, 40, 0, 0, time.UTC)),
+		event(time.Date(2019, time.March, 28, 21, 21, 0, 0, time.UTC)),
+	}
 }
 
 func TestClient_GetLogsBounded(t *testing.T) {
-	tests := []struct {
-		name      string
-		err       error
-		logEvents []okta.LogEvent
-		since     time.Time
-		want      []*okta.LogEvent
-		wantErr   bool
-	}{
-		{
-			name:      "example",
-			logEvents: testEvents,
-			since:     time.Date(2018, time.January, 0o1, 0o0, 0o0, 0o0, 0o0, time.UTC),
-			want: []*okta.LogEvent{
-				{
-					Actor:          testActor(),
-					EventType:      okta.PtrString("user.lifecycle.create"),
-					DisplayMessage: okta.PtrString("Create okta user"),
-					Published:      okta.PtrTime(time.Date(2019, time.March, 28, 21, 21, 0o0, 0o0, time.UTC)),
-				},
-			},
-		},
-		{
-			name:      "error",
-			logEvents: []okta.LogEvent{},
-			since:     time.Date(2018, time.January, 0o1, 0o0, 0o0, 0o0, 0o0, time.UTC),
-			err:       errors.New("boomsauce"), //nolint:err113
-			wantErr:   true,
-		},
-	}
+	since := time.Date(2018, time.January, 1, 0, 0, 0, 0, time.UTC)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &Client{
-				logger: zap.NewNop(),
-				logEventIface: &mockLogEventsClient{
-					t:         t,
-					err:       tt.err,
-					logEvents: tt.logEvents,
-					maxIter:   10,
-				},
-			}
+	t.Run("single page", func(t *testing.T) {
+		c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			writeJSON(t, w, http.StatusOK, testLogEvents())
+		}))
 
-			got, err := c.GetLogsBounded(context.TODO(), tt.since, time.Now().UTC(), "")
-			if tt.wantErr {
-				assert.Error(t, err)
+		got, err := c.GetLogsBounded(context.TODO(), since, time.Now().UTC(), "")
+		assert.NoError(t, err)
+		assert.Len(t, got, 3)
+
+		for _, e := range got {
+			assert.Equal(t, "user.lifecycle.create", e.GetEventType())
+		}
+	})
+
+	t.Run("paginated", func(t *testing.T) {
+		events := testLogEvents()
+
+		c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Query().Get("after") == "" {
+				w.Header().Set("Link", `<https://test.okta.local/api/v1/logs?after=page2>; rel="next"`)
+				writeJSON(t, w, http.StatusOK, events[:2])
+
 				return
 			}
 
-			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
+			writeJSON(t, w, http.StatusOK, events[2:])
+		}))
+
+		got, err := c.GetLogsBounded(context.TODO(), since, time.Now().UTC(), "")
+		assert.NoError(t, err)
+		assert.Len(t, got, 3)
+	})
+
+	t.Run("api error", func(t *testing.T) {
+		c := newTestClient(t, errorHandler())
+
+		_, err := c.GetLogsBounded(context.TODO(), since, time.Now().UTC(), "")
+		assert.Error(t, err)
+	})
 }
 
 func TestClient_pollLogs(t *testing.T) {
-	testTime := time.Date(2011, time.September, 20, 15, 15, 0o0, 0o0, time.UTC)
+	start := time.Date(2011, time.September, 20, 15, 15, 0, 0, time.UTC)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
-	defer cancel()
+	t.Run("collects events", func(t *testing.T) {
+		var calls atomic.Int64
 
-	client := &Client{
-		logger: zap.NewNop(),
-		logEventIface: &mockLogEventsClient{
-			t:         t,
-			logEvents: testEvents,
-			maxIter:   1,
-		},
-	}
+		c := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.Header().Set("Link", `<https://test.okta.local/api/v1/logs?after=cursor>; rel="next"`)
 
-	events := []*okta.LogEvent{}
+			// only the first poll returns events; subsequent polls are empty
+			if calls.Add(1) == 1 {
+				writeJSON(t, w, http.StatusOK, testLogEvents())
+				return
+			}
 
-	client.pollLogs(
-		ctx,
-		1*time.Microsecond,
-		testTime,
-		"",
-		func(_ context.Context, le *okta.LogEvent) {
+			writeJSON(t, w, http.StatusOK, []okta.LogEvent{})
+		}))
+
+		ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
+		defer cancel()
+
+		events := []*okta.LogEvent{}
+
+		// pollLogs blocks until ctx is done, appending synchronously via the handler
+		c.pollLogs(ctx, time.Millisecond, start, "", func(_ context.Context, le *okta.LogEvent) {
 			events = append(events, le)
-		},
-	)
+		})
 
-	<-ctx.Done()
+		assert.Len(t, events, 3)
+	})
 
-	want := make([]*okta.LogEvent, len(testEvents))
-	for i := range testEvents {
-		want[i] = &testEvents[i]
-	}
+	t.Run("api error collects nothing", func(t *testing.T) {
+		c := newTestClient(t, errorHandler())
 
-	assert.Equal(t, want, events)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
 
-	errCtx, errCancel := context.WithTimeout(context.TODO(), 1*time.Second)
-	defer errCancel()
+		events := []*okta.LogEvent{}
 
-	errClient := &Client{
-		logger: zap.NewNop(),
-		logEventIface: &mockLogEventsClient{
-			t:         t,
-			logEvents: testEvents,
-			err:       errors.New("boomsauce"), //nolint:err113
-			maxIter:   1,
-		},
-	}
+		c.pollLogs(ctx, time.Millisecond, start, "", func(_ context.Context, le *okta.LogEvent) {
+			events = append(events, le)
+		})
 
-	errEvents := []*okta.LogEvent{}
-
-	errClient.pollLogs(
-		ctx,
-		1*time.Microsecond,
-		testTime,
-		"",
-		func(_ context.Context, le *okta.LogEvent) {
-			errEvents = append(errEvents, le)
-		},
-	)
-
-	<-errCtx.Done()
-
-	assert.Equal(t, []*okta.LogEvent{}, errEvents)
+		assert.Empty(t, events)
+	})
 }

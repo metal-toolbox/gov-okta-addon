@@ -3,16 +3,14 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"net/url"
 
+	"github.com/metal-toolbox/gov-okta-addon/internal/configs"
 	"github.com/metal-toolbox/gov-okta-addon/internal/okta"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	governor "github.com/metal-toolbox/governor-api/pkg/client"
 	okt "github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 	"go.uber.org/zap"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 // syncUsersCmd syncs okta users into governor
@@ -35,34 +33,16 @@ func init() {
 // syncUsersToGovernor syncs users from okta to governor
 func syncUsersToGovernor(ctx context.Context) error {
 	logger := logger.Desugar()
-	dryRun := viper.GetBool("sync.dryrun")
+	dryRun := configs.AppConfig.DryRun
 
 	logger.Info("starting sync to governor users", zap.Bool("dry-run", dryRun))
 
-	oc, err := okta.NewClient(
-		okta.WithLogger(logger),
-		okta.WithURL(viper.GetString("okta.url")),
-		okta.WithToken(viper.GetString("okta.token")),
-		okta.WithCache((!viper.GetBool("okta.nocache"))),
-	)
+	oc, err := configs.NewOktaClient(logger)
 	if err != nil {
 		return err
 	}
 
-	gc, err := governor.NewClient(
-		governor.WithLogger(logger),
-		governor.WithURL(viper.GetString("governor.url")),
-		governor.WithTokenSource((&clientcredentials.Config{
-			ClientID:       viper.GetString("governor.client-id"),
-			ClientSecret:   viper.GetString("governor.client-secret"),
-			TokenURL:       viper.GetString("governor.token-url"),
-			EndpointParams: url.Values{"audience": {viper.GetString("governor.audience")}},
-			Scopes: []string{
-				"write",
-				"read:governor:users",
-			},
-		}).TokenSource(ctx)),
-	)
+	gc, err := configs.NewGovernorClient(ctx, governor.WithLogger(logger))
 	if err != nil {
 		return err
 	}
@@ -202,7 +182,7 @@ func syncUsersToGovernor(ctx context.Context) error {
 
 // deleteOrphanGovernorUsers is a helper function to delete governor users that not longer exist in okta
 func deleteOrphanGovernorUsers(ctx context.Context, gc *governor.Client, emailIDMap map[string]string) (int, error) {
-	dryRun := viper.GetBool("sync.dryrun")
+	dryRun := configs.AppConfig.DryRun
 	l := logger.Desugar()
 
 	l.Info("starting to clean orphan governor users", zap.Bool("dry-run", dryRun))

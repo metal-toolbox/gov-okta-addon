@@ -4,17 +4,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
+	"slices"
 
+	"github.com/metal-toolbox/gov-okta-addon/internal/configs"
 	"github.com/metal-toolbox/gov-okta-addon/internal/okta"
 	"github.com/metal-toolbox/governor-api/pkg/api/v1alpha1"
 	governor "github.com/metal-toolbox/governor-api/pkg/client"
 	okt "github.com/okta/okta-sdk-golang/v6/okta"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
 	"go.uber.org/zap"
-	"golang.org/x/oauth2/clientcredentials"
 )
 
 type memberSummary struct {
@@ -46,35 +45,16 @@ func init() {
 
 func syncGroupMembersToGovernor(ctx context.Context) error {
 	logger := logger.Desugar()
-	dryRun := viper.GetBool("sync.dryrun")
+	dryRun := configs.AppConfig.DryRun
 
 	logger.Info("starting sync to governor group members", zap.Bool("dry-run", dryRun))
 
-	oc, err := okta.NewClient(
-		okta.WithLogger(logger),
-		okta.WithURL(viper.GetString("okta.url")),
-		okta.WithToken(viper.GetString("okta.token")),
-		okta.WithCache((!viper.GetBool("okta.nocache"))),
-	)
+	oc, err := configs.NewOktaClient(logger)
 	if err != nil {
 		return err
 	}
 
-	gc, err := governor.NewClient(
-		governor.WithLogger(logger),
-		governor.WithURL(viper.GetString("governor.url")),
-		governor.WithTokenSource((&clientcredentials.Config{
-			ClientID:       viper.GetString("governor.client-id"),
-			ClientSecret:   viper.GetString("governor.client-secret"),
-			TokenURL:       viper.GetString("governor.token-url"),
-			EndpointParams: url.Values{"audience": {viper.GetString("governor.audience")}},
-			Scopes: []string{
-				"write",
-				"read:governor:groups",
-				"read:governor:users",
-			},
-		}).TokenSource(ctx)),
-	)
+	gc, err := configs.NewGovernorClient(ctx, governor.WithLogger(logger))
 	if err != nil {
 		return err
 	}
@@ -127,7 +107,7 @@ func syncGroupMembersToGovernor(ctx context.Context) error {
 }
 
 func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1alpha1.Group) (*memberSummary, error) {
-	dryRun := viper.GetBool("sync.dryrun")
+	dryRun := configs.AppConfig.DryRun
 
 	l := logger.Desugar().With(
 		zap.String("governor.group.id", g.ID),
@@ -198,7 +178,7 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 
 		expectedMembers = append(expectedMembers, user.ID)
 
-		if !contains(govGroup.Members, user.ID) {
+		if !slices.Contains(govGroup.Members, user.ID) {
 			lg.Info("adding user to governor group")
 
 			if !dryRun {
@@ -213,7 +193,7 @@ func syncGroup(ctx context.Context, gc *governor.Client, oc *okta.Client, g *v1a
 	}
 
 	for _, m := range govGroup.Members {
-		if !contains(expectedMembers, m) {
+		if !slices.Contains(expectedMembers, m) {
 			user, err := gc.User(ctx, m, false)
 			if err != nil {
 				l.Warn("error getting user from governor", zap.String("governor.user.id", m), zap.Error(err))

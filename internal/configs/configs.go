@@ -72,6 +72,15 @@ type Sync struct {
 	SkipOktaUpdate bool     `mapstructure:"skip-okta-update"`
 }
 
+// MustAddonFlags registers addon-wide behavior toggles shared by serve and the
+// sync commands, and binds them to viper. Panics on error.
+func MustAddonFlags(v *viper.Viper, flags *pflag.FlagSet) {
+	flags.Bool("dry-run", false, "do not make any changes, just log what would be done")
+	viperBindFlag(v, "dryrun", flags.Lookup("dry-run"))
+	flags.Bool("skip-delete", true, "do not delete anything in okta during reconcile loop")
+	viperBindFlag(v, "skip-delete", flags.Lookup("skip-delete"))
+}
+
 // MustOktaFlags registers Okta related flags and binds them to viper
 // Panics on error
 func MustOktaFlags(v *viper.Viper, flags *pflag.FlagSet) {
@@ -101,8 +110,6 @@ func MustReconcilerFlags(v *viper.Viper, flags *pflag.FlagSet) {
 	viperBindFlag(v, "reconciler.interval", flags.Lookup("reconciler-interval"))
 	flags.Bool("reconciler-locking", false, "enable reconciler locking and leader election")
 	viperBindFlag(v, "reconciler.locking", flags.Lookup("reconciler-locking"))
-	flags.Bool("skip-delete", true, "do not delete anything in okta during reconcile loop")
-	viperBindFlag(v, "skip-delete", flags.Lookup("skip-delete"))
 	flags.Duration("eventlog-interval", DefaultEventlogInterval, "run interval for the okta eventlog poller")
 	viperBindFlag(v, "eventlog.interval", flags.Lookup("eventlog-interval"))
 	flags.Duration("eventlog-lookback", DefaultEventlogLookback, "coldstart lookback time period for the okta eventlog poller")

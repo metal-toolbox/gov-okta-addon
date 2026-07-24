@@ -7,7 +7,6 @@ import (
 	sdkcfg "github.com/metal-toolbox/governor-extension-sdk/pkg/configs"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
@@ -49,11 +48,7 @@ func init() {
 	sdkcfg.MustAuditFlags(v, flags)
 	sdkcfg.MustGovernorFlags(v, flags)
 	configs.MustOktaFlags(v, flags)
-
-	// dry-run is shared by serve (reconciler) and the sync commands, so register
-	// it once on the common parent and bind it to the top-level "dryrun" key.
-	flags.Bool("dry-run", false, "do not make any changes, just log what would be done")
-	viperBindFlag("dryrun", flags.Lookup("dry-run"))
+	configs.MustAddonFlags(v, flags)
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -109,11 +104,4 @@ func setupLogging() {
 
 	logger = l.Sugar().With("app", appName)
 	defer logger.Sync() //nolint:errcheck
-}
-
-// viperBindFlag provides a wrapper around the viper bindings that handles error checks
-func viperBindFlag(name string, flag *pflag.Flag) {
-	if err := viper.BindPFlag(name, flag); err != nil {
-		panic(err)
-	}
 }

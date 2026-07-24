@@ -4,23 +4,23 @@ package cmd
 import (
 	"strings"
 
-	"github.com/metal-toolbox/governor-api/pkg/configs"
+	sdkcfg "github.com/metal-toolbox/governor-extension-sdk/pkg/configs"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
+
+	"github.com/metal-toolbox/gov-okta-addon/internal/configs"
 )
 
 const (
-	appName                         = "gov-okta-addon"
-	defaultIAMRuntimeTimeoutSeconds = 15
+	appName = "gov-okta-addon"
 )
 
 var (
-	cfgFile   string
-	logger    *zap.SugaredLogger
-	appConfig configs.Configs
+	cfgFile string
+	logger  *zap.SugaredLogger
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -39,13 +39,21 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.gov-okta-addon.yaml)")
+	v := viper.GetViper()
+	flags := rootCmd.PersistentFlags()
 
-	rootCmd.PersistentFlags().Bool("debug", false, "enable debug logging")
-	viperBindFlag("logging.debug", rootCmd.PersistentFlags().Lookup("debug"))
+	flags.StringVar(&cfgFile, "config", "", "config file (default is $HOME/."+appName+".yaml)")
 
-	rootCmd.PersistentFlags().Bool("pretty", false, "enable pretty (human readable) logging output")
-	viperBindFlag("logging.pretty", rootCmd.PersistentFlags().Lookup("pretty"))
+	sdkcfg.MustLoggingFlags(v, flags)
+	sdkcfg.MustTracingFlags(v, flags)
+	sdkcfg.MustAuditFlags(v, flags)
+	sdkcfg.MustGovernorFlags(v, flags)
+	configs.MustOktaFlags(v, flags)
+
+	// dry-run is shared by serve (reconciler) and the sync commands, so register
+	// it once on the common parent and bind it to the top-level "dryrun" key.
+	flags.Bool("dry-run", false, "do not make any changes, just log what would be done")
+	viperBindFlag("dryrun", flags.Lookup("dry-run"))
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -60,7 +68,7 @@ func initConfig() {
 
 		// Search config in home directory with name ".gov-okta-addon" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".gov-okta-addon")
+		viper.SetConfigName("." + appName)
 	}
 
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_", "-", "_"))
@@ -77,7 +85,7 @@ func initConfig() {
 		)
 	}
 
-	if err := viper.Unmarshal(&appConfig); err != nil {
+	if err := viper.Unmarshal(&configs.AppConfig); err != nil {
 		logger.Fatalw("failed to unmarshal config", "error", err)
 	}
 }
@@ -99,7 +107,7 @@ func setupLogging() {
 		panic(err)
 	}
 
-	logger = l.Sugar().With("app", "gov-okta-addon")
+	logger = l.Sugar().With("app", appName)
 	defer logger.Sync() //nolint:errcheck
 }
 

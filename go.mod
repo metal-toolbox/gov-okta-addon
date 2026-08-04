@@ -12,7 +12,7 @@ require (
 	github.com/metal-toolbox/governor-extension-sdk v0.5.1
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/nats-io/nats.go v1.52.0
-	github.com/okta/okta-sdk-golang/v6 v6.1.6
+	github.com/okta/okta-sdk-golang/v6 v6.1.7
 	github.com/prometheus/client_golang v1.24.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10

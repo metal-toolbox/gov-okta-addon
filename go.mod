@@ -5,6 +5,7 @@ go 1.26.5
 require (
 	github.com/aarondl/null/v8 v8.1.3
 	github.com/gofrs/uuid v4.4.0+incompatible
+	github.com/gofrs/uuid/v5 v5.5.1
 	github.com/gosimple/slug v1.15.0
 	github.com/metal-toolbox/addonx v0.1.1
 	github.com/metal-toolbox/auditevent v0.9.0

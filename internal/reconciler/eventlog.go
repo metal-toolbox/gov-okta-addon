@@ -28,7 +28,8 @@ func (r *Reconciler) startEventLogPollerSubscriptions(ctx context.Context) {
 		time.Now().UTC().Add(-r.eventlogLookback),
 		// https://developer.okta.com/docs/reference/core-okta-api/#filter
 		`(eventType eq "user.lifecycle.create" or eventType eq "user.lifecycle.suspend" or eventType eq "user.lifecycle.unsuspend")`,
-		r.oktaLogEventHandler)
+		r.oktaLogEventHandler,
+	)
 }
 
 func (r *Reconciler) oktaLogEventHandler(ctx context.Context, evt *okta.LogEvent) {
@@ -120,7 +121,8 @@ func (r *Reconciler) userLifecycleCreateHandler(ctx context.Context, evt *okta.L
 			logger.Debug("okta user exists in governor, updating profile", zap.String("governor.user.id", govUser.ID))
 
 			if govUser.Status.String != v1alpha1.UserStatusPending && govUser.ExternalID.String != "" {
-				logger.Info("skipping update for user with non-pending status and non-empty external id",
+				logger.Info(
+					"skipping update for user with non-pending status and non-empty external id",
 					zap.String("governor.user.status", govUser.Status.String),
 					zap.String("governor.user.external_id", govUser.ExternalID.String),
 				)

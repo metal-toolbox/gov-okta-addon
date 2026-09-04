@@ -490,6 +490,14 @@ func TestClient_listAssignedApplicationsForGroup(t *testing.T) {
 			assert.Equal(t, tt.want, appIDs(got))
 		})
 	}
+
+	t.Run("recovers from sdk decode error", func(t *testing.T) {
+		c := newTestClient(t, samlAppMissingSignOnField(t, "app-01", "test-org-01"))
+
+		got, err := c.listAssignedApplicationsForGroup(context.TODO(), "873121ec-646f-4e70-84ad-fd56db401631")
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"app-01"}, appIDs(got))
+	})
 }
 
 func TestClient_GroupGithubCloudApplications(t *testing.T) {
@@ -557,4 +565,12 @@ func TestClient_GroupGithubCloudApplications(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+
+	t.Run("recovers from sdk decode error", func(t *testing.T) {
+		c := newTestClient(t, samlAppMissingSignOnField(t, "app-01", "test-org-01"))
+
+		got, err := c.GroupGithubCloudApplications(context.TODO(), "873121ec-646f-4e70-84ad-fd56db401631")
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]string{"test-org-01": "app-01"}, got)
+	})
 }

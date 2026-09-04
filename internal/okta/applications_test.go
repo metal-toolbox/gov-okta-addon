@@ -226,6 +226,14 @@ func TestClient_listApplications(t *testing.T) {
 		_, err := c.listApplications(context.TODO(), "")
 		assert.Error(t, err)
 	})
+
+	t.Run("recovers from sdk decode error", func(t *testing.T) {
+		c := newTestClient(t, samlAppMissingSignOnField(t, "app-01", "testorg"))
+
+		got, err := c.listApplications(context.TODO(), "")
+		assert.NoError(t, err)
+		assert.Equal(t, []string{"app-01"}, appIDs(got))
+	})
 }
 
 func TestClient_GithubCloudApplications(t *testing.T) {
@@ -288,4 +296,12 @@ func TestClient_GithubCloudApplications(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+
+	t.Run("recovers from sdk decode error", func(t *testing.T) {
+		c := newTestClient(t, samlAppMissingSignOnField(t, "app-01", "testorg"))
+
+		got, err := c.GithubCloudApplications(context.TODO())
+		assert.NoError(t, err)
+		assert.Equal(t, map[string]string{"testorg": "app-01"}, got)
+	})
 }

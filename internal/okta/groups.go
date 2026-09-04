@@ -62,7 +62,8 @@ func groupProfileRequest(name, desc string, profile map[string]interface{}) okta
 
 // CreateGroup creates a simple group in Okta with a name, description and an extended schema profile
 func (c *Client) CreateGroup(ctx context.Context, name, desc string, profile map[string]interface{}) (string, error) {
-	c.logger.Info("creating Okta group",
+	c.logger.Info(
+		"creating Okta group",
 		zap.String("okta.group.name", name),
 		zap.String("okta.group.description", desc),
 		zap.Any("okta.group.profile", profile),
@@ -80,7 +81,8 @@ func (c *Client) CreateGroup(ctx context.Context, name, desc string, profile map
 
 // UpdateGroup updates a group in Okta and returns the updated group
 func (c *Client) UpdateGroup(ctx context.Context, id, name, desc string, profile map[string]interface{}) (*okta.Group, error) {
-	c.logger.Info("updating Okta group",
+	c.logger.Info(
+		"updating Okta group",
 		zap.String("okta.group.id", id),
 		zap.String("okta.group.name", name),
 		zap.String("okta.group.description", desc),
@@ -295,20 +297,35 @@ func (c *Client) GroupGithubCloudApplications(ctx context.Context, groupID strin
 }
 
 // listAssignedApplicationsForGroup lists the applications that are assigned to a group ID
-func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID string) ([]okta.ListApplications200ResponseInner, error) {
+func (c *Client) listAssignedApplicationsForGroup(ctx context.Context, groupID string) ([]appSummary, error) {
 	if groupID == "" {
 		return nil, ErrApplicationBadParameters
 	}
 
 	c.logger.Debug("listing okta applications assigned to group", zap.Any("okta.group.id", groupID))
 
-	apps, err := paginate(func(after string) ([]okta.ListApplications200ResponseInner, *okta.APIResponse, error) {
+	apps, err := paginate(func(after string) ([]appSummary, *okta.APIResponse, error) {
 		req := c.client.GroupAPI.ListAssignedApplicationsForGroup(ctx, groupID).Limit(defaultPageLimit)
 		if after != "" {
 			req = req.After(after)
 		}
 
-		return req.Execute()
+		raw, resp, err := req.Execute()
+		if err != nil {
+			if fallback, ok := listApplicationsFallback(err); ok {
+				c.logger.Warn("recovered from okta application decode error using raw response fallback", zap.Error(err))
+				return fallback, resp, nil
+			}
+
+			return nil, resp, err
+		}
+
+		summaries, err := toAppSummaries(raw)
+		if err != nil {
+			return nil, resp, err
+		}
+
+		return summaries, resp, nil
 	})
 	if err != nil {
 		return nil, err

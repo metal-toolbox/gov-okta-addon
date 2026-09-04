@@ -2,6 +2,7 @@ package okta
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -97,8 +98,31 @@ func samlApp(id string, githubOrg interface{}) okta.ListApplications200ResponseI
 	return okta.ListApplications200ResponseInner{SamlApplication: app}
 }
 
-// appIDs extracts the okta ids from a list of application response wrappers.
-func appIDs(apps []okta.ListApplications200ResponseInner) []string {
+// samlAppMissingSignOnField responds with a page containing a single SAML application whose
+// settings.signOn object is missing "allowMultipleAcsEndpoints".  This reproduces a real Okta
+// API response the SDK's typed oneOf decode rejects outright (see appSummary), even though the
+// app id and githubOrg setting we actually need are present and well formed.
+func samlAppMissingSignOnField(t *testing.T, id, githubOrg string) http.Handler {
+	t.Helper()
+
+	body := fmt.Sprintf(`[{
+		"id": %q,
+		"signOnMode": "SAML_2_0",
+		"settings": {
+			"app": {"githubOrg": %q},
+			"signOn": {"ssoAcsUrl": "https://example.okta.com/sso/saml"}
+		}
+	}]`, id, githubOrg)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(body))
+	})
+}
+
+// appIDs extracts the okta ids from a list of application summaries.
+func appIDs(apps []appSummary) []string {
 	ids := make([]string, 0, len(apps))
 	for _, a := range apps {
 		id, _, _ := appGithubOrg(a)

@@ -3,6 +3,7 @@ package okta
 import (
 	"context"
 	"encoding/json"
+	"errors"
 
 	"github.com/okta/okta-sdk-golang/v6/okta"
 	"go.uber.org/zap"
@@ -12,31 +13,66 @@ const (
 	defaultPageLimit = 200
 )
 
+// appSummary is a minimal, permissive view of an okta application: just the fields we
+// actually need (id and the "app" settings bag that carries githubOrg).  We decode into this
+// instead of the SDK's typed oneOf union (okta.ListApplications200ResponseInner) because that
+// union enforces required sub-fields (e.g. SamlApplicationSettingsSignOn.allowMultipleAcsEndpoints)
+// that some real-world Okta apps omit from their API response, which makes the SDK fail to
+// decode the entire page. See decodeAppSummaries.
+type appSummary struct {
+	ID       string `json:"id"`
+	Settings struct {
+		App map[string]interface{} `json:"app"`
+	} `json:"settings"`
+}
+
 // appGithubOrg extracts the okta application id and the raw githubOrg app setting from an
-// okta application.  The v6 SDK models applications as a oneOf union of typed variants with
-// non-string app settings living in the settings "app" object, so we marshal the concrete
-// instance and read the fields back generically.  ok is false when the application has no
-// githubOrg setting.
-func appGithubOrg(a okta.ListApplications200ResponseInner) (id string, githubOrg interface{}, ok bool) {
-	b, err := json.Marshal(a)
-	if err != nil || len(b) == 0 || string(b) == "null" {
-		return "", nil, false
+// okta application summary.  ok is false when the application has no githubOrg setting.
+func appGithubOrg(a appSummary) (id string, githubOrg interface{}, ok bool) {
+	v, ok := a.Settings.App["githubOrg"]
+	return a.ID, v, ok
+}
+
+// decodeAppSummaries decodes a raw applications list response body into appSummary values.
+// It's deliberately more permissive than the SDK's typed models (see appSummary) so it
+// succeeds even when the SDK's own oneOf decode would reject the payload.
+func decodeAppSummaries(body []byte) ([]appSummary, error) {
+	var apps []appSummary
+
+	if err := json.Unmarshal(body, &apps); err != nil {
+		return nil, err
 	}
 
-	var parsed struct {
-		ID       string `json:"id"`
-		Settings struct {
-			App map[string]interface{} `json:"app"`
-		} `json:"settings"`
+	return apps, nil
+}
+
+// toAppSummaries converts SDK-decoded applications to appSummary by round-tripping through
+// JSON, since the concrete app fields we need (id, settings.app) are common to every variant
+// of the oneOf union.
+func toAppSummaries(apps []okta.ListApplications200ResponseInner) ([]appSummary, error) {
+	b, err := json.Marshal(apps)
+	if err != nil {
+		return nil, err
 	}
 
-	if err := json.Unmarshal(b, &parsed); err != nil {
-		return "", nil, false
+	return decodeAppSummaries(b)
+}
+
+// listApplicationsFallback recovers from an okta SDK decode error by parsing the raw response
+// body directly into appSummary values, working around the SDK's overly strict oneOf decoding
+// (see appSummary).  It returns ok=false if the error isn't a decode error we can recover from.
+func listApplicationsFallback(err error) (apps []appSummary, ok bool) {
+	var oerr *okta.GenericOpenAPIError
+	if !errors.As(err, &oerr) || len(oerr.Body()) == 0 {
+		return nil, false
 	}
 
-	v, ok := parsed.Settings.App["githubOrg"]
+	apps, decodeErr := decodeAppSummaries(oerr.Body())
+	if decodeErr != nil {
+		return nil, false
+	}
 
-	return parsed.ID, v, ok
+	return apps, true
 }
 
 // GithubCloudApplications returns a map of all Okta Github cloud applications with org name as the key and the okta ID as the value
@@ -71,8 +107,8 @@ func (c *Client) GithubCloudApplications(ctx context.Context) (map[string]string
 }
 
 // listApplications returns all of the applications matching the given filter
-func (c *Client) listApplications(ctx context.Context, filter string) ([]okta.ListApplications200ResponseInner, error) {
-	apps, err := paginate(func(after string) ([]okta.ListApplications200ResponseInner, *okta.APIResponse, error) {
+func (c *Client) listApplications(ctx context.Context, filter string) ([]appSummary, error) {
+	apps, err := paginate(func(after string) ([]appSummary, *okta.APIResponse, error) {
 		req := c.client.ApplicationAPI.ListApplications(ctx).Limit(defaultPageLimit)
 		if filter != "" {
 			req = req.Filter(filter)
@@ -82,7 +118,22 @@ func (c *Client) listApplications(ctx context.Context, filter string) ([]okta.Li
 			req = req.After(after)
 		}
 
-		return req.Execute()
+		raw, resp, err := req.Execute()
+		if err != nil {
+			if fallback, ok := listApplicationsFallback(err); ok {
+				c.logger.Warn("recovered from okta application decode error using raw response fallback", zap.Error(err))
+				return fallback, resp, nil
+			}
+
+			return nil, resp, err
+		}
+
+		summaries, err := toAppSummaries(raw)
+		if err != nil {
+			return nil, resp, err
+		}
+
+		return summaries, resp, nil
 	})
 	if err != nil {
 		return nil, err

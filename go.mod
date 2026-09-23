@@ -11,7 +11,7 @@ require (
 	github.com/metal-toolbox/governor-api v0.14.1
 	github.com/metal-toolbox/governor-extension-sdk v0.5.1
 	github.com/mitchellh/go-homedir v1.1.0
-	github.com/nats-io/nats.go v1.52.0
+	github.com/nats-io/nats.go v1.54.0
 	github.com/okta/okta-sdk-golang/v6 v6.1.7
 	github.com/prometheus/client_golang v1.24.0
 	github.com/spf13/cobra v1.10.2
@@ -82,7 +82,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
-	github.com/klauspost/compress v1.19.1 // indirect
+	github.com/klauspost/compress v1.20.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/leodido/go-urn v1.5.0 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
@@ -134,12 +134,12 @@ require (
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/arch v0.29.0 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/exp v0.0.0-20260718201538-764159d718ef // indirect
-	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/sync v0.22.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
+	golang.org/x/sync v0.23.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20260723164925-7274b71286bd // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260723164925-7274b71286bd // indirect
